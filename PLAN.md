@@ -23,15 +23,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] Test bridge: `vm/winrun.sh` (VM desktop session) vs `build/wine`
 - [x] DXVK / vkd3d-proton installed and presenting on RTX
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
-- [ ] Inventor 2027.1 install (web installer, no optional components)
-  - VM: installed, was finalizing when paused. Do NOT click Start/launch
-    (starts the 30-day trial).
-  - Wine (build/ integ 77645e2b221, optional components unticked): base
-    product INSTALLED (all core packages, Summary.log 01:34); the bundled
-    2027.1 update fails (WinVerifyTrust NOSIGNATURE on the 3.3 GB update exe,
-    cert table past 2 GB) → "Installation incomplete" → 019. Dialog left open.
-    Autodesk Genuine Service msi 1603 in custom action killBeacon, ODIS treats
-    it as success (uninvestigated).
+- [x] Inventor 2027.1 install (web installer, no optional components)
+  - VM: installed. Do NOT click Start/launch (starts the 30-day trial).
+  - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
+    base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as
+    Essential, as on the VM). UI left at the Start screen (not clicked).
+    Only deviation: Genuine Service MSI 1603 (PowerShell CA, 020), ODIS treats as
+    success; Content Libraries installed from an earlier run.
   - Prefix fixes: users/xl0/Documents was a symlink to the read-only host
     ~/Documents (RSA Engine "REP_Init: Cannot create ...\Documents\Autodesk
     \Output"); now a real dir. A stray `WindowsUpdate\Auto Update\RebootRequired`
@@ -59,7 +57,11 @@ commits or screenshots). Read-only mode may remain after expiry.
     after review (1 regression found+fixed: cross-session device broadcasts)
   - 018 session-0 follow-ups (low)
   - 015 ServicesPipeTimeout read as DWORD — fixed with 014 (default kept 10 s)
-  - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
+  - 017 dcomp: Wine-Staging DirectComposition series (66 patches, CodeWeavers)
+    + our cross-process target fix — merged; WebView2 renders the licensing
+    page in inv-vm. Sign-in window itself still black (017 worker on it)
+  - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
+    retry delay before software fallback (low; clean-room blocks implementing)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
     aspnetcore time-stamp tokens; installer Error 15) — merged
   - 019 imagehlp certificate offsets > 2 GB (2027.1 update exe) — merged
