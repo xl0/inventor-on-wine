@@ -1,5 +1,5 @@
 # 010 RegLoadKey can't load binary (regf) hives → Inventor Core install "Error 4000"
-Status: wip · Owner: worker · Branch: fix/010-regf-hive (wt/010, from master) · Found in: Inventor web installer, prefix `inv`, integ + fix/008 (wt/008-integ-build)
+Status: fixed · Owner: worker · Branch: fix/010-regf-hive (wt/010, from master; wt/010-integ = integ d4d52733ba7 + fix) · Found in: Inventor web installer, prefix `inv`, integ + fix/008 (wt/008-integ-build)
 
 ## Observed
 - With 008 fixed, the .adix signature checks pass (LP and Anark packages no
@@ -43,5 +43,39 @@ RegUnLoadKey). Conformance test with a tiny regf hive.
   Bad input -> STATUS_REGISTRY_CORRUPT. Text format still accepted.
 - Not done: key classes, security (sk) cells, transaction logs (.LOG1/2),
   writing back (RegLoadKey keys stay in memory as before), RegSaveKey in regf.
-- adixhandler also imports RegLoadAppKeyW (Wine: stub returning 0xdeadbeef);
-  check if the install path uses it.
+- RegLoadAppKey (below): hive under \Registry\A\<LUID> via
+  NtLoadKeyEx(REG_APP_HIVE, roothandle); server skips the SeRestore check for
+  REG_APP_HIVE and deletes the key when the root key's last handle closes
+  (Windows keeps it until all handles in the hive are closed; not modelled).
+  Writes are not persisted to the file (as with RegLoadKey in Wine).
+
+## Findings (worker)
+- The failing call is actually RegLoadAppKeyW, not RegLoadKey:
+  `MsixCoreLib::WriteAdIXRegistry::ExecuteForAddRequest` (adixhandler
+  FUN_1808931c0) does `RegLoadAppKeyW(Registry.dat, &hkey, KEY_READ, 0, 0)`
+  and walks hkey; Wine's stub returned hkey 0xdeadbeef -> E_HANDLE.
+  RegLoadKeyW is imported too (other path). Both needed the regf reader.
+- Windows ground truth (VM): InvCore Registry.dat is a 1.5 hive; loaded tree
+  dumped with `tests/regloadkey_hive.c` matches Wine key-for-key, value data
+  identical (Wine enumerates values sorted, Windows in file order: pre-existing
+  Wine difference). `reg save` writes 1.3 hives (big values in one cell),
+  RegSaveKeyEx(REG_LATEST_FORMAT) writes 1.5 with db big-data cells whose
+  segments are all full 16344-byte cells (Windows silently drops a big value
+  whose last segment cell is smaller). Corrupt root cell -> ERROR_BADDB and no
+  key left behind. NtLoadKeyEx with roothandle but without REG_APP_HIVE ->
+  STATUS_INVALID_PARAMETER_7 (existing ntdll test).
+
+## Outcome
+Commits on fix/010-regf-hive:
+- server: Support loading binary (regf) hive files.
+- kernelbase: Implement RegLoadAppKey. (+ server REG_APP_HIVE flag in
+  load_registry, ntdll NtLoadKeyEx roothandle, wow64 handle thunk fix)
+Tests: advapi32 registry `test_reg_load_key_hive` (synthetic 1.5 hive: compressed
+and UTF-16 names, inline/cell/db big data, root value, corrupt root), existing
+RegLoadAppKey/NtLoadKeyEx todo_wines removed. VM x86_64/i386: registry
+173589/178033, ntdll reg 28112, 0 failures. Wine x86_64/i386: registry
+7223/7621, ntdll reg 3826/5518, 0 failures.
+Real flow (prefix inv on wt/010-integ-build): Inventor Core 2027 installs
+(Error 4000 gone); bundle ends "Installation incomplete" because the .NET
+Desktop Runtime signature check fails -> issue 013 (regression from the integ
+RFC 3161 time-stamp verification).
