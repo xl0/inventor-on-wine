@@ -77,7 +77,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 023 dxgi Present1 dirty rects on flip swapchains — merged
   - 024 wofutil WofSetFileDataLocation stub crashed Edge setup — merged
   - 025 SC_MAXIMIZE on maximized hidden window showed it (Edge) — merged
-  - 026 Edge sandboxed renderers never start (workaround --no-sandbox; open)
+  - 026 Edge sandbox: CreateAppContainerToken/NtCreateLowBoxToken — merged.
+    Pending (after sign-in, when :98/:107 sessions can restart): rebuild build/,
+    regress run, drop --no-sandbox from tools/edge.sh + both prefixes' HKCR
   - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
     retry delay before software fallback (low; clean-room blocks implementing)

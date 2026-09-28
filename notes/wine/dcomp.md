@@ -30,5 +30,6 @@
   owned by the GPU process, and parented into the browser's window, which sits in the
   host app's toplevel (three processes). 027: the server ignored transparent children
   when clipping the parent surface.
-- Edge (the browser) needs --no-sandbox under Wine for now (026). It launches from
+- Edge (the browser) needed --no-sandbox under Wine: its renderers are lowbox app
+  containers (kernelbase CreateAppContainerToken, fix/026). It launches from
   AdskIdentityManager through HKCR https.

@@ -30,6 +30,7 @@
   and dirty-rect Present1. `layered_child_gpu.c`: cross-process D3D child in a colour-keyed
   layered window. `syscommand_hidden.c`: SC_MAXIMIZE/MINIMIZE on hidden windows.
   `wofset.c`: WofSetFileDataLocation / FSCTL_SET_EXTERNAL_BACKING.
+  `lowbox_token.c`: NtCreateLowBoxToken / CreateAppContainerToken token properties.
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
@@ -100,7 +101,7 @@
   also run on prefixes/inv). Edge is the default browser (its
   installer sets HKCR http/https). The Autodesk sign-in form opens there, and the
   OAuth code comes back through a custom URI scheme registered in the prefix.
-  Edge runs with --no-sandbox (HKCR command) until issue 026 is fixed. Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
+  Edge runs with --no-sandbox (HKCR command) until fix/026 (CreateAppContainerToken) is merged. Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
   restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
