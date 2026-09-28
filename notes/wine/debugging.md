@@ -17,3 +17,6 @@
 - Map a winedbg address in third-party code to pseudo-C: `tools/decomp.sh
   BIN decomp ADDR` (VA if the module sits at its preferred base, else
   ADDR - module base as RVA; `info share` in winedbg lists bases).
+- Installers that run throwaway `%TEMP%\*.bat` helpers (InstallBuilder: its
+  log `%TEMP%\installbuilder_installer_<pid>.log` only shows exit codes):
+  capture them with a host loop `cp $TEMP/*.bat out/; sleep 0.02`.

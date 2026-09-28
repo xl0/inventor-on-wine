@@ -1,5 +1,5 @@
 # 007 Inventor install fails with "Error 101"
-Status: wip · Owner: worker · Branch: fix/007-tasklist-no-match (wt/007, from master) · Found in: Inventor web installer, build/ at integ (74cceca78b1)
+Status: fixed · Owner: worker · Branch: fix/007-tasklist-no-match (wt/007, from master) · Found in: Inventor web installer, build/ at integ (74cceca78b1)
 
 ## Observed
 - Original web installer `inst/webinstall/Setup.exe`, prefix `prefixes/inv`,
@@ -41,3 +41,14 @@ in the prefix may matter — note what you clean up.
 - Fix: programs/tasklist prints header lazily, INFO line when nothing matched.
 - Repro without the UI: scratch prefix + that lock file, run AdODIS-installer.exe
   with the args above (exit 101 before the fix).
+
+## Outcome
+Commit a96a97aa782 on fix/007-tasklist-no-match ("tasklist: Print an info
+message when no tasks match the filters."), test in programs/tasklist/tests
+(no-match output for table and CSV). VM + Wine: 82 tests, 0 failures (x86_64,
+i386); unfixed Wine fails the 2 new checks.
+Real flow: integ + fix (wt/007-integ, wt/007-integ-build; prefix inv now
+updated to that build), stale lock planted -> pidcheck exit 0, ODIS package
+installs (exit 0). Install then fails with Error 4005 -> issue 008.
+Note: clicking Exit on the error dialog rolls back and empties
+C:\ProgramData\Autodesk\ODIS (lock included).

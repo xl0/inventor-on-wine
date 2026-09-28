@@ -24,7 +24,9 @@
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
   `run.sh [install]`, `shot.sh [png]` (screendump via HMP `mon.sock`).
-  SSH: `ssh -i vm/id_ed25519 -p 2222 dev@127.0.0.1` (PowerShell default shell).
+  SSH: `ssh -i vm/id_ed25519 -p 2222 -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null -o BatchMode=yes dev@127.0.0.1`
+  (PowerShell default shell; host key changes with snapshots).
   VNC 127.0.0.1:5901. Install is unattended (`autounattend.xml` + `setup.ps1`
   on a generated ISO): local admin dev/dev, autologon, OpenSSH, no sleep.
   Unactivated (generic Pro install key).

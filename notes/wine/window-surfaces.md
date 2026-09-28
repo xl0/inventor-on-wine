@@ -16,7 +16,15 @@
   WM_WINE_SETPIXELFORMAT; the owner sets clip_clients -> server
   PAINT_HAS_PIXEL_FORMAT -> surface region excludes the client rect
   (server/window.c get_surface_region), i.e. surface clip_region.
-- An empty surface clip reaches x11drv_surface_set_clip as count 0 and is
-  treated as no clip (issue 006).
+- An empty surface clip reaches x11drv_surface_set_clip as count 0 (rects
+  non-NULL); clearing it passes rects NULL. fix/006 clips everything on count 0.
+- Client surfaces of a *foreign* toplevel are only visible when offscreen
+  (needs_offscreen_rendering: child window / DPI scaling); otherwise the client
+  X window stays under the dummy parent. A foreign child's pixel format doesn't
+  refresh the owner's surface clip until the owner's next SetWindowPos.
+- Cross-process GL (wglSetPixelFormat on a foreign HWND) fails; Vulkan/DXGI works.
 - Test harness for expose bugs on :98: `xset s on; xset s activate` then
-  `xset s off; xset s reset` covers and re-exposes every window.
+  `xset s off; xset s reset` covers and re-exposes every window. On Xvfb the
+  screensaver sends no Expose; map+kill a window instead (`xlogo -geometry
+  400x400+0+0 & sleep 1; kill $!`). Xvfb + lavapipe
+  (`VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json`) presents fine.
