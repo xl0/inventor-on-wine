@@ -20,3 +20,6 @@
   StartServiceCtrlDispatcher (sechost), so they don't keep wineserver alive.
 - Go/.NET IsWindowsService(): parent (InheritedFromUniqueProcessId in
   SystemProcessInformation) named services.exe with SessionId 0.
+- BroadcastSystemMessage (BSM_ALLDESKTOPS/ALLCOMPONENTS) enumerates only the
+  caller's session; with fix/014 a session-0 caller also reaches the console
+  session's WinSta0 (device-change broadcasts from plugplay/mountmgr).

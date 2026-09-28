@@ -47,9 +47,9 @@ commits or screenshots). Read-only mode may remain after expiry.
     after adversarial review (4 bugs found+fixed, folded in)
   - 013 crypt32 array decoder skip bug (exposed by 009; .NET runtime
     Error 15) — merged
-  - 014 services in session 0 (Go-based Autodesk licensing service) — fixed,
-    9 commits, in review before merge
-    open: WTSEnumerateSessions should list the console session too (low)
+  - 014 services in session 0 (Go-based Autodesk licensing service) — merged
+    after review (1 regression found+fixed: cross-session device broadcasts)
+  - 018 session-0 follow-ups (low)
   - 015 ServicesPipeTimeout read as DWORD — fixed with 014 (default kept 10 s)
   - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /

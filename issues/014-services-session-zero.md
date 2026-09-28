@@ -108,3 +108,13 @@ the caller's session (a service sees just session 0 "Console").
 - NtSetInformationToken(TokenSessionId) now fails without SeTcb (Windows
   behaviour; the old stub returned success). wineboot enables SeTcb, so
   services inherit it enabled (like SYSTEM).
+
+## Review (fix/014 tip 96d8bad)
+- Regression found and fixed: plugplay/mountmgr (session 0) broadcast
+  WM_DEVICECHANGE with BroadcastSystemMessage, which only enumerates the
+  caller's session, so session-1 windows stopped getting DBT_DEVNODES_CHANGED /
+  volume arrival. `user32: Broadcast system messages from other sessions to
+  the console session.` (ordered before the wineboot commit) also broadcasts
+  into `\Sessions\<console>\Windows\WindowStations\WinSta0`.
+  Repro (session-0 child broadcasts, session-1 parent window counts): master 1,
+  branch 0, fixed 1.

@@ -62,8 +62,9 @@ squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
 - Switching the Wine build used on an existing prefix triggers a prefix update;
   run `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u` first, or a
   rundll32 error dialog hangs the next app launch.
-- `prefixes/inv` has auto-start Autodesk services (AdskAccessService), so its
-  wineserver never goes idle: `wineserver -w` hangs; use `wineserver -k`.
+- Prefixes with auto-start Autodesk services: on builds with 014 (services in
+  session 0) wineserver idles once user processes exit; older builds hang on
+  `wineserver -w` — use `wineserver -k` to be safe.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
 - Conformance test on Wine: `wt/NNN-build/wine
