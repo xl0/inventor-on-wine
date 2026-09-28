@@ -1,7 +1,7 @@
 # msi (checked against master 4e819f054dd + fix/051)
 
 - Script execution: `InstallFiles` etc. are scheduled into `SCRIPT_INSTALL` and
-  run at `InstallExecute`/`InstallFinalize`. On failure `ACTION_PerformAction`
+  run at `InstallExecute`/`InstallFinalize`. On failure `MSI_InstallPackage`
   sets `need_rollback`, which makes `msi_get_component_action` return
   `comp->Installed` (absent), and runs `SCRIPT_ROLLBACK` — e.g. `RemoveFiles`
   (rollback action of `InstallFiles`) then removes the components' files/folders.
