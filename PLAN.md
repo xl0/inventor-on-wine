@@ -39,16 +39,17 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
     (build/ rebuild pending: 010 worker uses it)
   - 011 crypt32 chain policy ignores partial chains (security, small)
   - 010 RegLoadKey rejects Registry.dat hive from .adix (installer Error 4000)
-- [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
-  runs it. Tracks upstream master tip: periodically recreate integ on current
-  master + open fix branches, rerun tests + the Inventor steps.
+- [x] Integration branch `integ` in wine-src: linear stack of our fix commits
+  on master; `build/` runs it. Tracks upstream master tip: periodically
+  `git rebase master integ` (upstreamed patches drop out), rebuild, retest,
+  force-push; rerun tests + the Inventor steps.
 - Later: virtio-fs cached-read flakiness (newer QEMU/viofs? guest debug log),
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue
-(briefed by `notes/worker.md` + the issue file), reviews, merges into `integ`,
+(briefed by `notes/worker.md` + the issue file), reviews, cherry-picks onto `integ`,
 rebuilds `build/`, deletes merged worktrees (branches kept). Workers report
 new bugs as draft issues and infra breakage instead of routing around it.
 Disassembling third-party (Autodesk) code is OK; Microsoft code never.

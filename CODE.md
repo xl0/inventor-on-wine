@@ -2,7 +2,8 @@
 
 - This dir is a git repo with an allowlist `.gitignore` (scripts, docs,
   tests only), pushed to github.com/xl0/inventor-on-wine. `wine-src/` is its
-  own repo: fixes on local `fix/NNN-*`, merged into `integ`, which is pushed to
+  own repo: fixes on local `fix/NNN-*`, cherry-picked onto `integ` (linear patch stack
+  on master; `git format-patch master..integ` = our series), force-pushed to
   the fork github.com/xl0/wine (remote `gh`; origin = gitlab.winehq.org).
 - `wine-src/` — upstream Wine git (gitlab.winehq.org), our patches go here.
 - `build/` — out-of-tree build, `--enable-archs=i386,x86_64` (new WoW64,
