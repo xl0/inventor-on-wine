@@ -52,7 +52,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 015 ServicesPipeTimeout type/default (low)
   - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
-    aspnetcore time-stamp tokens; installer Error 15) — open, blocks install
+    aspnetcore time-stamp tokens; installer Error 15) — merged
   - uninvestigated: AceInvAddIn-ca.msi 1603 (Electrical Catalog Browser,
     optional, now unticked); TrueView failed only via .NET Error 15 (013)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits

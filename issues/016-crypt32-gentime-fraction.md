@@ -1,5 +1,5 @@
 # 016 GeneralizedTime with 1-2 fraction digits fails to decode → VC++ redist signature check "Error 15"
-Status: open · Owner: - · Branch: - · Found in: Inventor web installer, prefix `inv`, build/ at integ 2d9c0d96550 (001–013)
+Status: fixed · Owner: worker 016 · Branch: fix/016-gentime-fraction (e1a638e7099) · Found in: Inventor web installer, prefix `inv`, build/ at integ 2d9c0d96550 (001–013)
 
 ## Observed
 - Re-run of the web installer (all optional components unticked; Content
@@ -48,3 +48,25 @@ Parse the fraction as Windows does (digits only, up to 3 significant, scaled to 
 extra digits ignored), then the zone. Conformance test in crypt32 encode.c time tests
 (values above). Rerun `wvt` on VC_redist.x64 / aspnetcore payloads
 (copies: prefix inv `%TEMP%\{447AF3F0-5A11-3D54-B8C1-9D1C88C26148}\3rdParty\x64\`).
+
+## Outcome
+Cause confirmed. Fix: after '.'/',' read every digit, the first three scaled
+to ms (`scale` 100/10/1/0), then the zone. Commit `crypt32: Scale
+GeneralizedTime fractions of a second to milliseconds.` + encode.c vectors
+(.7Z, .07Z, .9699Z, .96-0100). VM encode x86_64/i386 6377 tests 0 failures;
+Wine encode 0 failures.
+
+More ground truth (`tests/cms/gentime.c`, VM = Wine+fix unless noted):
+`.Z` / `.` → .000; `,7Z` → .700; `.123456789Z` → .123 (truncated);
+`.7+0100`, `.7+01`, `.1234+0100` → +1 h; `.96-0130` → -1:30.
+Left (pre-existing, not needed): Windows accepts fractions of minutes/hours
+(`202511220022.5Z` → :30 s, `2025112200.5Z` → :30 min), Wine fails; Windows
+rejects trailing garbage after the zone/fraction (`...31x`, `...31Zx`, `.7x`,
+`.x7Z`, `.12a4Z` → 80093103), Wine's CRYPT_AsnDecodeTimeZone ignores it.
+
+Regression (integ 2d9c0d96550 + fix, fresh prefix): wvt VC_redist.x64
+S_OK asof 2025-11-22 00:22 1 counter (= VM), aspnetcore-runtime-10.0.9 S_OK,
+windowsdesktop-runtime-10.0.9 and VC_redist.x86 S_OK; real AppxSignature.p7x
+(InvPro, InvCore adix, ODIS metadata) S_OK. crypt32 + wintrust suites on
+master+fix and integ+fix: same as baselines (only crypt32:chain 2 failures,
+pre-existing).

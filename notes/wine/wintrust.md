@@ -29,3 +29,7 @@
   time-stamp tokens carry a `[1]` attr cert.
 - Handy harness: `tests/p7x_winverifytrust.c` dumps chain/policy/WinVerifyTrust
   signer state; `tests/p7x_gen.py` makes signed p7x test blobs (python3-cryptography).
+- crypt32 GeneralizedTime (decode.c CRYPT_AsnDecodeGeneralizedTime): fraction
+  = any digit count, first 3 scaled to ms (issue 016; Microsoft TSAs emit
+  `.7Z`). Unlike Windows, Wine still accepts trailing garbage after the
+  zone and rejects fractional minutes/hours.
