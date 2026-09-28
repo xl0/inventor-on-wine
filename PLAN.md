@@ -127,8 +127,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 034 Inventor crash: RevokeDragDrop from another thread/process released a
     foreign pointer — merged (build/ rebuild pending). Pending: apply the
     crash-capture .reg (issue 034) to inv/inv2 when Inventor is stopped
-  - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged,
-    build/ rebuild pending (campaign running)
+  - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged
   - 036 Inventor dialogs render black (DWG export wizard, plain #32770
     message box) — queued (needs an Inventor)
   - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
