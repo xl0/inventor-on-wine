@@ -1,0 +1,19 @@
+# cantgen.exe (x64; cantgen32.exe gives the same) on Win11 VM, 2026-09-28
+self pid=13280 (msg 6=NEW_PROCESS 7=EXIT_PROCESS 8=ABNORMAL_EXIT)
+missing    CreateProcess failed err=14001
+  job msgs: 6(pid 13280) 6(pid 8552) 7(pid 8552)
+missing_s  CreateProcess failed err=14001
+  job msgs: 6(pid 7440) 7(pid 7440)
+malformed  CreateProcess failed err=14001
+  job msgs: 6(pid 3436) 7(pid 3436)
+comctl6    CreateProcess ok pid=3952 exit=42
+  job msgs: 6(pid 3952) 7(pid 3952)
+comctl6x86 CreateProcess ok pid=728 exit=42
+  job msgs: 6(pid 728) 7(pid 728)
+comctl5    CreateProcess ok pid=7320 exit=42
+  job msgs: 6(pid 7320) 7(pid 7320)
+vc90omp    CreateProcess failed err=14001
+  job msgs: 6(pid 4748) 7(pid 4748)
+# cantgen_dbg.exe (DEBUG_PROCESS): CreateProcess err=14001, no debug events at all.
+# archflag.exe / archflag32.exe: CreateActCtx with wProcessorArchitecture other than
+# the caller's own fails with 87; a private dep of the other arch fails with 14001.

@@ -20,3 +20,9 @@
   of a module without its own context) means the process default context for
   every class except Basic, which returns hActCtx NULL (fixed in issue 002).
 - Note GetCurrentActCtx returns NULL when nothing is activated, on Windows too.
+- CreateProcess fails with ERROR_SXS_CANT_GEN_ACTCTX if the new exe's context
+  can't be generated (Windows does it parent side). Wine: check in kernelbase
+  CreateProcessInternalW, same-arch children only (issue 004). The child's own
+  actctx_init still silently falls back to the empty context.
+- Wine's WinSxS lacks some in-box Windows assemblies (IsolationAutomation,
+  SystemCompatible); Common-Controls 5.82 and 6.0 are provided by comctl32(_v6).

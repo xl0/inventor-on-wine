@@ -54,7 +54,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 001 SxS app config privatePath probing — merged
   - 002 QueryActCtxW USE_ACTIVE fallback to process context — merged
   - 003 installer "hang" — not a Wine bug (our x/shot.sh was wrong; spin is Autodesk's, same on Windows)
-  - 004 CreateProcess should fail (14001) on missing manifest dependency (low)
+  - 004 CreateProcess fails on missing manifest dep — fixed but PARKED: needs
+    built-in assembly audit first (else breaks exes Windows starts)
   - 005 lost GPU window content after expose (win32u) — merged
   - 006 winex11 empty surface clip = no clip — merged
   - 007 tasklist no-match output (installer Error 101) — merged
