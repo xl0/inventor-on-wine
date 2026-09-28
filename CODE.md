@@ -40,6 +40,8 @@
   dump visible top-level windows + children (class, text, rect, pid, styles).
   `dragdrop_revoke.c`: RegisterDragDrop/RevokeDragDrop across threads/apartments/processes (034).
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
+  `ctrlchar_text.c`: "Pan\r" via ExtTextOut/DrawText/combo/listbox (039, screenshot it).
+  `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),

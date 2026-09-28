@@ -42,3 +42,14 @@ Which API the viewport uses (Inventor.exe loads d3d11, d3d9, opengl32;
 Application Options > Display > graphics settings / "Software graphics"),
 WINEDEBUG=+d3d11,+d3d warnings during SaveAsBitmap, compare with DXVK
 (deps/dxvk.sh on a copy of the prefix).
+
+## UI campaign (manual, :98, integ d53133a66a1)
+Viewport stays blank (background only) in part/assembly/drawing: no model,
+sketch geometry, ViewCube, navigation bar, origin, orbit overlay; same for
+all visual styles. Input still reaches it (status bar coordinates track the
+mouse; rectangle corners and component placement by click work; heads-up
+value boxes render). Picking does not: edges/faces never prehighlight or
+select (Dimension, Fillet edge pick, face click), so fillet-by-pick, drag
+component and pick-based constraints are blocked. Possibly GPU-based
+selection failing with the renderer, or a separate bug: recheck once
+rendering works. The Save As preview of a drawing sheet did render.

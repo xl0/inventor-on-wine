@@ -48,6 +48,21 @@ commits or screenshots). Read-only mode may remain after expiry.
     Not testable: VBA (not installed), Apprentice (not registered) — same on VM.
     Speed: suites 1.1-2.5x the VM; constraints 5-10x (mate/flush 2.7 s vs
     0.4 s, angle 2.0 vs 0.2), placing 200 occurrences 19 s vs 7 s.
+  - UI pass by hand (:98, integ d53133a66a1; worker report has details):
+    | area | result |
+    |---|---|
+    | ribbon tabs part/asm/drawing, File menu, New dialog | OK |
+    | App Options (all tabs), Doc Settings, iProperties, fx, Styles, Projects | OK; CR shown as box 039, date gap 044 |
+    | title bar: QAT/InfoCenter cut off by WM frame | broken 040 |
+    | Open/Save As/Place file dialogs | save/typed name OK; breadcrumb blank 041, file click ignored 043 |
+    | sketch rect (typed dims), extrude, params, rename, drag, undo/redo, ctx menus | OK |
+    | viewport render, ViewCube, styles, orbit; picking (dim/fillet/drag) | broken 037 |
+    | asm place (typed name) + constraint via browser picks; drawing base view | OK |
+    | tooltips/popups | OK, black shadow 042 |
+    | Assistant (WebView2) Q&A; Help → Edge | OK (Edge ~50 s, 022) |
+    Env: WPF browser lacks symbol glyphs ([●] grounded mark shows as box: no
+    Segoe UI Symbol-type font in C:\windows\Fonts); :98 Xorg uses xfree86
+    keycodes, Wine expects evdev → wrong GetKeyNameText ("Super_L" for End).
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
@@ -133,6 +148,12 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
     (+ second Inventor env inv2 on :99)
   - 038 NTFS alternate data stream name syntax unsupported (low)
+  - 039 C0 control chars (CR) drawn as .notdef boxes (App Options combos)
+  - 040 client-area title bar (QAT/InfoCenter) replaced by WM decorations
+  - 041 file dialog breadcrumb segments have no names
+  - 042 per-pixel-alpha popup shadows opaque black (low)
+  - 043 ExplorerBrowser: file selection/double-click not reported to host
+  - 044 DateTimePicker short date gap "9 /28/2026" (low)
   - 030 COM reads merged per-user classes (not for elevated) — merged
   - 033 32-bit per-user class redirection relies on deletable marker keys (low)
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
