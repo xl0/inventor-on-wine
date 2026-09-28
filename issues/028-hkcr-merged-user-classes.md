@@ -1,5 +1,5 @@
 # 028 HKCR lacks HKCU\Software\Classes: per-user URL protocols never launch
-Status: open (draft) · Owner: – · Branch: – · Found in: prefixes/inv, Autodesk sign-in (Edge → AdskIdentityManager)
+Status: fixed · Owner: worker 028 · Branch: fix/028-hkcr-merged-view (wt/028) · Found in: prefixes/inv, Autodesk sign-in (Edge → AdskIdentityManager)
 
 ## Symptom
 Autodesk sign-in in Edge ends on signin.autodesk.com/idmgr/callback ("You're signed in",
@@ -38,3 +38,54 @@ first, then HKLM\Software\Classes. This is a big, long-standing Wine gap. Check 
 bugzilla / Wine-Staging for prior work first. A narrower shell32 fix (consulting HKCU\Software\
 Classes in assoc/ShellExecute) would cover this app but not Chromium's registry lookups; decide
 after reading the tests.
+
+## Prior work (researched 2026-09-28)
+- Bug 14771 (2008, NEW; dup 17019): Firefox default-browser check. No patch attached.
+- André Hentschel 2010 / George Stephanos 2013 (GSoC) upstreamed only the tests
+  (`test_classesroot`, `_enum`, `_mask`: HKCR handles tagged `(h & 3) == 2`); the implementation
+  never landed. Nothing in Wine-Staging (current tree or history) or Proton.
+- ReactOS `advapi32/reg/hkcr.c` (Jérôme Gardou): tagged handles, user-then-machine fallback for
+  open/create/query/set/delete, merged enum. Reference for the design only.
+- GitLab !11386 (2026-07, open, bug 57229): shell32-only fallback in `execute_from_key`
+  plus winemenubuilder export of per-user protocols. Covers ShellExecute only, not
+  AssocQueryString / Chromium registry reads.
+- Related merged: !2483/!966 (shared Software\Classes Wow6432Node), !10580 (wine.inf creates
+  HKCU\Software\Classes).
+
+## Windows ground truth (tests/hkcr_merge.c, Win11 VM, elevated)
+- HKCR handles carry the tag bit and point at ONE real key: HKCU side (`\REGISTRY\USER\<sid>_Classes\..`)
+  when it exists, else HKLM side. Absolute and relative opens resolve the same way at every level.
+- Values: per value, user side wins, else machine side (partial HKCU overlays keep HKLM values).
+  A machine-side handle sees a user key created later (query + set go to the user key).
+- Enumeration (keys and values) is the sorted, deduplicated union; RegQueryInfoKey counts the union.
+- RegCreateKeyEx through HKCR: an existing key (either side, user first) is opened; a new key is
+  always created on the HKLM side, even below a user-only parent (parents created in HKLM too).
+
+## Fix (fix/028-hkcr-merged-view, on master)
+`a9fd231f808 kernelbase: Merge HKCU\Software\Classes into HKEY_CLASSES_ROOT.` +
+`965df4bb935 shlwapi/tests: Test AssocQueryString with a per-user URL protocol.`
+Full merged view in kernelbase registry.c (~450 lines, one commit: enumeration can't be split
+off without regressing overlay keys or leaving test_classesroot_enum half-todo):
+- HKCR-derived handles are tagged (bit 1; server and ntdll ignore the low 2 bits). The other
+  side of a tagged key is found by name (NtQueryKey path, swap `\Registry\Machine\Software\Classes`
+  <-> `\Registry\User\<sid>\Software\Classes`, open with KEY_WOW64_64KEY since the name is already
+  redirected). HKCR root uses the cached special root + a cached HKCU\Software\Classes handle.
+- Open / delete-key: user side first. Create: existing key opened, else created on the HKLM side
+  (parents too). Query value: user, then machine. Set value: user side if it exists.
+- RegEnumKeyEx/RegEnumValue/RegQueryInfoKey: sorted dedup merge of both server lists (sorted
+  case-insensitively like RtlCompareUnicodeString). A small cursor cache (8 entries, cleared by
+  RegCloseKey) keeps sequential enumeration linear.
+- RegOverridePredefKey(HKCR) disables merging for the root (override used as before).
+- Not merged: RegDeleteValue, RegNotifyChangeKeyValue, security (act on the handle's own key);
+  combase/ole32 keep their private HKLM-only classes root (per-user COM registrations still
+  invisible to COM activation).
+- Cost: HKCR open+query ~2x, enumeration ~3x server calls (NtQueryKey + counterpart open per op).
+
+Results: advapi32 registry: all HKCR todo_wine flipped (4), 0 failures x86_64/i386 on Wine and
+the Win11 VM; shlwapi assoc new test passes on VM and Wine (fails on master). tests/hkcr_merge.c
+output on Wine matches the VM except "set via a HKLM-side handle" (now matches too) and
+FRIENDLYAPPNAME (pre-existing, unrelated). regress.sh (advapi32 kernelbase shlwapi shell32 ole32
+combase msi urlmon ieframe, both arches) vs master 4e819f0 and integ 6c63dc3: 0 worse of 170.
+Success check (scratch prefix): scheme only in HKCU\Software\Classes -> AssocQueryString S_OK,
+ShellExecuteEx launches the handler with the URL (master: 0x80070483 / ERROR_FILE_NOT_FOUND).
+Once merged, the HKLM copies of the IDM schemes in prefixes/inv are no longer needed.

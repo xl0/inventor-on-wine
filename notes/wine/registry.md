@@ -18,7 +18,11 @@
   enumerates in insertion/file order.
 - Handy tools: `tests/regloadkey_hive.c HIVE` dumps a loaded hive (names,
   types, sizes, data checksums) for Wine/VM diffing.
-- HKCR is only `HKLM\Software\Classes` in Wine (kernelbase `open_classes_root`); Windows
-  merges `HKCU\Software\Classes` over it (advapi32 `test_classesroot` todo_wine). Per-user
-  registrations (URL protocols, file types written by apps without admin) are invisible to
-  AssocQueryString / ShellExecute. Issue 028; `tests/hkcu_proto.c`.
+- HKCR merged view (fix/028, kernelbase): HKCU\Software\Classes wins over HKLM per key and per
+  value; enumeration is the sorted union; new keys go to HKLM; handles are tagged `(h & 3) == 2`.
+  Windows' user side is `\REGISTRY\USER\<sid>_Classes` (HKCU\Software\Classes links to it); Wine's
+  is `\Registry\User\<sid>\Software\Classes`. combase/ole32 still use a private HKLM-only classes
+  root. Before 028 Wine had no merge at all. Ground truth: `tests/hkcr_merge.c`, `tests/hkcu_proto.c`.
+- wineserver applies Wow64 redirection itself for Wow64 callers without KEY_WOW64_64KEY
+  (`Software` -> `Software\Wow6432Node`): reopening an already-resolved key name by absolute path
+  from a 32-bit process needs KEY_WOW64_64KEY.
