@@ -1,5 +1,5 @@
 # 040 Custom title bar (client over caption) replaced by WM decorations
-Status: open (draft) · Owner: - · Branch: - · Found in: UI test campaign (main window)
+Status: fixed · Owner: worker-040 · Branch: fix/040-custom-caption-decor (6f82c0dfd0e) · Found in: UI test campaign (main window)
 
 ## Symptom (integ d53133a66a1, :98 openbox)
 Inventor's main window (AfxMDIFrame140u, style 0x15cf0000 = WS_CAPTION|
@@ -15,16 +15,32 @@ unreachable by mouse (Ctrl+Z/Y etc. still work).
 - VM: ![vm](attachments/040-titlebar-vm.png)
 - Wine: ![wine](attachments/040-titlebar-wine.png)
 
-## Cause (suspected)
-win32u `get_visible_rect()` subtracts the style-based NC size
-(adjust_window_rect with the driver's style mask) from the window rect even when
-the app's client rect covers that area; winex11 then maps the X window at the
-visible rect and asks the WM for a title (MWM_DECOR_TITLE). Only
-`window == client` disables it. The visible rect should not cut into the
-client area (or the window should be undecorated when the client covers the
-caption). Registry `HKCU\Software\Wine\X11 Driver\Decorated=N` presumably
-avoids it globally (not tried; campaign keeps defaults).
+## Windows ground truth (Win11 VM, `tests/custom_caption.c`)
+WS_OVERLAPPEDWINDOW, WM_NCCALCSIZE = DefWindowProc minus the caption (sides and
+bottom kept; when maximized top += frame width):
+- normal: window 100,100-600,400, client 484x292 at 108,100; no system caption,
+  the 8 px side/bottom frame is invisible (DWM), the app's strip is the top.
+- maximized: window -8,-8-1032,728, client 1024x720 at 0,0.
+- Wine master under openbox: openbox title bar over the app strip (X window
+  starts below the style caption). ![repro](attachments/040-repro-vm-wine.png)
 
-## Repro
-Any window whose WM_NCCALCSIZE returns the window rect minus side borders only
-(caption area in client), maximized, under a WM. Inventor: start it on :98.
+## Cause
+win32u `get_visible_rect()` removes the style-based NC area (driver style masks)
+from the window rect; the X window is placed at that visible rect and winex11 asks
+for MWM_DECOR_TITLE whenever window != visible. Only `window == client` (47f69a22484,
+Steam/Battle.net, bug 40930) disabled it. No upstream fix for the partial case
+found (bugzilla is behind Anubis; user reports e.g.
+https://forums.linuxmint.com/viewtopic.php?t=465397).
+
+## Fix
+`win32u: Don't let host decorations cover the client area.` — if the client rect
+sticks out of the computed visible rect, visible = window rect (generalizes the
+window == client case). winex11 (and winemac) then drop decorations since
+window == visible. Win32 rects/messages unchanged, so no user32 test.
+Verified on Xvfb :160 + openbox with the repro (normal: app strip at the top, Wine
+draws the side/bottom frame, no WM title). Regress (user32 win32u comctl32
+uxtheme dwmapi imm32 dxgi, both arches): only user32:win i386 flagged, FLAKY
+(base re-run fails the same foreground tests).
+Leftover: maximized, the WM places the undecorated X window at the work area while
+the surface starts at the off-screen frame -> 4 px Wine frame top/left, 4 px client
+cut right/bottom: issues/045. Inventor check pending (coordinator).

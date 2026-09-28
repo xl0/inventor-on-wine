@@ -42,6 +42,8 @@
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
   `ctrlchar_text.c`: "Pan\r" via ExtTextOut/DrawText/combo/listbox (039, screenshot it).
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
+  `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
+  WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,
   ICommDlgBrowser / IExplorerBrowserEvents / DShellFolderViewEvents log, clicks the first file (041, 043).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at

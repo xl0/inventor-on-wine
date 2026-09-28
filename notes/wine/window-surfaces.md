@@ -37,3 +37,8 @@
 - winex11 state tracking: a managed (activated / captioned) toplevel's map request sets
   `wm_state_serial`, cleared only by the WM writing WM_STATE. On a WM-less X server (our :98)
   it never clears: later hides/moves of that window are deferred forever (029).
+- Visible rect / WM decorations (win32u get_visible_rect): window rect minus the
+  style NC that the host decorations replace (driver GetWindowStyleMasks); winex11
+  asks for MWM title/border only when window != visible. window == visible when
+  window == client, shaped, Decorated=N, or (fix/040) the client rect sticks out of
+  the would-be visible rect (custom caption via WM_NCCALCSIZE).
