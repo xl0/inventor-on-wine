@@ -162,6 +162,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 049 SysLink rejects <a> with extra attributes (raw markup shown)
   - X 050 Electrical Catalog CA needs inbox tar.exe → tools/tar.sh (bsdtar 3.8.8)
   - M 051 msi removed pre-existing empty folders on uninstall/rollback (data loss)
+  - O 052 AdskLicensing "Current" link → plain dir "Current?" (service can't start)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
