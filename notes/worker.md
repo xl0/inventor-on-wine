@@ -13,8 +13,11 @@ relevant `notes/wine/*.md` first.
 - Upstreamable Wine style: match surrounding code, smallest correct diff, no
   speculative fallbacks. Tests only for what realistically regresses; they
   must pass on the VM and on Wine (`todo_wine` only for deliberate leftovers).
-- Commit finished work on your branch, Wine-style subject
-  (`ntdll: Do X.`), no Co-Authored-By / attribution lines.
+- Commit finished work on your `fix/NNN-*` branch, Wine-style subject
+  (`ntdll: Do X.`), no Co-Authored-By / attribution lines. The user approved
+  this workflow; the git hook wants the approval quoted: prefix the command with
+  `GIT_OK='worker commits on fix branches (user-approved workflow)'`. Never
+  push, never commit outside your branch.
 - Resources you don't own unless your brief says so: display :98,
   `prefixes/`, `build/`, the Autodesk installers. Never launch Inventor or click
   in the VM (Inventor is installed there; launching starts the 30-day trial).
@@ -46,6 +49,9 @@ squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
   `wt/NNN-build`: `../NNN/configure --enable-archs=i386,x86_64 && make -j40`.
   Rebuild only what changed: `make -j40 dlls/ntdll/all dlls/kernel32/tests/all`
   (the `/all` matters; plain `dlls/ntdll` is a no-op directory target).
+- Switching the Wine build used on an existing prefix triggers a prefix update;
+  run `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u` first, or a
+  rundll32 error dialog hangs the next app launch.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
 - Conformance test on Wine: `wt/NNN-build/wine

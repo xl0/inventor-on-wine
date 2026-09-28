@@ -1,5 +1,5 @@
 # 005 Installer UI window stays blank white (possible regression from integ)
-Status: wip · Owner: worker · Branch: fix/005-x11-empty-surface-clip (wt/005, from master) · Found in: Inventor web installer, build/ at `integ`
+Status: fixed (uncommitted, awaiting review) · Owner: worker · Branch: fix/005-expose-client-surface (wt/005, from master) · Found in: Inventor web installer, build/ at `integ`
 
 ## Observed
 - `build/` rebuilt at wine-src `integ` (master 4e819f054dd + fix/001 + fix/002).
@@ -42,4 +42,18 @@ rerun the staged copy vs the original layout; check ODIS/Electron logs
 - White (not black) suggests the surface flush also paints over the pixel-format
   client area: server surface region excludes the client (PAINT_HAS_PIXEL_FORMAT,
   set via WM_WINE_SETPIXELFORMAT), i.e. the clip region is empty, and
-  x11drv_surface_set_clip() treats count 0 as "no clip" (XSetClipMask None). Verifying.
+  x11drv_surface_set_clip() treats count 0 as "no clip" (XSetClipMask None).
+  Confirmed with +bitblt: browser surface gets `set_clip ... count 0`. Filed as 006.
+
+## Outcome
+Fix in wt/005 (win32u/window.c expose_window_surface): after flushing the
+surface, RedrawWindow() the part of the exposed rect outside the surface clip
+region (areas owned by client surfaces), so the app repaints them. Pre-3437ba2
+Wine did a (buggy-looking) variant of this. No conformance test: needs a real
+X Expose, not reproducible from a Windows-side test.
+Verified on integ+fix (wt/005-integ-build, uncommitted apply of the same diff):
+rendered after blank/unblank of a rendered window, and when launched blanked.
+Test harness: xset s on; xset s activate; ... xset s off; xset s reset.
+Note: switching builds on prefix inv triggers wineboot -u; run it first with
+WINEDLLOVERRIDES="mscoree,mshtml=" or 32-bit rundll32 shows the .NET
+"This application could not be started" box and blocks the launch.

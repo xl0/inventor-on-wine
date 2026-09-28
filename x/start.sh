@@ -6,3 +6,5 @@ cd "$(dirname "$0")"
 /usr/lib/xorg/Xorg :98 -config "$PWD/xorg-nvidia.conf" \
   -modulepath /usr/lib/x86_64-linux-gnu/nvidia/xorg,/usr/lib/xorg/modules \
   -logfile "$PWD/Xorg.98.log" -nolisten tcp -noreset -novtswitch -sharevts >xorg.out 2>&1 &
+until DISPLAY=:98 xset q >/dev/null 2>&1; do sleep 0.2; done
+DISPLAY=:98 xset s off -dpms  # blanking loses GPU-drawn window content (issue 005)

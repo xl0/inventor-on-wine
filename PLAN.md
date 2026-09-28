@@ -23,16 +23,19 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
 - [ ] Inventor 2027.1 install (web installer, no optional components)
   - VM: installed, was finalizing when paused. Do NOT click Start/launch
     (starts the 30-day trial).
-  - Wine: web installer's Setup.exe failed (issue 001); running a staged copy
-    with the assemblies moved beside Setup.exe (workaround) in prefix `inv`.
+  - Wine: original web installer (inst/webinstall) runs on integ, UI renders;
+    at the first page. Next: install location → install.
 - [ ] Wine bugs: one file each in `issues/` (index below). Coordinator drives
   Inventor and finds bugs; workers fix one issue each in a wine-src worktree.
   - 001 SxS app config privatePath probing — merged
   - 002 QueryActCtxW USE_ACTIVE fallback to process context — merged
   - 003 installer "hang" — not a Wine bug (our x/shot.sh was wrong; spin is Autodesk's, same on Windows)
   - 004 CreateProcess should fail (14001) on missing manifest dependency (low)
-  - 005 installer UI window stays white on integ build (triage)
-- [x] Integration branch `integ` in wine-src (001 + 002 merged); `build/` runs it.
+  - 005 lost GPU window content after expose (win32u) — merged
+  - 006 winex11 empty surface clip = no clip (white flash; low)
+- [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
+  runs it. Tracks upstream master tip: periodically recreate integ on current
+  master + open fix branches, rerun tests + the Inventor steps.
 - Later: virtio-fs cached-read flakiness (newer QEMU/viofs? guest debug log),
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)

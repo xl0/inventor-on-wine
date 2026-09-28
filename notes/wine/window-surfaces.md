@@ -1,0 +1,22 @@
+# Window surfaces, client surfaces, Expose (X11) — checked at wine-11.18-218-g4e819f054dd
+
+- Toplevel GDI content lives in a window surface (win32u/dce.c, winex11
+  bitblt.c x11drv_surface_*), owned by the window's process. On X Expose,
+  winex11 event.c X11DRV_Expose -> win32u window.c expose_window_surface():
+  with a surface it only re-flushes the surface (no WM_PAINT); without one it
+  RedrawWindow()s. fix/005 also redraws the exposed part outside the surface
+  clip region (client-surface areas) so the app re-presents.
+- GL/Vulkan/DXGI content is a client surface (win32u window.c client_surface_*,
+  winex11 init.c). "Offscreen" ones (child windows, DPI scaling, foreign-process
+  windows, e.g. Chromium's GPU process drawing on the browser HWND) render to an
+  X window under the dummy parent and are StretchBlt'ed onto the toplevel X
+  window on each present (X11DRV_client_surface_present). Nothing keeps that
+  image: an Expose loses it until the app presents again.
+- Cross-process pixel format: set_window_pixel_format() on a foreign HWND posts
+  WM_WINE_SETPIXELFORMAT; the owner sets clip_clients -> server
+  PAINT_HAS_PIXEL_FORMAT -> surface region excludes the client rect
+  (server/window.c get_surface_region), i.e. surface clip_region.
+- An empty surface clip reaches x11drv_surface_set_clip as count 0 and is
+  treated as no clip (issue 006).
+- Test harness for expose bugs on :98: `xset s on; xset s activate` then
+  `xset s off; xset s reset` covers and re-exposes every window.
