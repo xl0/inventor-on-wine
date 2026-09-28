@@ -77,6 +77,8 @@ Review again after the next batch of workers. Notes so far:
   Do it for any code parsing app-supplied data in shared processes.
 - Workers leave Wine processes behind (010 reviewer: 24 procs for a day);
   guide now says to clean up.
+- 014 ran `pkill -x Xvfb`, killing the regress runner's shard displays mid-run
+  (reported it promptly). Guide: kill by PID/display only.
 - Coordinator mistake: `git add -A` swept a worker's in-progress edit
   (decomp.sh without msbin.py) into a commit. Stage explicit paths only while
   workers are editing the project repo.

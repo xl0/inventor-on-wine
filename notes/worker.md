@@ -76,7 +76,8 @@ squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
   filter run on `wt/regress-master-build`. Full runs are the coordinator's.
 
 Before finishing: `wineserver -k` every prefix you started and kill your
-Xvfb/Xorg servers (unless the brief says to leave something running).
+Xvfb/Xorg servers by PID or display number (never `pkill Xvfb` / `pkill wine`:
+other agents run their own) (unless the brief says to leave something running).
 
 ## Final report
 Concise: result (root cause / fix), new Windows ground truth, commits, test
