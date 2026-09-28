@@ -124,8 +124,9 @@ commits or screenshots). Read-only mode may remain after expiry.
     via COM) — merged
   - 032 typelib load quadratic + PSDispatch loading typelibs (COM 10–500x
     slower) — merged; COM now ~VM speed (asm 163 s → 4 s)
-  - 034 intermittent Inventor crash in ole32 RevokeDragDrop/IDropTarget_Release
-    (startup and early session; 3x in ~1 h of suite runs)
+  - 034 Inventor crash: RevokeDragDrop from another thread/process released a
+    foreign pointer — merged (build/ rebuild pending). Pending: apply the
+    crash-capture .reg (issue 034) to inv/inv2 when Inventor is stopped
   - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged,
     build/ rebuild pending (campaign running)
   - 036 Inventor dialogs render black (DWG export wizard, plain #32770
