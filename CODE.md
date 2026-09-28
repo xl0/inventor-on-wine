@@ -23,6 +23,7 @@
   Build: `x86_64-w64-mingw32-gcc -O2 -o X.exe X.c -ld3d11 -ldxgi -luuid`.
   `p7x_winverifytrust.c` (+`p7x_gen.py`): msix-SDK-style signature checks on an
   AppxSignature.p7x. `regloadkey_hive.c`: RegLoadKey of a binary hive + tree dump.
+  `dcomp_create.c`: DCompositionCreateDevice/2/3(NULL) (Win11: S_OK).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
@@ -57,6 +58,10 @@
   virtiofsd 1.14.0 static zip sha256 2e4fe957…8978e (GitLab upload, no
   upstream hash), virtio-win-0.1.302.iso 303f7ae4…67949d (only viofs/w11 used),
   winfsp-2.1.25156.msi 073a70e0…9f7a (matches GitHub digest).
+  MicrosoftEdgeWebView2RuntimeInstallerX64.exe: WebView2 Evergreen Runtime
+  154.0.4258.37, sha256 771042db…582c1b. Microsoft's standalone installer
+  (fwlink 2124701) always serves the latest version; on 2026-09-28 that
+  matched the VM. The file is the pin, so keep it.
 - `deps/dxvk.sh PREFIX` — pinned + sha256-checked DXVK 3.1.1 and vkd3d-proton
   3.0.1, copied into the prefix with native DllOverrides. Tarballs cached in deps/.
 - Ghidra 12.1.4 (`deps/ghidra_12.1.4_PUBLIC`, zip sha256 ddac49f9…d2d4db, from
@@ -80,6 +85,10 @@
   the Wine install works: bugs seen only there may be transplant artifacts.
   Test display: own Xorg :107 on GPU 34:00.0 (`inst/transplant/xorg-107.conf`,
   `DRI_PRIME=pci-0000_34_00_0`).
+  WebView2 Runtime (in-box on Win11, AdskLicensingAgent's sign-in UI) is
+  installed from deps/. The real Wine install path needs it too, as a prefix
+  prerequisite like .NET. Session: `inst/transplant/run-inv.sh [log]` starts
+  AdskLicensingService by hand (014 workaround) + Inventor on :107.
 
 # Running Wine with GPU
 

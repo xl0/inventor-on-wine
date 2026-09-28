@@ -14,7 +14,9 @@
 # Rules: everything under Autodesk/FlexNet dirs is copied as shipped, including
 # app-local Microsoft DLLs. System-wide Microsoft pieces (VC++ 14.50, .NET 10
 # desktop/aspnetcore) are installed by running the same hash-pinned redist
-# installers Autodesk ran; nothing is copied from C:\Windows. HKLM/HKCU Run
+# installers Autodesk ran; nothing is copied from C:\Windows. WebView2 (part of
+# Windows 11, needed by AdskLicensingAgent's sign-in UI) comes from Microsoft's
+# pinned standalone installer in deps/, same version as the VM. HKLM/HKCU Run
 # entries are not imported (Autodesk Access would autostart on every boot).
 # Data: inst/transplant/ (gitignored): base/ cur/ dumps, files/ (C:\ mirror),
 # redist/, delta.reg, manifest.txt.
@@ -92,6 +94,10 @@ REDIST=(
 	"x64/dotNet/100/windowsdesktop-runtime-10.0.9-win-x64.exe d4eb932ad12ec61cb5293348021dbaa43fa373bc19ed1876e9dbf8cb38633ad3 /install /quiet /norestart"
 	"x64/aspNetCore/100/aspnetcore-runtime-10.0.9-win-x64.exe e81a9577f1839f83bda527882277f228e865968264ddc0fe4fea51ff1c0d7fa6 /install /quiet /norestart"
 )
+
+# WebView2 Evergreen Runtime 154.0.4258.37 x64 (= VM), https://go.microsoft.com/fwlink/?linkid=2124701
+WV2=MicrosoftEdgeWebView2RuntimeInstallerX64.exe
+WV2_SHA=771042db15cb5c463bac51a8408e70183d7130e8ac946709384c2223da582c1b
 
 fetch() {
 	# Transplant set: new or changed (sha256) files under Autodesk/FlexNet roots.
@@ -226,6 +232,10 @@ print(f'registry: {len(keep)} keys imported, {len(skip)} skipped, {len(prods)} A
 EOF
 	"$ROOT/build/wine" regedit /S "$(winepath_w "$T/delta.reg")"
 	$wineserver -w
+	# Last: it leaves MicrosoftEdgeUpdate running (and auto-start edgeupdate services).
+	echo "$WV2_SHA  $ROOT/deps/$WV2" | sha256sum -c --quiet
+	"$ROOT/build/wine" "$ROOT/deps/$WV2" /silent /install
+	$wineserver -k
 	manifest
 }
 
@@ -245,7 +255,8 @@ for i in range(0, len(paths), 500):
     ms.update(l.split('\t', 1) for l in out.splitlines())
 print('# inv-vm transplant manifest (tools/transplant.sh)\n')
 print('## Redist-installed (Microsoft installers Autodesk ran; run under Wine)')
-print('VC++ 2022 14.50.35719 x86+x64, .NET Windows Desktop Runtime 10.0.9 x64, ASP.NET Core Runtime 10.0.9 x64')
+print('VC++ 2022 14.50.35719 x86+x64, .NET Windows Desktop Runtime 10.0.9 x64, ASP.NET Core Runtime 10.0.9 x64,')
+print('WebView2 Evergreen Runtime 154.0.4258.37 x64 (deps/, not an Autodesk redist; in-box on Windows 11)')
 print('Not reproduced: files Autodesk/redists put in C:\\Windows (Installer cache, NGen images).\n')
 s = collections.Counter(); n = collections.Counter()
 for r in rows:
@@ -261,5 +272,5 @@ EOF
 case ${1:-all} in
 	footprint) footprint ;; fetch) fetch ;; build) build ;;
 	all) footprint; fetch; build ;;
-	*) sed -n 2,23p "$0"; exit 2 ;;
+	*) sed -n 2,22p "$0"; exit 2 ;;
 esac
