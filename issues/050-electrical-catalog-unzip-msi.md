@@ -1,5 +1,5 @@
 # 050 Electrical Catalog Browser installation fails in AceUnzipZipFiles
-Status: open (not a Wine API bug: missing inbox tar.exe; needs decision) · Owner: worker-050 · Branch: - · Found in: local Inventor 2027.1 installation
+Status: workaround via inbox-equivalent tar.exe (`tools/tar.sh`); fix = prefix prerequisite, not a Wine bug · Owner: worker-050 · Branch: - · Found in: local Inventor 2027.1 installation
 
 ## Symptom
 On Ubuntu 24.04, new-WoW64 `integ 47e296ffde4d`
@@ -87,3 +87,11 @@ ODIS requires 10.0.17763). Wine has no tar.exe, so the CA returns 1359.
    Upstreamable in principle but a new program (~few hundred lines) for one CA.
 3. Accept: optional add-on, ODIS rolls it back and continues. Manual
    workaround: extract AceInvLib.zip into the destination above.
+
+## Resolution (2026-09-28)
+Option 1 approved. `tools/tar.sh` builds libarchive 3.8.8's bsdtar (static MinGW, zlib)
+and installs it as system32/syswow64 `tar.exe` (`bsdtar 3.8.8 - libarchive 3.8.8`).
+Scratch copy of inv-net48: the exact CA command extracts 20 files / 4588032 bytes; the
+repro msiexec returns 0 with the library installed, temp dir cleaned. Installed in
+inv-net48, inv, inv2, inv3 (files only); transplant.sh runs it. Re-running the Electrical
+Catalog Browser install in prefixes/inv is left to the coordinator.

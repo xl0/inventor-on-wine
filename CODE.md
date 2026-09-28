@@ -179,6 +179,10 @@ are not present here.
   matched the VM. The file is the pin, so keep it.
   MicrosoftEdgeEnterpriseX64-154.0.4258.37.msi: Edge Stable x64, sha256
   4d8d922c…258246 (matches edgeupdates.microsoft.com/api/products?view=enterprise).
+- `tools/tar.sh` (WINEPREFIX=...): Windows' inbox tar.exe (bsdtar 3.8.8, as on Win11) into
+  system32/syswow64; builds static MinGW bsdtar.exe (zlib only) into deps/bsdtar-3.8.8/ if missing.
+  libarchive-3.8.8.tar.xz sha256 3873a888…efb918 (GitHub digest), zlib-1.3.2.tar.xz d7a06547…a792f3
+  (zlib.net). Installed in inv-net48, inv, inv2, inv3; transplant.sh runs it (050).
 - Wine Gecko 2.47.4 (the version wine-src's appwiz.cpl expects), x86 + x86_64
   MSIs in deps/, sha256 = GECKO_SHA in dlls/appwiz.cpl/addons.c; installed with
   `wine msiexec /i wine-gecko-2.47.4-<arch>.msi /qn` into inv-net48, inv, inv2

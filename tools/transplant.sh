@@ -229,6 +229,7 @@ print(f'registry: {len(keep)} keys imported, {len(skip)} skipped, {len(prods)} A
 EOF
 	"$ROOT/build/wine" regedit /S "$(winepath_w "$T/delta.reg")"
 	$wineserver -w
+	"$ROOT/tools/tar.sh"
 	"$ROOT/tools/edge.sh"  # last: leaves MicrosoftEdgeUpdate running
 	manifest
 }
