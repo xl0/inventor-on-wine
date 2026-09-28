@@ -94,14 +94,14 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
-    (full merged view, kernelbase); review found+fixed 2 bugs; merge ONLY with
-    030 (else COM can lose re-registered classes)
+    (full merged view, kernelbase) — merged with 030 as one series.
+    Pending: drop the HKLM-copy workaround from prefixes/inv once build/ has it
   - 031 oleaut32 typelib typedesc offsets > 32 KB (Inventor parts/assemblies
     via COM) — merged
   - 032 typelib marshaler re-parses the 4 MB Inventor typelib per proxy
     (10–500x slower COM than the VM) — in progress
-  - 030 COM (combase/ole32) must read the merged HKCR view — in progress,
-    prerequisite for merging 028
+  - 030 COM reads merged per-user classes (not for elevated) — merged
+  - 033 32-bit per-user class redirection relies on deletable marker keys (low)
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
     PartDocument.ComponentDefinition / ComponentDefinition.Occurrences broken — blocks
     part + assembly modelling via COM (tools/invscen part/asm) — open
