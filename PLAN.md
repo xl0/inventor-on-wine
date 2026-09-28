@@ -157,6 +157,11 @@ commits or screenshots). Read-only mode may remain after expiry.
     (probable cause of an Inventor startup crash; not confirmed)
   - O 049 SysLink `<a>` with extra attributes shown as raw markup (draft)
   - L 050 Electrical Catalog Browser unzip custom action (MSI 1603)
+  - O 047 Inventor crash: NULL read in ogsdevicedx11 on TBB thread (in progress)
+  - O 048 cold-start hang, trial popup "We're having trouble" (maybe shared licensing)
+  - L 049 SysLink rejects <a> with extra attributes (raw markup shown)
+  - X 050 Electrical Catalog CA needs inbox tar.exe → tools/tar.sh (bsdtar 3.8.8)
+  - M 051 msi removed pre-existing empty folders on uninstall/rollback (data loss)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
