@@ -136,6 +136,8 @@ are not present here.
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
   restart the other Inventors afterwards (they show "Licensing error" and quit).
+  Licensing host = prefixes/inv2 (its service ImagePath repointed to the
+  versioned dir, issue 052); never restart inv2 while Inventors run.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
   `run.sh [install]`, `shot.sh [png]` (screendump via HMP `mon.sock`).
   SSH: `ssh -i vm/id_ed25519 -p 2222 -o StrictHostKeyChecking=no
