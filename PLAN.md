@@ -24,7 +24,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] DXVK / vkd3d-proton installed and presenting on RTX
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
 - [x] Inventor 2027.1 install (web installer, no optional components)
-  - VM: installed. Do NOT click Start/launch (starts the 30-day trial).
+- [ ] First launch + sign-in. inv-vm (transplant): WebView2 renders the
+  licensing page; the sign-in window is black (017 worker). Then switch the main
+  path to prefixes/inv (real install): rebuild build/ with dcomp, launch on
+  :98 (user can watch via VNC), coordinator signs in.
+  - VM: installed (not launched yet).
   - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
     base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as
     Essential, as on the VM). UI left at the Start screen (not clicked).
