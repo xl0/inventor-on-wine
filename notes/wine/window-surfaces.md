@@ -23,6 +23,8 @@
   X window stays under the dummy parent. A foreign child's pixel format doesn't
   refresh the owner's surface clip until the owner's next SetWindowPos.
 - Cross-process GL (wglSetPixelFormat on a foreign HWND) fails; Vulkan/DXGI works.
+- GDI on an own child window of a foreign top-level draws nothing: children have no
+  surface of their own and the parent's lives in the other process (dcomp.md).
 - Test harness for expose bugs on :98: `xset s on; xset s activate` then
   `xset s off; xset s reset` covers and re-exposes every window. On Xvfb the
   screensaver sends no Expose; map+kill a window instead (`xlogo -geometry

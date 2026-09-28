@@ -25,6 +25,8 @@
   `p7x_winverifytrust.c` (+`p7x_gen.py`): msix-SDK-style signature checks on an
   AppxSignature.p7x. `regloadkey_hive.c`: RegLoadKey of a binary hive + tree dump.
   `dcomp_create.c`: DCompositionCreateDevice/2/3(NULL) (Win11: S_OK).
+  `dcomp_qi.c`: desktop device QI for Edge's undocumented {4ca97a18-...} (Win11: S_OK).
+  `dxgi_comp_swapchain.c`: GetDC-painted composition swapchain, buffer order after Present1.
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
@@ -90,8 +92,8 @@
   `DRI_PRIME=pci-0000_34_00_0`).
   WebView2 Runtime (in-box on Win11, AdskLicensingAgent's sign-in UI) is
   installed from deps/. The real Wine install path needs it too, as a prefix
-  prerequisite like .NET. Session: `inst/transplant/run-inv.sh [log]` starts
-  AdskLicensingService by hand (014 workaround) + Inventor on :107.
+  prerequisite like .NET. Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
+  restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and

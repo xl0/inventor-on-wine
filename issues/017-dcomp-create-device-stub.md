@@ -1,5 +1,5 @@
 # 017 dcomp: DCompositionCreateDevice* are E_NOTIMPL stubs (WebView2 GPU process dies)
-Status: open (draft) · Owner: - · Branch: - · Found in: inv-vm (build/ at integ 2d9c0d96550, WebView2 Runtime 154.0.4258.37)
+Status: fixed (awaiting review) · Owner: worker · Branch: fix/017-dcomp-staging (wt/017, on integ 77645e2b221) · Found in: inv-vm (build/ at integ 2d9c0d96550, WebView2 Runtime 154.0.4258.37)
 
 ## Symptom
 Inventor start-up -> AdskLicensingAgent opens its sign-in window (WebView2,
@@ -55,3 +55,25 @@ rendering device:
 Implement enough of dcomp (or bring in the staging series) that
 DCompositionCreateDevice*(NULL, ...) succeed and Chromium's GPU process
 composites. Then re-run inv-vm to the Autodesk sign-in page.
+
+## Outcome (worker)
+- Imported Wine-Staging `patches/dcomp-DCompositionCreateDevice2` (staging cc193df7,
+  66 of 67 patches, authorship kept) onto integ. Generated files folded in:
+  configure entry for dlls/dcomp/tests, server protocol (make_requests).
+- Dropped staging 0066 "dcomp: Always use the front buffer": the last presented frame
+  of a flip-model swapchain is buffer BufferCount-1 (tests/dxgi_comp_swapchain.c,
+  Win11 = Wine); with 0066 the compositor showed an all-zero buffer (black window).
+- Own commit: dcomp presents targets inside another process's window through a DXGI
+  swapchain. Chromium's software output targets its own child window, reparented into
+  the browser's window; staging's GDI AlphaBlend onto it draws nothing in Wine (child
+  windows use the foreign top-level's surface), so the page stayed white.
+- Own commit: dropped staging's DCompositionWaitForCompositorClock absence test
+  (Win11 exports it).
+- dcomp tests: Wine 743 tests, 28 todo, 0 failures; VM (Win11) 1089 tests, 0 failures.
+- Result: inv-vm (wt/017-build, wined3d-vk unchanged) shows AdskLicensingAgent's
+  "Let's Get Started" page (Sign in with your Autodesk ID / serial number / network
+  license). Not clicked.
+- Left over: the hardware GPU path CHECK-fails 6 times (~30 s) before Chromium falls
+  back to software compositing: it QIs the desktop device for an undocumented
+  interface (Win11: S_OK). Filed as 022.
+- Knowledge: notes/wine/dcomp.md.
