@@ -33,6 +33,7 @@
   `lowbox_token.c`: NtCreateLowBoxToken / CreateAppContainerToken token properties.
   `hkcu_proto.c`: per-user URL protocol via HKCR / AssocQueryString. `hkcr_merge.c`: HKCR merged
   view probe (which side backs open/create/query/enum; needs admin).
+  `tlb_cache.c`: typelib cache + PSDispatch/PSOAInterface proxy/stub probe and benchmark (032).
   `com_peruser.c`: COM vs per-user classes (CLSID/ProgID/Interface/OleRegGetUserType,
   RegOpenUserClassesRoot); run elevated and non-elevated, modes as argv[1] for fresh processes.
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
