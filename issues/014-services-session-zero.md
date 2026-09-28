@@ -118,3 +118,12 @@ the caller's session (a service sees just session 0 "Console").
   into `\Sessions\<console>\Windows\WindowStations\WinSta0`.
   Repro (session-0 child broadcasts, session-1 parent window counts): master 1,
   branch 0, fixed 1.
+
+## Confirmed on the real install path (installer driver, build/ at d1fbaf04951, without 014)
+Web installer, prefix `inv`, 2026-09-28 01:18: `cer.msi` (Autodesk CER Service 7.2.5)
+StartServices waits the 10 s pipe timeout, `err:msi:ITERATE_StartService failed to
+start service L"Autodesk CER Service" (1053)` → msi 1627 → bundle rolls back,
+UI "Install error ... Error 1627" (dialog left open). `tasklist`: services.exe
+in session 1. VM installed the same package fine. Needs build/ rebuilt at integ
+tip (77645e2b221 has 014) to continue.
+![Error 1627](attachments/014-install-error-1627-cer.png)

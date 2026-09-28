@@ -70,3 +70,7 @@ windowsdesktop-runtime-10.0.9 and VC_redist.x86 S_OK; real AppxSignature.p7x
 (InvPro, InvCore adix, ODIS metadata) S_OK. crypt32 + wintrust suites on
 master+fix and integ+fix: same as baselines (only crypt32:chain 2 failures,
 pre-existing).
+
+## Verified (installer driver, build/ d1fbaf04951)
+`wvt` on VC_redist.x64 and aspnetcore-runtime: S_OK, 1 counter signer (as VM).
+The installer rerun gets past the 3rdParty signature checks (next stop: 014).

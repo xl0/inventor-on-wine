@@ -15,7 +15,8 @@
   — worker rules, reporting, build/test recipe (the brief every worker reads).
 - `wt/NNN/`, `wt/NNN-build/`, `wt/NNN-prefix/` — per-issue wine-src worktree
   (branch `fix/NNN-slug`), its build, its prefix.
-- `prefixes/<name>/` — Wine prefixes. Create with
+- `prefixes/<name>/` — Wine prefixes. New prefixes symlink `users/<you>/Documents` to the
+  host home (read-only in the sandbox): replace it with a real dir. Create with
   `WINEDLLOVERRIDES="mscoree,mshtml=" build/wine wineboot -u`
   (otherwise Mono/Gecko download dialogs hang on a headless display).
 - `tests/` — our small mingw-built test programs (run on Wine and the VM).

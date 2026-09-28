@@ -26,9 +26,15 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [ ] Inventor 2027.1 install (web installer, no optional components)
   - VM: installed, was finalizing when paused. Do NOT click Start/launch
     (starts the 30-day trial).
-  - Wine (integ 2d9c0d96550, 001–013): rerun (optional components unticked;
-    Content Libraries already installed) fails ~1 min in: Error 15, WinVerifyTrust
-    on VC_redist.x64.exe → 016. Error dialog left open (don't click Exit).
+  - Wine (build/ d1fbaf04951, 001–013+016; optional components unticked,
+    Content Libraries already installed): fails ~30 s in, Error 1627 = CER
+    Service start 1053 (014, in integ but not in build/). Next: rebuild build/
+    at integ tip, rerun. Error dialog left open (don't click Exit).
+  - Prefix fixes: users/xl0/Documents was a symlink to the read-only host
+    ~/Documents (RSA Engine "REP_Init: Cannot create ...\Documents\Autodesk
+    \Output"); now a real dir. A stray `WindowsUpdate\Auto Update\RebootRequired`
+    key (created 00:29:07 during a rollback, writer unknown; ODIS then demands a
+    restart) was deleted.
 - [ ] Wine bugs: one file each in `issues/` (index below). Coordinator drives
   Inventor and finds bugs; workers fix one issue each in a wine-src worktree.
   - 001 SxS app config privatePath probing — merged
