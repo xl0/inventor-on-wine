@@ -1,5 +1,5 @@
 # 029 winex11: hidden managed windows stay mapped on an X server without a window manager
-Status: open (draft) · Owner: – · Branch: – · Found in: prefixes/inv on :98 (integ 6c63dc3c499), Inventor trial welcome dialog
+Status: wontfix (test-environment gap: no WM on :98; coordinator will run openbox there) · Owner: – · Branch: – · Found in: prefixes/inv on :98 (integ 6c63dc3c499), Inventor trial welcome dialog
 
 ## Symptom
 Inventor's "Welcome to your trial" dialog (AdskLicensingAgent, WebView2 in a `webview`

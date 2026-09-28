@@ -87,7 +87,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — open
   - 029 winex11: hidden managed windows stay mapped without a WM (waits for WM_STATE
-    forever; trial welcome dialog leaves a white box on :98) — open (draft); infra choice
+    forever; trial welcome dialog leaves a white box on :98) — infra: run openbox on :98
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
     retry delay before software fallback (low; clean-room blocks implementing)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
