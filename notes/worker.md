@@ -68,6 +68,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Prefixes with auto-start Autodesk services: on builds with 014 (services in
   session 0) wineserver idles once user processes exit; older builds hang on
   `wineserver -w` — use `wineserver -k` to be safe.
+- X display numbers: :98/:99 are the Inventor GPU displays, tools/regress.sh
+  uses :120–:151 for its shards (and cleans them up) — pick your own Xvfb
+  display from :200 up.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
 - Conformance test on Wine: `wt/NNN-build/wine

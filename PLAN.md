@@ -122,6 +122,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 040 custom title bar vs WM decorations · M 041 file dialog breadcrumb
   - L 042 popup shadows black · M 043 file dialog selection
   - L 044 DateTimePicker gap · O 045 maximized undecorated offset (draft)
+  - M 046 comctl32 subclass: cross-thread/process, nested removal UAF, v5/v6 split
+    (probable cause of an Inventor startup crash; not confirmed)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
