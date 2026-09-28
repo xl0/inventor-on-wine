@@ -73,9 +73,10 @@ commits or screenshots). Read-only mode may remain after expiry.
     one cold start hung on the first doc (048); view images still 037.
     Real-world data (`samples`/`samples2016`: Autodesk's official 2022 + 2016 sample sets,
     69 docs each incl. 1313-leaf Buffer Prep Skid; inv3/:100): everything matches the VM
-    (counts, BOM, mass, migration, save/reopen, older DWG) except Arm_Rest.ipt + Fan
-    Connector.ipt (053), last-digit rebuild volumes (055), intermittent crash (056) and
-    047. ~1.9x the VM overall; big-asm open/reopen 2.5-7x, save ~1.2x.
+    (counts, BOM, mass, migration, save/reopen, older DWG) since 053/054/056 (integ
+    c09f08e4924; samples2016 full PASS) except last-digit rebuild volumes (055) and a
+    full-2022-run sequence: Buffer Prep Skid save-as E_FAIL, then Inventor dies in Fan Cover
+    Mold Rebuild2 (throw from catch, 056 notes). ~1.9x the VM (057); big-asm open 2.5-7x.
   - UI pass by hand (:98, integ d53133a66a1; worker report has details):
     | area | result |
     |---|---|

@@ -81,3 +81,7 @@ kernel32 file.c:439/6926 also fail with master's tests) and on Wine x86_64/i386.
 ucrtbase shell32 msi setupapi + advapi32 ole32 scrrun shlwapi cmd xcopy msvcp140 msvcr100
 msvcr90 cabinet mscms wininet, 354 units) vs master baseline: 0 worse.
 Remaining gaps and risks: notes/wine/delete.md.
+
+## Verified in Inventor (build c09f08e4924, inv3)
+.NET Directory.Delete(C:\t\samples\2022, true) with that samples.ipj the active project
+(watched by Inventor) now succeeds; tests/delete_open_dir.exe matches Win11 in all 4 cases.

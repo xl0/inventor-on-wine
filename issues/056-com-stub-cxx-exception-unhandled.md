@@ -64,3 +64,13 @@ Probe `tests/stub_exception.c` (modes disp/sta/mta/direct/wrap, 5 exception case
 - Test: ole32 marshal.c test_server_exception (C++ noncontinuable, AV, RPC_X_BAD_STUB_DATA,
   then a normal call). Passes on the VM (x86_64, i386) and on Wine; unfixed Wine dies.
 Probe on patched Wine matches Windows in every mode.
+
+## Retest in Inventor (build c09f08e4924, inv3): NOT fixed for this case
+Full `samples` (2022 set) run: Inventor still died in Rebuild2 of Fan Cover Mold.iam, with the same
+stack (dump inv3 Temp\Inventor260928175655.dmp). Frame 0: RaiseException from vcruntime140_1
+call_catch_block4, i.e. a C++ throw inside a catch block in fwsrv, below IDispatch_Invoke_Stub.
+The new combase handler didn't get it, and CER wrote a dump. Either Wine's unwinder can't dispatch a
+throw from a catch funclet to outer SEH frames, or Inventor calls its crash reporter itself.
+It's reproducible in the sequence (it happened in 2 of 3 full runs), never in isolation: the step before
+is always "save as Buffer Prep Skid.iam" failing with E_FAIL after ~55-90 s (it passes alone, and on the VM).
+Next: probe a throw-from-catch (MSVC EH) in a cross-apartment call; look at what that save fails on.

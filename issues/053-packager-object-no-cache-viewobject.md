@@ -88,3 +88,8 @@ regress (packager ole32 oleaut32 olecli32 shell32) vs master 4e819f054dd: 0 wors
 Retest: `INVSCEN_ONLY=Arm_Rest tools/invscen/run.sh samples` and Personal Computer.iam
 (Fan Connector Features/Volume, Rebuild2), with `WINEDEBUG=+packager` to catch the
 next missing method.
+
+## Verified in Inventor (build c09f08e4924, inv3)
+Arm_Rest.ipt opens, rebuilds, saves, reopens: 4 features / 3 sketches, same as the VM.
+Personal Computer.iam: 5060.066 cm3 (VM 5060.066) and Rebuild2 True; Fan Connector loads.
+Remaining packager FIXMEs: QI IOleLink (Windows also E_NOINTERFACE), IRunnableObject {00000126}; harmless so far.
