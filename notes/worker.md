@@ -86,6 +86,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   wt/NNN-regress -j 8 -m '^(ntdll|kernel32)$'`, then `compare` against the same
   filter run on `wt/regress-master-build`. Full runs are the coordinator's.
 
+After killing a wineserver, check for orphaned Wine processes of that prefix
+(its WINEPREFIX in /proc/PID/environ, started before the new server) — they can
+survive and hold windows/ports (74 of them once).
 Before finishing: `wineserver -k` every prefix you started and kill your
 Xvfb/Xorg servers by PID or display number (never `pkill Xvfb` / `pkill wine`:
 other agents run their own). Beware `pgrep -f PATTERN` / `pkill -f`: the
