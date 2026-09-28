@@ -155,7 +155,6 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 044 DateTimePicker gap · O 045 maximized undecorated offset (draft)
   - M 046 comctl32 subclass: cross-thread/process, nested removal UAF, v5/v6 split
     (probable cause of an Inventor startup crash; not confirmed)
-  - O 049 SysLink `<a>` with extra attributes shown as raw markup (draft)
   - L 050 Electrical Catalog Browser unzip custom action (MSI 1603)
   - O 047 Inventor crash: NULL read in ogsdevicedx11 on TBB thread (in progress)
   - O 048 cold-start hang, trial popup "We're having trouble" (maybe shared licensing)
@@ -163,6 +162,14 @@ commits or screenshots). Read-only mode may remain after expiry.
   - X 050 Electrical Catalog CA needs inbox tar.exe → tools/tar.sh (bsdtar 3.8.8)
   - M 051 msi removed pre-existing empty folders on uninstall/rollback (data loss)
   - X 052 junctions lost when copying prefixes without xattrs (inv2/inv3 repaired)
+  - O 053 packager: Package object lacks IViewObject2/IOleCache/IDataObject (Arm_Rest, Fan Connector)
+  - O 054 DeleteFile/RemoveDirectory lack POSIX semantics (name stays while handles open)
+  - L 055 ucrtbase math last-bit differences; sample rebuild volumes differ 5e-6..5e-5 (unconfirmed link)
+  - O 056 COM stub lets C++ (noncontinuable) exceptions escape: Inventor crashes instead of RPC_E_SERVERFAULT
+  - O 053 packager OLE object lacks default-handler ifaces (sample parts) — in progress
+  - O 054 POSIX delete semantics (Directory.Delete with watchers) — in progress
+  - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
+  - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
