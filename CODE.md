@@ -68,8 +68,18 @@
   use analyzes (mostly 1 core: 7 MB exe 1.5 min, 44 MB Installer.exe 35 min;
   cached queries 4-6 s, `strings` ~30 s). Clean-room guard refuses MS system paths and
   PEs whose version-info CompanyName or Authenticode O= says Microsoft
-  (also refuses Wine builtins, whose CompanyName is Microsoft).
+  (also refuses Wine builtins, whose CompanyName is Microsoft). The check
+  lives in `tools/msbin.py FILE...` (also used by transplant.sh).
 - Prefixes: `smoke` (plain), `dxvk` (smoke + DXVK/vkd3d-proton).
+- `tools/transplant.sh [footprint|fetch|build]` — prefix `inv-vm`: copy of
+  pristine `inv-net48` + Inventor 2027.1 transplanted from the VM (diff against
+  snapshot `base`, via a temporary second VM): Autodesk/FlexNet files as shipped
+  (incl. app-local MS DLLs), junctions as symlinks, filtered registry delta
+  (C:\Users\dev rewritten, Run keys dropped); VC++ 14.50 + .NET 10.0.9 via the
+  MS redists Autodesk ran. Data + manifest in `inst/transplant/`. Stopgap until
+  the Wine install works: bugs seen only there may be transplant artifacts.
+  Test display: own Xorg :107 on GPU 34:00.0 (`inst/transplant/xorg-107.conf`,
+  `DRI_PRIME=pci-0000_34_00_0`).
 
 # Running Wine with GPU
 
