@@ -10,8 +10,10 @@ Milestones (Inventor): install → licensing service → sign-in → main window
 new part → sketch/extrude → save/reopen → assemblies → drawings → export.
 Drive via Inventor COM API where possible, screenshots only for UI/render checks.
 
-Licensing: 30-day trial per Autodesk account — don't launch Inventor (starts
-the clock) until the harness is ready. Read-only mode may remain after expiry.
+Licensing: 30-day trial per Autodesk account. User approved starting the clock
+(2026-09-27). First launch needs the user's Autodesk sign-in (credentials are
+the user's: leave the sign-in page on :98 for them via VNC; never screenshot/
+commit it). Read-only mode may remain after expiry.
 
 ## TODO
 - [x] Wine built from source (new WoW64), prefix boots
