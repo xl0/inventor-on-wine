@@ -66,6 +66,14 @@ commits or screenshots). Read-only mode may remain after expiry.
     Env: WPF browser lacks symbol glyphs ([●] grounded mark shows as box: no
     Segoe UI Symbol-type font in C:\windows\Fonts); :98 Xorg uses xfree86
     keycodes, Wine expects evdev → wrong GetKeyNameText ("Super_L" for End).
+- [ ] Extra coverage (queued, subagents): real-world sample data on inv3/:100
+  (running) → soak loop (run.sh all for hours, crashes/memory/timing drift) on
+  :98 after 047 → specialised environments (Nastran, Frame Generator, Design
+  Accelerator, Tube&Pipe/Cable if content allows, Anark 3D PDF, print) →
+  environment variations (non-ASCII/long paths, locale, HiDPI, clipboard,
+  file associations) → after 037: visual styles/Studio/ray tracing/viewport
+  perf/picking → installer repair/modify/uninstall. GPU passthrough to the VM
+  (real NVIDIA reference instead of WARP) after the user enables IOMMU.
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
