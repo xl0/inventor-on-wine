@@ -24,6 +24,14 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] DXVK / vkd3d-proton installed and presenting on RTX
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
 - [x] Inventor 2027.1 install (web installer, no optional components)
+- [ ] Test campaign (user request, after outstanding issues): extensive API +
+  UI tests via subagents, each vs the VM. API (tools/invscen): features
+  (fillet/chamfer/hole/pattern/shell/revolve/sweep/loft, sheet metal), file I/O
+  and export/import (STEP/IGES/STL/DWG/DXF/PDF), assemblies (constraints, BOM,
+  large generated asm), drawings (section/detail/dims/parts list), iLogic/VBA,
+  per-step timings. UI (:98): ribbon tabs + main dialogs, manual sketch/extrude,
+  viewport navigation + visual styles screenshot-diffed vs VM (wined3d, then
+  DXVK), browser/context menus/undo, Assistant panel, help links.
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
