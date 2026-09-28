@@ -30,39 +30,9 @@ shopt -s nocasematch
 if [[ $BIN =~ /(windows/system32|syswow64|winsxs|microsoft\.net)/ ]]; then
 	echo "decomp.sh: refusing $BIN: Microsoft system path (clean-room rule)" >&2; exit 3
 fi
-python3 - "$BIN" <<'PY' || exit 3
-import struct, sys
-d = open(sys.argv[1], 'rb').read()
-why = []
-# VS_VERSIONINFO blocks: find CompanyName value.
-key = 'VS_VERSION_INFO'.encode('utf-16le')
-cn = 'CompanyName\0'.encode('utf-16le')
-i = d.find(key)
-while i >= 6:
-    blk = d[i - 6:i - 6 + struct.unpack_from('<H', d, i - 6)[0]]
-    j = blk.find(cn)
-    if j >= 0:
-        j += len(cn); j += -j % 4
-        v = blk[j:].split(b'\0\0\0')[0] + b'\0'
-        v = v[:len(v) & ~1].decode('utf-16le', 'replace')
-        if 'microsoft' in v.lower():
-            why.append('CompanyName ' + v.strip('\0'))
-            break
-    i = d.find(key, i + 1)
-# Authenticode: security data directory (index 4) -> cert blob.
-if d[:2] == b'MZ':
-    pe = struct.unpack_from('<I', d, 0x3c)[0]
-    if d[pe:pe + 4] == b'PE\0\0':
-        opt = pe + 24
-        dirs = opt + (96 if struct.unpack_from('<H', d, opt)[0] == 0x10b else 112)
-        off, size = struct.unpack_from('<II', d, dirs + 4 * 8)
-        # organizationName (2.5.4.10) == "Microsoft Corporation" in any cert of the signature
-        if size and b'\x55\x04\x0a\x0c\x15Microsoft Corporation' in d[off:off + size] or \
-           size and b'\x55\x04\x0a\x13\x15Microsoft Corporation' in d[off:off + size]:
-            why.append('Authenticode cert O=Microsoft Corporation')
-if why:
-    sys.exit('decomp.sh: refusing %s: %s (clean-room rule)' % (sys.argv[1], '; '.join(why)))
-PY
+if m=$(python3 "$ROOT/tools/msbin.py" "$BIN"); then :; else
+	echo "decomp.sh: refusing ${m/$'\t'/: } (clean-room rule)" >&2; exit 3
+fi
 
 SHA=$(sha256sum "$BIN" | cut -d' ' -f1)
 PROJ=$CACHE/$SHA

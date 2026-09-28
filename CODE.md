@@ -22,7 +22,7 @@
   `d3d11_present.c`: device + swapchain + clear/present + readback, exit 0 = ok.
   Build: `x86_64-w64-mingw32-gcc -O2 -o X.exe X.c -ld3d11 -ldxgi -luuid`.
   `p7x_winverifytrust.c` (+`p7x_gen.py`): msix-SDK-style signature checks on an
-  AppxSignature.p7x. `regloadkey_hive.c`: RegLoadKey of a binary hive.
+  AppxSignature.p7x. `regloadkey_hive.c`: RegLoadKey of a binary hive + tree dump.
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).

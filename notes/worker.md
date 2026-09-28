@@ -10,6 +10,8 @@ relevant `notes/wine/*.md` first.
   black-box only. Third-party app code (Autodesk etc.) may be disassembled:
   `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports` (Ghidra, cached
   per binary; refuses Microsoft binaries — don't work around the guard).
+  Running Microsoft redistributables is fine (app-local copies the app ships,
+  redist installers, winetricks): keep prefixes faithful to a real install.
 - Upstreamable Wine style: match surrounding code, smallest correct diff, no
   speculative fallbacks. Tests only for what realistically regresses; they
   must pass on the VM and on Wine (`todo_wine` only for deliberate leftovers).
