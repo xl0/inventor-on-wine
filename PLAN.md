@@ -48,6 +48,9 @@ commits or screenshots). Read-only mode may remain after expiry.
     Not testable: VBA (not installed), Apprentice (not registered) — same on VM.
     Speed: suites 1.1-2.5x the VM; constraints 5-10x (mate/flush 2.7 s vs
     0.4 s, angle 2.0 vs 0.2), placing 200 occurrences 19 s vs 7 s.
+    2026-09-28 rerun, integ 228616fa47c, cold + warm: all campaign PASSes hold
+    except cold asmbig save (crash in ogsdevicedx11, 047, also in campaign dumps);
+    one cold start hung on the first doc (048); view images still 037.
   - UI pass by hand (:98, integ d53133a66a1; worker report has details):
     | area | result |
     |---|---|
