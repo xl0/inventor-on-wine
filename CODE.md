@@ -125,6 +125,8 @@ are not present here.
   `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
   callback, cross-thread/process calls (046).
   `syslink_attr.c`: SysLink `<a>` parsing with extra attributes (049).
+  `stub_exception.c [MODE]`: exception raised in a COM server method: cross-apartment IDispatch/IPersist
+  calls, the stub called directly, a custom stub; per case in a child (056).
   `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
   then paths/CreateProcess through it (052).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at

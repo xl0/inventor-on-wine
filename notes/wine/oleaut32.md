@@ -11,3 +11,11 @@
   a 4 MB typelib). Keep ITypeLib2_Constructor_MSFT free of per-reference list scans.
 - Probe/benchmark: tests/tlb_cache.c (builds a 2000-typeinfo typelib, measures
   marshal/unmarshal per IID; args hold/rename/swap/n=N).
+
+# COM server-side exceptions (056)
+
+- Windows: any exception escaping a server method called through a proxy (C++ 0xE06D7363,
+  AV, noncontinuable or not) → caller gets RPC_E_SERVERFAULT, server keeps running.
+  The channel catches it (combase rpc_execute_call), not the stub: CStdStubBuffer_Invoke
+  only handles exceptions outside the STUB_CALL_SERVER phase (unmarshal errors → HRESULT).
+  NdrStubCall2 / widl stubs report the phase through *pdwStubPhase.
