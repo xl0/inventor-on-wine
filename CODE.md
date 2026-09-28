@@ -37,7 +37,7 @@
   `com_peruser.c`: COM vs per-user classes (CLSID/ProgID/Interface/OleRegGetUserType,
   RegOpenUserClassesRoot); run elevated and non-elevated, modes as argv[1] for fresh processes.
   `dosdev_name.c`: DOS device names in paths (035). `wintext.c` (`wintext.exe [TITLE]`):
-  dump visible top-level windows + children (class, text, rect, pid), for dialogs that don't render.
+  dump visible top-level windows + children (class, text, rect, pid, styles).
   `dragdrop_revoke.c`: RegisterDragDrop/RevokeDragDrop across threads/apartments/processes (034).
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
@@ -72,10 +72,11 @@
 - `inst/` — installer work: `webinstall/` (7z-extracted web installer), logs.
 - :98 runs openbox (started by x/start.sh); without a WM Wine never unmaps
   hidden windows (issue 029).
-- `x/shot.sh [png]` screenshots :98; `x/vnc.sh` (re)starts x11vnc on
-  127.0.0.1:5902 (-noxdamage) and turns off :98 screen blanking.
-  Root GetImage there is packed 24 bpp despite a 32 bpp header (NVIDIA
-  headless quirk); shot.sh handles it, generic xwd readers squash x by 0.75.
+- `x/shot.sh [png [N]]` screenshots :98 (or :N) with a plain root XGetImage;
+  `x/vnc.sh` (re)starts x11vnc on 127.0.0.1:5902 (-noxdamage) and turns off
+  :98 screen blanking. Never `xwd -root`: Wine's per-process X colormaps make
+  xwd take its multi-colormap path (packed 24 bpp) and draw Wine dialogs black (036).
+  `xwd -id WIN` of a single window is fine.
 - `vm/input.py click X Y | key COMBO | type TEXT` — VM input over QMP.
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
   virtiofsd 1.14.0 static zip sha256 2e4fe957…8978e (GitLab upload, no

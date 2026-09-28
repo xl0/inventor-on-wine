@@ -15,7 +15,8 @@ static BOOL CALLBACK child(HWND h, LPARAM depth)
     GetWindowTextA(h, text, sizeof(text));
     GetWindowRect(h, &r);
     GetWindowThreadProcessId(h, &pid);
-    printf("%*s%p pid %04lx %s '%s' %ldx%ld+%ld+%ld%s\n", (int)depth * 2, "", h, pid, cls, text, r.right - r.left, r.bottom - r.top, r.left, r.top,
+    printf("%*s%p pid %04lx %s '%s' %ldx%ld+%ld+%ld style %08lx ex %08lx%s\n", (int)depth * 2, "", h, pid, cls, text,
+           r.right - r.left, r.bottom - r.top, r.left, r.top, GetWindowLongA(h, GWL_STYLE), GetWindowLongA(h, GWL_EXSTYLE),
            IsWindowVisible(h) ? "" : " hidden");
     return TRUE;
 }

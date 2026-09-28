@@ -41,7 +41,7 @@ commits or screenshots). Read-only mode may remain after expiry.
     detail/dims/parts list/sheet formats, .idw), STEP/IGES/SAT/Parasolid/STL
     round trips, PDF/DWG/DXF export and iLogic PASS with the VM's values.
     Wine-only failures: SaveAsBitmap unshaded (037), view extents/cold-start
-    ActiveView (037), black Inventor dialogs (036), con.iam (035, fixed),
+    ActiveView (037), con.iam (035, fixed),
     Inventor crashes in RevokeDragDrop (034, 3 in ~1 h of suite runs).
     Infra: prefix has no Wine Gecko; Inventor's first STEP import per session
     loads mshtml → "install Gecko" prompt blocks Inventor (export runs last).
@@ -128,8 +128,8 @@ commits or screenshots). Read-only mode may remain after expiry.
     foreign pointer — merged (build/ rebuild pending). Pending: apply the
     crash-capture .reg (issue 034) to inv/inv2 when Inventor is stopped
   - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged
-  - 036 Inventor dialogs render black (DWG export wizard, plain #32770
-    message box) — queued (needs an Inventor)
+  - 036 "black" Inventor dialogs — not a Wine bug: `xwd -root` artifact (Wine's
+    per-process colormaps); x/shot.sh now uses a plain XGetImage, dialogs render
   - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
     (+ second Inventor env inv2 on :99)
   - 038 NTFS alternate data stream name syntax unsupported (low)

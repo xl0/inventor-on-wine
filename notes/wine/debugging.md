@@ -11,8 +11,10 @@
 - Narrow relay: set `HKCU\Software\Wine\Debug\RelayInclude` (e.g.
   `kernel32.Sleep;kernelbase.Sleep`) then run with `WINEDEBUG=+relay`.
   Kill fast — a spinning caller writes ~100 MB/s.
-- Display :98 screenshots: only trust `x/shot.sh` (root GetImage on the
-  headless NVIDIA server is packed 24 bpp despite a 32 bpp header).
+- Display :98 screenshots: only trust `x/shot.sh` (plain root XGetImage). `xwd -root`
+  switches to its multi-colormap path whenever a Wine window is mapped (winex11 gives
+  each process its own colormap; openbox installs the focused one): 24 bpp packed
+  output, and some Wine windows (dialogs over Inventor) come out black (036).
   Cross-check coords with Win32 `GetWindowRect` vs `xwininfo -root -tree`.
 - Map a winedbg address in third-party code to pseudo-C: `tools/decomp.sh
   BIN decomp ADDR` (VA if the module sits at its preferred base, else
