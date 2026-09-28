@@ -26,6 +26,11 @@ relevant `notes/wine/*.md` first.
 - The issue file is your memory: keep Status / findings current so another
   worker can resume from it. Put reusable, non-obvious Wine knowledge in
   `notes/wine/<topic>.md` (small targeted edits; others edit them too).
+- Screenshots: add one when the screen state is the evidence (errors,
+  rendering bugs, before/after of a UI fix). Crop to the window, save 256-colour
+  PNG as `issues/attachments/NNN-short-name.png`, link it from the issue file.
+  The repo is public: never capture Autodesk sign-in/account pages or anything
+  showing email, license or machine identity.
 - Brief statements are observations or suspicions; verify before building on them.
 
 ## Check the harness first

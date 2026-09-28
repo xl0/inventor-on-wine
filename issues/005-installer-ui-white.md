@@ -15,6 +15,9 @@ Status: fixed (uncommitted, awaiting review) · Owner: worker · Branch: fix/005
   following update" → Next). The user also once saw a white window during the
   003 worker's session (old build), so it may be intermittent, not a regression.
 
+![white window](attachments/005-white-window.png) — correct render for
+comparison: ![correct](attachments/003-window-correct.png)
+
 ## Suspected (unverified)
 Regression from 001 (app configs now read for every activation context — e.g.
 an Electron exe with a `.config`?) or 002 (query fallback). Or intermittent.

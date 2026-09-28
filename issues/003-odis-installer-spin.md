@@ -23,6 +23,12 @@ button. Clicking Next seemed to only change the button's focus look.
   ret=140b534bd`). On the VM the finished installer's Installer.exe still runs
   one thread at 1.0 CPU-s/s (45 min on one thread).
 
+Old x/shot.sh output (squashed to 0.75 width, colour fringes) vs a correct capture:
+
+![squashed full screen](attachments/003-shot-squashed-full.png)
+![squashed window](attachments/003-shot-squashed-window.png)
+![correct window](attachments/003-window-correct.png)
+
 ## Leftover differences vs Windows (not blocking)
 - DDA-UI.log: ADP analytics never initialize on Wine (`ADPUtil initialize.
   sessionID:` empty, `setDDASessionID:` empty); on the VM both are GUIDs.

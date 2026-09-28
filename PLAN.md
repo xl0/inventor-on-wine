@@ -33,6 +33,7 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
   - 004 CreateProcess should fail (14001) on missing manifest dependency (low)
   - 005 lost GPU window content after expose (win32u) — merged
   - 006 winex11 empty surface clip = no clip (white flash; low)
+  - 007 install fails with "Error 101" at ~5%
 - [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
   runs it. Tracks upstream master tip: periodically recreate integ on current
   master + open fix branches, rerun tests + the Inventor steps.
