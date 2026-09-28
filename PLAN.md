@@ -24,7 +24,7 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] DXVK / vkd3d-proton installed and presenting on RTX
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
 - [x] Inventor 2027.1 install (web installer, no optional components)
-- [ ] First launch + sign-in. inv-vm (transplant): WebView2 renders the
+- [ ] First launch + sign-in. inv-vm (transplant, now idle; :107 stopped): WebView2 renders the
   licensing page. Sign-in is OAuth in the system browser (IdentityManager
   LaunchNativeBrowser; code returns via a custom URI protocol) → install Edge
   in the prefix as default browser, keep the round trip inside Wine.

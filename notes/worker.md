@@ -78,7 +78,9 @@ squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
 
 Before finishing: `wineserver -k` every prefix you started and kill your
 Xvfb/Xorg servers by PID or display number (never `pkill Xvfb` / `pkill wine`:
-other agents run their own) (unless the brief says to leave something running).
+other agents run their own). Beware `pgrep -f PATTERN` / `pkill -f`: the
+pattern also matches your own shell's command line — match exact argv with
+`ps -eo pid,args | awk ...` instead (unless the brief says to leave something running).
 
 ## Final report
 Concise: result (root cause / fix), new Windows ground truth, commits, test
