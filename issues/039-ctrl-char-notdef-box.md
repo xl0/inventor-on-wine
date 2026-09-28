@@ -1,5 +1,5 @@
 # 039 Control characters (CR) drawn as .notdef boxes in text output
-Status: fixed · Owner: worker 039 · Branch: fix/039-ctrl-char-glyphs · Found in: UI test campaign (Application Options)
+Status: merged, verified · Owner: worker 039 · Branch: fix/039-ctrl-char-glyphs · Found in: UI test campaign (Application Options)
 
 ## Symptom (integ d53133a66a1, :98)
 Inventor's combo box strings end in `\r` (read with CB_GETLBTEXT: "Smooth\r",
@@ -59,3 +59,10 @@ Known deviations (deliberate, small): GetGlyphOutline/GetCharWidth32/ABC and
 GetTextExtentPoint32 now give 0 for these chars (Windows: .notdef, except
 Point32 C1); GetCharacterPlacement still returns glyph 0 (Windows: space glyph).
 - Wine after fix: ![wine fixed](attachments/039-cr-text-wine-fixed.png)
+
+## Verified in Inventor
+2026-09-28, build/ integ 42f83791c78, :98 prefixes/inv: Application Options
+Display (combo texts and MMB dropdown list), Colors, Hardware show "Pan",
+"Smooth", "Default - Gray", "1 Color", "DirectX 11" without boxes, as on the VM.
+Ribbon labels and model browser text unchanged/clean.
+- Wine fixed: ![wine fixed](attachments/039-appoptions-fixed.png)
