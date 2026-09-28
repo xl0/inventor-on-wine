@@ -123,7 +123,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 042 popup shadows black · M 043 file dialog selection
   - L 044 DateTimePicker gap · O 045 maximized undecorated offset (draft)
   - X 003 installer "hang" (harness artifact)
-  - Pending chores: ntoskrnl test todo_wine after 014 (fixup in progress);
+  - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
   on master; `build/` runs it. Tracks upstream master tip: periodically
