@@ -174,6 +174,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 053 packager IViewObject2 + IOleObject + IPersistStorage::Save (Arm_Rest.ipt)
   - M 054 POSIX delete semantics in DeleteFile/RemoveDirectory (+3 server fixes)
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
+  - O 057 multi-file assembly open/reopen 2.5–7x slower (perf)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
