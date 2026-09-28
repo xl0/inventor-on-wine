@@ -21,8 +21,14 @@
 - HKCR merged view (fix/028, kernelbase): HKCU\Software\Classes wins over HKLM per key and per
   value; enumeration is the sorted union; new keys go to HKLM; handles are tagged `(h & 3) == 2`.
   Windows' user side is `\REGISTRY\USER\<sid>_Classes` (HKCU\Software\Classes links to it); Wine's
-  is `\Registry\User\<sid>\Software\Classes`. combase/ole32 still use a private HKLM-only classes
-  root. Before 028 Wine had no merge at all. Ground truth: `tests/hkcr_merge.c`, `tests/hkcu_proto.c`.
+  is `\Registry\User\<sid>\Software\Classes`. Before 028 Wine had no merge at all.
+  Ground truth: `tests/hkcr_merge.c`, `tests/hkcu_proto.c`.
+- COM (combase/ole32, fix/030) keeps a private classes root that ignores RegOverridePredefKey:
+  RegOpenUserClassesRoot (tagged, merged) for non-elevated processes, HKLM only when elevated
+  (Windows ignores all per-user COM registrations in elevated processes). Wine processes are
+  limited unless the manifest asks for admin. Ground truth: `tests/com_peruser.c`.
+- The HKCU `Software\Classes\Wow6432Node\{CLSID,Interface,...}` redirection markers are empty
+  keys: deleting an "empty" HKCR key can remove them (advapi32 test_redirection did).
 - 32-bit view of HKCR: Windows redirects the user side too (`<sid>_Classes\WOW6432Node\CLSID`).
   Wine marks both HKLM and (since the 028 review) HKCU `Software\Classes\Wow6432Node` KEY_WOWSHARE:
   subkeys present there (wine.inf: CLSID, Interface, ...) are redirected, others shared. A

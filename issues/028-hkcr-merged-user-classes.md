@@ -107,3 +107,5 @@ hide real classes, so not a plain switch to Reg*).
 Minor (confirmed vs VM): merged RegEnumKeyEx ignores a missing KEY_ENUMERATE_SUB_KEYS (VM: 5).
 Theoretical: enum cache keyed by handle value (stale after CloseHandle/NtClose + handle reuse);
 two threads enumerating the same HKCR handle restart the walk each call (O(n^2)).
+Resolved by 030 (combase/ole32 use the merged view via RegOpenUserClassesRoot, HKLM only when
+elevated, like Windows). Final upstream-ordered series incl. 028: fix/028-030-series.
