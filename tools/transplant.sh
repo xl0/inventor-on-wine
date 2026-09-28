@@ -16,7 +16,7 @@
 # desktop/aspnetcore) are installed by running the same hash-pinned redist
 # installers Autodesk ran; nothing is copied from C:\Windows. WebView2 (part of
 # Windows 11, needed by AdskLicensingAgent's sign-in UI) comes from Microsoft's
-# pinned standalone installer in deps/, same version as the VM; so does Edge (the default
+# pinned standalone installer in deps/ (tools/edge.sh), same version as the VM; so does Edge (the default
 # browser, where the Autodesk sign-in form opens). HKLM/HKCU Run
 # entries are not imported (Autodesk Access would autostart on every boot).
 # Data: inst/transplant/ (gitignored): base/ cur/ dumps, files/ (C:\ mirror),
@@ -95,14 +95,6 @@ REDIST=(
 	"x64/dotNet/100/windowsdesktop-runtime-10.0.9-win-x64.exe d4eb932ad12ec61cb5293348021dbaa43fa373bc19ed1876e9dbf8cb38633ad3 /install /quiet /norestart"
 	"x64/aspNetCore/100/aspnetcore-runtime-10.0.9-win-x64.exe e81a9577f1839f83bda527882277f228e865968264ddc0fe4fea51ff1c0d7fa6 /install /quiet /norestart"
 )
-
-# WebView2 Evergreen Runtime 154.0.4258.37 x64 (= VM), https://go.microsoft.com/fwlink/?linkid=2124701
-WV2=MicrosoftEdgeWebView2RuntimeInstallerX64.exe
-WV2_SHA=771042db15cb5c463bac51a8408e70183d7130e8ac946709384c2223da582c1b
-# Microsoft Edge Stable 154.0.4258.37 x64 enterprise MSI (default browser of Windows 11; the
-# Autodesk sign-in runs in it). URL + sha256 from edgeupdates.microsoft.com/api/products?view=enterprise
-EDGE=MicrosoftEdgeEnterpriseX64-154.0.4258.37.msi
-EDGE_SHA=4d8d922c8b2470084a380142cdfd51b2b28a83af7982d8f023cb8facbf258246
 
 fetch() {
 	# Transplant set: new or changed (sha256) files under Autodesk/FlexNet roots.
@@ -237,19 +229,7 @@ print(f'registry: {len(keep)} keys imported, {len(skip)} skipped, {len(prods)} A
 EOF
 	"$ROOT/build/wine" regedit /S "$(winepath_w "$T/delta.reg")"
 	$wineserver -w
-	# Last: it leaves MicrosoftEdgeUpdate running (and auto-start edgeupdate services).
-	echo "$WV2_SHA  $ROOT/deps/$WV2" | sha256sum -c --quiet
-	"$ROOT/build/wine" "$ROOT/deps/$WV2" /silent /install
-	$wineserver -k
-	# Edge registers itself as the http/https handler (HKCR), like on Windows.
-	# Needs wofutil WofSetFileDataLocation (issue 024).
-	echo "$EDGE_SHA  $ROOT/deps/$EDGE" | sha256sum -c --quiet
-	"$ROOT/build/wine" msiexec /i "$(winepath_w "$ROOT/deps/$EDGE")" /qn
-	# Workaround for issue 026 (sandboxed renderers never start): remove when fixed.
-	local e='"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --no-sandbox'
-	for k in http https; do "$ROOT/build/wine" reg add "HKLM\\Software\\Classes\\$k\\shell\\open\\command" /ve /d "$e \"%1\"" /f; done
-	"$ROOT/build/wine" reg add 'HKLM\Software\Classes\MSEdgeHTM\shell\open\command' /ve /d "$e --single-argument %1" /f
-	$wineserver -k
+	"$ROOT/tools/edge.sh"  # last: leaves MicrosoftEdgeUpdate running
 	manifest
 }
 

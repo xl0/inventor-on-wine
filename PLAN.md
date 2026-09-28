@@ -31,9 +31,12 @@ commits or screenshots). Read-only mode may remain after expiry.
   Status: Edge renders the Autodesk sign-in; email+password accepted, then an
   hCaptcha — needs the user (VNC :107 on 127.0.0.1:5903).
   Rendering fixes found: 023 dxgi Present1 dirty rects; layered colorkey
-  window hides GPU child content. Then switch the main
-  path to prefixes/inv (real install): rebuild build/ with dcomp, launch on
-  :98 (user can watch via VNC), coordinator signs in.
+  window hides GPU child content.
+  prefixes/inv (real install, integ 220b08678ea): Autodesk's installer ran its
+  own WebView2 143 (missing on Wine; in-box 154 on the VM, so skipped there);
+  tools/edge.sh upgraded it to 154 + Edge. Launched from the Start-menu .lnk on
+  :98: licensing page renders, "Sign in with your Autodesk ID" opens Edge
+  (first-run wizard, then the sign-in form). Next: coordinator signs in on :98.
   - VM: installed (not launched yet).
   - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
     base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as

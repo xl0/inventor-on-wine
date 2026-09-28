@@ -96,10 +96,10 @@
   Test display: own Xorg :107 on GPU 34:00.0 (`inst/transplant/xorg-107.conf`,
   `DRI_PRIME=pci-0000_34_00_0`).
   WebView2 Runtime (in-box on Win11, AdskLicensingAgent's sign-in UI) and
-  Microsoft Edge are installed from deps/. Edge is the default browser (its
+  Microsoft Edge are installed from deps/ by `tools/edge.sh` (WINEPREFIX=...;
+  also run on prefixes/inv). Edge is the default browser (its
   installer sets HKCR http/https). The Autodesk sign-in form opens there, and the
   OAuth code comes back through a custom URI scheme registered in the prefix.
-  The real Wine install path needs both too, as OS prerequisites like .NET.
   Edge runs with --no-sandbox (HKCR command) until issue 026 is fixed. Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
   restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
