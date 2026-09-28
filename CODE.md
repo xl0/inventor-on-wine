@@ -47,6 +47,8 @@
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,
   ICommDlgBrowser / IExplorerBrowserEvents / DShellFolderViewEvents log, clicks the first file (041, 043).
+  `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
+  callback, cross-thread/process calls (046).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),

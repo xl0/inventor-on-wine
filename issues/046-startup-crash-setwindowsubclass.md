@@ -1,5 +1,5 @@
 # 046 Intermittent Inventor startup crash in comctl32 SetWindowSubclass
-Status: open (draft) · Owner: - · Branch: - · Found in: 040/041/043 verification
+Status: fixed (pending confirmation in Inventor) · Owner: 046 worker · Branch: fix/046-subclass-thread · Found in: 040/041/043 verification
 
 ## Symptom (integ 13704a2e74b, prefixes/inv, :98)
 Cold start via `tools/invscen/run.sh hello`: Inventor died ~21 s in (CER dialog,
@@ -18,7 +18,30 @@ The subclass list of hwnd 0x300ca holds a pointer overwritten with string data:
 a freed SUBCLASSPROCS node (use-after-free) or a stale/reused "CC32SubclassInfo"
 prop. Dump kept at prefixes/inv/drive_c/users/xl0/AppData/Local/Temp/Inventor260928134655.dmp.
 
-## Next
-Check comctl32 subclass bookkeeping when a subclass is removed from inside its
-own proc / during WM_NCDESTROY, and when the window is destroyed while nested
-DefSubclassProc calls run (Windows keeps the node alive until the stack unwinds).
+## Findings (046 worker)
+Caller (FwUI.dll FUN_1800d37e0, a subclass proc on 0x100e2 reacting to a registered message,
+wp=1): `hwnd = GetWindow(main_frame, GW_ENABLEDPOPUP); SetWindowSubclass(hwnd, ...)`, and on
+wp=2 `RemoveWindowSubclass` of the stored hwnd. That popup may belong to another thread or
+process. Wine's subclass functions had no thread/process check: GetPropW on another process's
+window returns a pointer into that process, and another thread's list can change under us.
+The small dump has no heap, so the owner of 0x300ca can't be proven; this is the only path
+in the code that produces "a list we don't own". No `C:\winedbg-crash.log` exists in inv.
+
+Windows ground truth (Win11, `tests/subclass_probe.c`, x64):
+- v5 uses prop `CC32SubclassInfo`, v6 `UxSubclassInfo`: separate lists and window procs.
+- SetWindowSubclass on another thread's window fails (last error untouched). Get/Remove work
+  from another thread of the same process; Remove then leaves the prop and window proc until
+  the window's thread handles its next message. All four fail on another process's window.
+- Removing a subclass from a nested call, before the outer call reaches it: the outer
+  DefSubclassProc skips it (Wine: used the freed entry -> execute fault).
+- Removing the last subclass while another wndproc sits on top keeps the prop and chain
+  (Wine: freed it, then every message through our proc was dropped with an ERR).
+- Subclass procs see WM_NCDESTROY; GetWindowSubclass still succeeds after DefSubclassProc there.
+
+Fix (4 commits, subclass tests extended; pass on VM + Wine, x86_64 + i386):
+thread/process checks; per-call position frames (nested-removal UAF); keep data while
+another wndproc is on top; v6 uses `UxSubclassInfo`.
+Not fixed: subclass data leaks when a subclassed window is destroyed (no WM_NCDESTROY
+cleanup); cross-thread DefSubclassProc still reads the other thread's data.
+If it recurs: winedbg log (AeDebug, notes/wine/debugging.md) plus `GetWindowThreadProcessId`
+of the SetWindowSubclass hwnd would confirm which owner it was.
