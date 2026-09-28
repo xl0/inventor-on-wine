@@ -32,7 +32,7 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
   - 003 installer "hang" — not a Wine bug (our x/shot.sh was wrong; spin is Autodesk's, same on Windows)
   - 004 CreateProcess should fail (14001) on missing manifest dependency (low)
   - 005 lost GPU window content after expose (win32u) — merged
-  - 006 winex11 empty surface clip = no clip (white flash; low)
+  - 006 winex11 empty surface clip = no clip — merged (build/ not yet rebuilt)
   - 007 install fails with "Error 101" at ~5%
 - [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
   runs it. Tracks upstream master tip: periodically recreate integ on current
@@ -47,4 +47,7 @@ Coordinator drives Inventor, files issues, spawns one worker per issue
 rebuilds `build/`, deletes merged worktrees (branches kept). Workers report
 new bugs as draft issues and infra breakage instead of routing around it.
 Disassembling third-party (Autodesk) code is OK; Microsoft code never.
-Review again after the next batch of workers.
+Review again after the next batch of workers. Notes so far:
+- 006 noticed two possible bugs (cross-process child swapchain doesn't update
+  the owner's clip until SetWindowPos; R/B swap on lavapipe) but didn't file
+  drafts as the guide asks.
