@@ -41,6 +41,7 @@ Windows ground truth (Win11, `tests/subclass_probe.c`, x64):
 Fix (4 commits, subclass tests extended; pass on VM + Wine, x86_64 + i386):
 thread/process checks; per-call position frames (nested-removal UAF); keep data while
 another wndproc is on top; v6 uses `UxSubclassInfo`.
+regress (comctl32|user32|shell32|comdlg32) vs integ 42f83791: 0 REAL, 3 FLAKY (user32 input/winstation).
 Not fixed: subclass data leaks when a subclassed window is destroyed (no WM_NCDESTROY
 cleanup); cross-thread DefSubclassProc still reads the other thread's data.
 If it recurs: winedbg log (AeDebug, notes/wine/debugging.md) plus `GetWindowThreadProcessId`
