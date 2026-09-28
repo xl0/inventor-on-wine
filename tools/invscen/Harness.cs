@@ -30,6 +30,7 @@ static class H
         // Inventor quits on OK): the step can't finish, abort with its text.
         while (!t.Join(Math.Min(5000, Math.Max(0, timeoutSec * 1000 - (int)sw.ElapsedMilliseconds))))
         {
+            Welcome();
             string dlg = Dialogs();
             bool lic = dlg.Contains("'Licensing error'");
             if (!lic && sw.ElapsedMilliseconds < timeoutSec * 1000L) continue;
@@ -57,6 +58,9 @@ static class H
     [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr w, EnumProc f, IntPtr p);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w, out uint pid);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr w);
+    [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr w, out RECT r);
+    [DllImport("user32.dll")] static extern bool PostMessage(IntPtr w, uint m, IntPtr a, IntPtr b);
+    struct RECT { public int L, T, R, B; }
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr w, System.Text.StringBuilder s, int n);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr w, System.Text.StringBuilder s, int n);
     delegate bool EnumProc(IntPtr w, IntPtr p);
@@ -65,6 +69,33 @@ static class H
         var b = new System.Text.StringBuilder(1024);
         if (cls) GetClassName(w, b, b.Capacity); else GetWindowText(w, b, b.Capacity);
         return b.ToString();
+    }
+
+    // AdskLicensingAgent's "Welcome to your trial" popup at Inventor start (WebView2 in an
+    // untitled 860x500 'webview' WS_POPUP; not shown while a killed Inventor's agent lingers):
+    // WM_CLOSE it. Clicking its X (cursor + mouse_event) instead made the next
+    // Documents.Add's ActiveView null on Wine; WM_CLOSE doesn't, and Inventor keeps running.
+    static bool welcomed;
+    public static void Welcome()
+    {
+        lock (typeof(H))
+        {
+            if (welcomed) return;
+            var pids = new System.Collections.Generic.HashSet<uint>();
+            foreach (var p in Process.GetProcessesByName("AdskLicensingAgent")) pids.Add((uint)p.Id);
+            EnumWindows((w, _) =>
+            {
+                uint pid; GetWindowThreadProcessId(w, out pid); RECT r;
+                if (!pids.Contains(pid) || !IsWindowVisible(w) || Text(w, true) != "webview"
+                    || !GetWindowRect(w, out r) || r.R - r.L != 860 || r.B - r.T != 500) return true;
+                PostMessage(w, 0x10, IntPtr.Zero, IntPtr.Zero);  // WM_CLOSE
+                for (int i = 0; i < 50 && IsWindowVisible(w); i++) Thread.Sleep(100);
+                if (IsWindowVisible(w)) return true;  // retried on the next poll
+                Console.WriteLine("dismissed trial welcome");
+                welcomed = true;
+                return false;
+            }, IntPtr.Zero);
+        }
     }
 
     // Visible dialog boxes (#32770) of Inventor.exe: 'title' [child texts | ...]; ...
@@ -216,6 +247,7 @@ static class H
                 // Registered in the ROT before it implements Application during startup.
                 catch (InvalidCastException) { Thread.Sleep(2000); }
             App.SilentOperation = true;
+            Welcome();
             // Deterministic start: discard whatever is open (dedicated test Inventor).
             int n = App.Documents.Count;
             App.Documents.CloseAll(false);

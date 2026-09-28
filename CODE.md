@@ -242,6 +242,8 @@ are not present here.
   Inventor/winedbg/CER dialog by PID (never wineserver -k, see licensing below).
   The harness aborts a step at once on Inventor's "Licensing error" dialog or when
   Inventor is gone (RPC unavailable); timeouts list Inventor's visible dialogs.
+  It WM_CLOSEs the licensing agent's trial welcome popup (connect + step polls;
+  logs "dismissed trial welcome"; clicking its X broke the next ActiveView).
   Expectations are analytic (volumes, centroids, flat-pattern lengths, view extents)
   or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
