@@ -29,7 +29,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   LaunchNativeBrowser; code returns via a custom URI protocol) → install Edge
   in the prefix as default browser, keep the round trip inside Wine.
   Status: Edge renders the Autodesk sign-in; email+password accepted, then an
-  hCaptcha — needs the user (VNC :107 on 127.0.0.1:5903).
+  hCaptcha — needs the user. Same on the real install (prefixes/inv, :98,
+  VNC 5902): credentials entered, hCaptcha waiting. :98 is the primary path.
   Rendering fixes found: 023 dxgi Present1 dirty rects; layered colorkey
   window hides GPU child content.
   prefixes/inv (real install, integ 220b08678ea): Autodesk's installer ran its
