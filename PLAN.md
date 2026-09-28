@@ -42,6 +42,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   dialog → Inventor Home ("Inventor 2027.1", Recent, Open/New) in ~75 s, responsive.
   - VM: installed; signed in 2026-09-28 13:15 (user solved hCaptcha); Inventor
     Home up, running in the desktop session (reference for scenarios).
+  - COM scenarios (tools/invscen, 2026-09-28): VM passes part, asm, drawing.
+    Wine: connect + new part OK, sketch blocked by 031; asm (with the VM's box.ipt)
+    blocked by 031 at Occurrences; drawing (VM box.ipt) passes: base + projected
+    view, save/reopen .dwg. All API calls slow on Wine (032).
   - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
     base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as
     Essential, as on the VM). UI left at the Start screen (not clicked).
@@ -89,6 +93,11 @@ commits or screenshots). Read-only mode may remain after expiry.
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
     (full merged view, kernelbase), in review before merge
   - 030 COM activation ignores per-user class registrations (low)
+  - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
+    PartDocument.ComponentDefinition / ComponentDefinition.Occurrences broken — blocks
+    part + assembly modelling via COM (tools/invscen part/asm) — open
+  - 032 typelib marshaler re-parses Inventor's 4 MB typelib per new dispinterface
+    proxy/stub (~2.2 s each; perf) — open
   - 029 winex11: hidden managed windows stay mapped without a WM (waits for WM_STATE
     forever; trial welcome dialog leaves a white box on :98) — infra: run openbox on :98
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process

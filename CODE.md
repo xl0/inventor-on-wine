@@ -107,6 +107,17 @@
   OAuth code comes back through a custom URI scheme registered in the prefix.
   Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
   restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
+- `tools/invscen/run.sh [--vm] SCENARIO` — Inventor COM API scenarios. Compiles
+  `Harness.cs` + `SCENARIO.cs` with the prefix's .NET 4.8 csc (Inventor interop types
+  embedded via /link, so the exe also runs on the VM), attaches to the running
+  Inventor (GetActiveObject; starts Inventor.exe in prefixes/inv if none runs; the
+  VM side never starts it), closes all docs, prints PASS/FAIL/SKIP per step with
+  values + timings (step timeout aborts the run; first failure skips the rest).
+  Artifacts: inst/invscen/SCENARIO/ (VM: C:\t\scen\SCENARIO, copied to
+  inst/invscen/vm/). Scenarios: hello (connect), part (sketch/extrude/mass
+  props/save/reopen), asm and drawing (use part/box.ipt), tlb (typelib check, 031).
+  csc wants backslash paths; `using Inventor` clashes with System names
+  (File, Environment, Attribute): qualify them.
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and
