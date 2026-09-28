@@ -37,7 +37,8 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
   - 008 wintrust p7x blob verification (installer Error 4005) — merged
   - 009 wintrust SHA-256 chain check + RFC 3161 token verification — merged
     (build/ rebuild pending: 010 worker uses it)
-  - 011 crypt32 chain policy ignores partial chains (security, small)
+  - 011 crypt32 partial chains + AUTHENTICODE_TS policy — merged
+  - 012 crypt32 base policy lacks basic constraints check (low)
   - 010 RegLoadKey rejects Registry.dat hive from .adix (installer Error 4000)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
   on master; `build/` runs it. Tracks upstream master tip: periodically
@@ -54,6 +55,7 @@ rebuilds `build/`, deletes merged worktrees (branches kept). Workers report
 new bugs as draft issues and infra breakage instead of routing around it.
 Disassembling third-party (Autodesk) code is OK; Microsoft code never.
 Review again after the next batch of workers. Notes so far:
+- 011 also left a gap unfiled (basic constraints; filed by coordinator as 012).
 - 006 noticed two possible bugs (cross-process child swapchain doesn't update
   the owner's clip until SetWindowPos; R/B swap on lavapipe) but didn't file
   drafts as the guide asks.

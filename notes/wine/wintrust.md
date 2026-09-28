@@ -16,7 +16,9 @@
   built as of genTime in CERTPROV and SoftpubAuthenticode maps a failing base
   policy on it to TRUST_E_TIME_STAMP (after the signer's own policy).
 - For blobs sftSystemTime is "now"; for files it's the file's creation time.
-- crypt32 chain policies ignore CERT_TRUST_IS_PARTIAL_CHAIN (issue 011).
+- crypt32 chain policies: partial chain -> CERT_E_CHAINING (base/Authenticode/
+  _TS), CERT_E_UNTRUSTEDROOT (SSL), unless unknown CA allowed (issue 011).
+  WTD_HASH_ONLY_FLAG skips the policy in SoftpubAuthenticode.
 - crypt32 msg.c: SignedData content is unwrapped from OCTET STRING for
   szOID_RSA_data or version >= 3 (CMS), both for CMSG_CONTENT_PARAM and the
   signer hash (Windows behaviour). Authenticode (v1) hashes the SEQUENCE's

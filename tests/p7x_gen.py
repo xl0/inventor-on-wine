@@ -4,7 +4,8 @@
 Own RSA root, code-signing leaf valid only in 2000, TSA cert; the PKCS #7
 Authenticode signature carries an RFC 3161 time-stamp token (genTime
 2000-06-01) as szOID_RFC3161_counterSign. Writes p7x_ts.p7x, p7x_nots.p7x
-and p7x.h (C arrays), plus bad-token variants p7x_{badimprint,badsig,noeku}.p7x.
+and p7x.h (C arrays), plus bad-token variants p7x_{badimprint,badsig,noeku}.p7x
+and p7x_noroot.p7x (root left out: partial signer chain).
 Usage: p7x_gen.py [REAL.p7x] -- with a real (trusted) p7x also writes copies
 with its token replaced by ours: real_ourtsa{,_root,_noeku,_badimprint}.p7x
 (genTime 2026-02-10; _root also puts our untrusted root in the token).
@@ -90,11 +91,11 @@ def mktoken(sig, imprint_ok=True, sig_ok=True, cert=tsa, gentime=b'2000060112000
 tokens = {'ts': mktoken(sig), 'badimprint': mktoken(sig, imprint_ok=False), 'badsig': mktoken(sig, sig_ok=False),
           'noeku': mktoken(sig, cert=tsa_noeku)}
 
-def p7x(ts):
+def p7x(ts, certs=None):
     s = si + ([der(0xa1, contents(set_(attr('1.3.6.1.4.1.311.3.3.1', tokens[ts]))))] if ts else [])
     msg = seq(oid('1.2.840.113549.1.7.2'), ctx(0, seq(
         integer(1), set_(SHA256), seq(oid('1.3.6.1.4.1.311.2.1.4'), ctx(0, indirect)),
-        ctx(0, cder(leaf) + cder(root)), set_(seq(*s)))))
+        ctx(0, certs or cder(leaf) + cder(root)), set_(seq(*s)))))
     return b'PKCX' + msg
 
 h = open('p7x.h', 'w')
@@ -107,6 +108,7 @@ for name, ts in (('p7x_ts', 'ts'), ('p7x_nots', None)):
     h.write('};\n')
 for ts in ('badimprint', 'badsig', 'noeku'):
     open('p7x_%s.p7x' % ts, 'wb').write(p7x(ts))
+open('p7x_noroot.p7x', 'wb').write(p7x('ts', cder(leaf)))  # partial signer chain (issue 011)
 
 def parse(b):  # -> (tag, contents, rest)
     l, hl = b[1], 2
