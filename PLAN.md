@@ -70,7 +70,8 @@ commits or screenshots). Read-only mode may remain after expiry.
     Error 15) — merged
   - 014 services in session 0 (Go-based Autodesk licensing service) — merged
     after review (1 regression found+fixed: cross-session device broadcasts)
-  - 018 session-0 follow-ups (low)
+  - 018 session-0 follow-ups (global locks, wineboot SeTcb, WTS sessions,
+    Service-0x0-3e7$ winstation) — merged
   - 015 ServicesPipeTimeout read as DWORD — fixed with 014 (default kept 10 s)
   - 017 dcomp: Wine-Staging DirectComposition series (66 patches, CodeWeavers)
     + our cross-process target fix — merged; WebView2 renders the licensing

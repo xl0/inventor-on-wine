@@ -5,8 +5,9 @@
  * svc_session.exe report   print the report for this process
  * Exit code of the driver: 0 if the service ran and its IsWindowsService check
  * (Go x/sys/windows/svc algorithm) was true.
- * Build: x86_64-w64-mingw32-gcc -O2 -o svc_session.exe svc_session.c -lntdll -lwtsapi32
+ * Build: x86_64-w64-mingw32-gcc -O2 -municode -o svc_session.exe svc_session.c -lntdll -lwtsapi32
  */
+#define _WIN32_WINNT 0x0a00
 #include <windows.h>
 #include <winternl.h>
 #include <wtsapi32.h>
@@ -43,6 +44,48 @@ static void parent_info(void)
         if (!spi->NextEntryOffset) break;
     }
     fprintf(out, "parent %lu not found\n", (ULONG)(ULONG_PTR)pbi.InheritedFromUniqueProcessId);
+}
+
+static void query_session(DWORD sid)
+{
+    WTS_CONNECTSTATE_CLASS *state;
+    WTSINFOW *info;
+    WCHAR *str;
+    DWORD *id, count;
+    static const WTS_INFO_CLASS classes[] = {WTSWinStationName, WTSUserName, WTSDomainName};
+    int i;
+
+    fprintf(out, "WTSQuerySessionInformation(%ld):", (LONG)sid);
+    if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, sid, WTSConnectState, (WCHAR **)&state, &count))
+    {
+        fprintf(out, " state %u", *state);
+        WTSFreeMemory(state);
+    }
+    else fprintf(out, " state err %lu", GetLastError());
+    if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, sid, WTSSessionId, (WCHAR **)&id, &count))
+    {
+        fprintf(out, " id %lu", *id);
+        WTSFreeMemory(id);
+    }
+    else fprintf(out, " id err %lu", GetLastError());
+    for (i = 0; i < ARRAYSIZE(classes); i++)
+    {
+        if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, sid, classes[i], &str, &count))
+        {
+            fprintf(out, " [%d] \"%ls\" (%lu)", classes[i], str, count);
+            WTSFreeMemory(str);
+        }
+        else fprintf(out, " [%d] err %lu", classes[i], GetLastError());
+    }
+    if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, sid, WTSSessionInfo, (WCHAR **)&info, &count))
+    {
+        fprintf(out, " info state %u id %lu winsta \"%ls\" user \"%ls\" domain \"%ls\" logon %s",
+                info->State, info->SessionId, info->WinStationName, info->UserName, info->Domain,
+                info->LogonTime.QuadPart ? "set" : "0");
+        WTSFreeMemory(info);
+    }
+    else fprintf(out, " info err %lu", GetLastError());
+    fprintf(out, "\n");
 }
 
 static void report(void)
@@ -84,6 +127,10 @@ static void report(void)
         WTSFreeMemory(sessions);
     }
     else fprintf(out, "WTSEnumerateSessions failed %lu\n", GetLastError());
+    query_session(WTS_CURRENT_SESSION);
+    query_session(0);
+    query_session(1);
+    query_session(7);
     name[0] = 0;
     GetUserObjectInformationW(GetProcessWindowStation(), UOI_NAME, name, sizeof(name), &len);
     fprintf(out, "winstation %ls\n", name);

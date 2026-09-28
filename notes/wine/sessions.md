@@ -13,7 +13,7 @@
   session 0 -> `\BaseNamedObjects`, `\Windows\WindowStations`;
   session N -> `\Sessions\N\...` (`server/directory.c:create_session`).
   Anything shared between services and user processes must use `Global\`
-  (e.g. SVCCTL_STARTED_EVENT).
+  (e.g. SVCCTL_STARTED_EVENT; with fix/018 also Wine's HKLM/GAC/winsxs locks).
 - `WTSGetActiveConsoleSessionId` = KUSER_SHARED_DATA.ActiveConsoleId,
   written by wineboot `create_user_shared_data` (its own session, 1).
 - Service processes become Wine "system" processes in
@@ -23,3 +23,8 @@
 - BroadcastSystemMessage (BSM_ALLDESKTOPS/ALLCOMPONENTS) enumerates only the
   caller's session; with fix/014 a session-0 caller also reaches the console
   session's WinSta0 (device-change broadcasts from plugplay/mountmgr).
+- Services' window station: `Service-0x0-3e7$` with fix/018
+  (`__wineservice_winstation` before). win32u `is_service_process()` keys
+  off that name (no explorer desktop, virtual monitor only); keep
+  programs/services and win32u in sync.
+- WTSEnumerateSessions with fix/018: 0 "Services" (disconnected) + console.
