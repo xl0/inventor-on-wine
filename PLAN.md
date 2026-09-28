@@ -24,7 +24,10 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] DXVK / vkd3d-proton installed and presenting on RTX
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
 - [x] Inventor 2027.1 install (web installer, no optional components)
-- [ ] First launch + sign-in. inv-vm (transplant, now idle; :107 stopped): WebView2 renders the
+- [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
+  save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
+  matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
+- [x] First launch + sign-in. inv-vm (transplant, now idle; :107 stopped): WebView2 renders the
   licensing page. Sign-in is OAuth in the system browser (IdentityManager
   LaunchNativeBrowser; code returns via a custom URI protocol) → install Edge
   in the prefix as default browser, keep the round trip inside Wine.
@@ -93,6 +96,10 @@ commits or screenshots). Read-only mode may remain after expiry.
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
     (full merged view, kernelbase); review found+fixed 2 bugs; merge ONLY with
     030 (else COM can lose re-registered classes)
+  - 031 oleaut32 typelib typedesc offsets > 32 KB (Inventor parts/assemblies
+    via COM) — merged
+  - 032 typelib marshaler re-parses the 4 MB Inventor typelib per proxy
+    (10–500x slower COM than the VM) — in progress
   - 030 COM (combase/ole32) must read the merged HKCR view — in progress,
     prerequisite for merging 028
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
