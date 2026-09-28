@@ -39,9 +39,12 @@ relevant `notes/wine/*.md` first.
 - Brief statements are observations or suspicions; verify before building on them.
 
 ## Check the harness first
+(Screenshots: use x/shot.sh [display] — never `xwd -root`, which draws Wine
+windows black under openbox with multiple colormaps. Input: prefer xdotool
+clicks; after `xdotool key`, check `xinput query-state` for stuck keys.)
 Before trusting a tool's output for a conclusion (screenshots, click coords,
 exit codes, "rebuilt" binaries), confirm it on a known case once. Past traps:
-squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
+squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
 
 ## Report, don't route around
 - Broken shared tooling or infra (VM, winrun, display, docs): report it to the
