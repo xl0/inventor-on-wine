@@ -161,7 +161,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 046 comctl32 subclass: cross-thread/process, nested removal UAF, v5/v6 split
     (probable cause of an Inventor startup crash; not confirmed)
   - L 050 Electrical Catalog Browser unzip custom action (MSI 1603)
-  - O 047 Inventor crash: NULL read in ogsdevicedx11 on TBB thread (in progress)
+  - M 047 d3d11 CreateDeferredContext raced with ClearState (Inventor crash) — merged
   - O 048 cold-start hang, trial popup "We're having trouble" (maybe shared licensing)
   - L 049 SysLink rejects <a> with extra attributes (raw markup shown)
   - X 050 Electrical Catalog CA needs inbox tar.exe → tools/tar.sh (bsdtar 3.8.8)
