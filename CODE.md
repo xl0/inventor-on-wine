@@ -134,6 +134,8 @@ are not present here.
   `crt_math.c`: ucrtbase math results bit-for-bit (writes crt_math.bin to compare, 055).
   `stub_exception.c [MODE]`: exception raised in a COM server method: cross-apartment IDispatch/IPersist
   calls, the stub called directly, a custom stub; per case in a child (056).
+  `cxx_catch_throw.c` + `cxx_catch_throw_eh.cpp` (clang MSVC-target C++ EH, build line in the file):
+  throw/rethrow from a catch block under C++ catch, __except, cross-apartment COM (058).
   `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
   then paths/CreateProcess through it (052).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
