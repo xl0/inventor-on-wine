@@ -97,7 +97,7 @@
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and
-  diff with flaky/real re-run check.
+  diff with re-run check: REAL / NEW (not in baseline) / FLAKY.
   Results cached in `deps/regress/<built commit>/`. Master baseline builder:
   `wt/regress-master` (detached worktree) + `wt/regress-master-build`.
 
