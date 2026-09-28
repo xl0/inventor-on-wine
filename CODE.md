@@ -60,7 +60,8 @@
 - `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports [ARG]` — headless
   Ghidra queries via `tools/Decomp.java`. Project cached per binary sha256 in
   `deps/ghidra-cache/` (+ Ghidra's XDG config/cache), flock per binary; first
-  use analyzes (-max-cpu 16). Clean-room guard refuses MS system paths and
+  use analyzes (mostly 1 core: 7 MB exe 1.5 min, 44 MB Installer.exe 35 min;
+  cached queries 4-6 s, `strings` ~30 s). Clean-room guard refuses MS system paths and
   PEs whose version-info CompanyName or Authenticode O= says Microsoft
   (also refuses Wine builtins, whose CompanyName is Microsoft).
 - Prefixes: `smoke` (plain), `dxvk` (smoke + DXVK/vkd3d-proton).
