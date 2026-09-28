@@ -1,4 +1,79 @@
-# Layout
+# Local workstation
+
+Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
+no reference VM. The server environment and populated prefixes described below
+are not present here.
+
+- `wine-src/`: partial clone of `xl0/wine`, `integ` at `47e296ffde4d`.
+  Tracks `gh/integ`; `origin` points to WineHQ. No rebase onto newer upstream.
+- `build/`: `../wine-src/configure --enable-archs=i386,x86_64` succeeds with
+  GCC/MinGW 13. Only notice: legacy OSS audio unavailable (ALSA/Pulse work).
+  Logs: `configure.out`, `config.log`, `make.log`, `build-resource-usage.txt`.
+  Full build succeeded in 29m14s, peak cgroup memory 6.86 GiB, no swap.
+  Version: `wine-11.18-360-g47e296ffde`.
+- `prefixes/smoke`: local prefix; 32/64-bit `cmd.exe` and the existing
+  `tests/custom_caption.c` GUI probe pass (`build/smoke.log`). User-folder
+  symlinks replaced with prefix-local directories. Mono/Gecko not installed;
+  smoke runs disable them and winemenubuilder. Test wineserver stopped.
+  Local D3D11 Vulkan smoke also passes on desktop `:0` (clear/present/readback,
+  `inst/local/d3d11-vulkan.log`); this does not validate Inventor's viewport.
+- `prefixes/inv`: native .NET 4.8 (Release 528049, both C# compilers run),
+  Windows 11, Gecko 2.47.4 for both architectures, Edge and WebView2
+  154.0.4258.37 installed. Browser downloads match the server's pinned hashes;
+  `tools/edge.sh` sets Edge as default for the OAuth callback.
+  Uses distro Winetricks 20240105
+  with explicit `WINE=build/wine` and `WINESERVER=build/server/wineserver`
+  (absolute paths). User-folder links isolated; winemenubuilder disabled to
+  avoid changing the host desktop. Setup log: `inst/local/prefix-setup.log`.
+  Installer provided by the user:
+  `~/Downloads/Autodesk_Inventor_Professional_2027_1_English_en-US_setup_webinstall.exe`
+  (SHA256 `1b843e5db368d07c68494da2610db8d9c98f5ae41b821efc31c9de49386162cc`).
+  Extracted unmodified to `inst/webinstall/`; entry point `Setup.exe`.
+  ODIS reports Inventor core + 2027.1 update, TrueView and Content Libraries
+  INSTALLED. Electrical Catalog Browser failed: its CA MSI's
+  `AceUnzipZipFiles` action returns 1603; optional add-on rolled back
+  ([050](issues/050-electrical-catalog-unzip-msi.md)).
+  Main Inventor launch/sign-in not yet verified. Installer was launched on `:0`
+  with `setsid nohup`, nice 10, idle I/O, 14 GiB cap/no swap in
+  `inventor-install.scope`. Uses `WINE_D3D_CONFIG=renderer=vulkan`.
+  Launcher PID: `inst/local/installer.pid`; output: `inst/local/installer.log`.
+  Browser setup log: `inst/local/browser-setup.log`.
+  Setup verification uses `wine winecfg -v`, not `HKCU\Software\Wine\Version`
+  (winecfg sets NT version keys and removes that override).
+- Local Xvfb crashes during GLX initialization in NVIDIA EGL/GBM.
+  `xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp -extension GLX'`
+  works for 2D smoke tests; verify with `xdpyinfo` before running Wine.
+  The host desktop `DISPLAY=:0` is accessible.
+- Missing dependencies were installed by the user outside the sandbox:
+
+  ```sh
+  sudo apt-get install --no-install-recommends \
+    g++-mingw-w64-i686-posix g++-mingw-w64-x86-64-posix \
+    libgnutls28-dev libasound2-dev libpulse-dev \
+    libxkbregistry-dev libxxf86vm-dev libusb-1.0-0-dev \
+    libsdl2-dev libcups2-dev libkrb5-dev libpcap-dev \
+    libpcsclite-dev libsane-dev libv4l-dev libva-dev \
+    ocl-icd-opencl-dev libcapi20-dev samba-dev
+  ```
+
+  The MinGW C++ packages also bring C compilers and binutils for both Windows
+  architectures; no additional i386 Linux libraries are needed. Wine bundles its
+  PE-side media libraries. Run in place, leaving system Wine 9 and its prefixes
+  untouched.
+- Local builds use nice 15, idle I/O, 8 jobs, and an aggregate cgroup memory
+  limit (8 GiB reclaim threshold, 12 GiB hard cap, no swap). From `build/`:
+
+  ```sh
+  nice -n 15 ionice -c 3 systemd-run --user --scope \
+    --unit=inventor-wine-build \
+    -p MemoryHigh=8G -p MemoryMax=12G -p MemorySwapMax=0 \
+    -p CPUWeight=25 -p IOWeight=10 make -j8 > make.log 2>&1
+  ```
+
+  User-manager scope creation works inside the sandbox and preserves its
+  filesystem restrictions. Never use the server's `-j120` locally.
+
+# Layout (server setup unless noted above)
 
 - This dir is a git repo with an allowlist `.gitignore` (scripts, docs,
   tests only), pushed to github.com/xl0/inventor-on-wine. `wine-src/` is its

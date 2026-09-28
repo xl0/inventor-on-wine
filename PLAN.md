@@ -1,4 +1,24 @@
-# Plan: Autodesk Inventor on Wine, agent-driven
+# Current goal: local Inventor setup (no VM)
+
+Reproduce the patched Wine + native Autodesk installer setup on this workstation.
+Keep system Wine untouched; run from `build/` with a separate prefix.
+The server results below are reference material, not local completion status.
+
+- [x] Clone `xl0/wine` into `wine-src/`, tracking `gh/integ` (`47e296ffde4d`).
+- [x] Build dependencies installed; new-WoW64 configure passes (only legacy OSS
+  audio unavailable).
+- [x] Local build complete: 8 jobs, nice 15, 12 GiB cap; 29m14s, peak 6.86 GiB,
+  no swap. Separate smoke prefix passes 32/64-bit console and GUI probes.
+- [x] Inventor prefix: native .NET 4.8 (32/64-bit runtime checks), Windows 11,
+  Gecko, isolated user folders. Local Vulkan D3D11 smoke passes.
+- [x] Pinned Edge/WebView2 installed; Autodesk installer launched on the desktop
+  in `prefixes/inv`, using the patched build.
+- [x] Main Inventor + 2027.1 update installed. Electrical Catalog Browser
+  failed in `AceUnzipZipFiles` (MSI 1603);
+  [issue 050](issues/050-electrical-catalog-unzip-msi.md), low priority.
+- [ ] Verify local Inventor launch/sign-in.
+
+# Server plan: Autodesk Inventor on Wine, agent-driven
 
 Intent: get Inventor working under Wine by closing a tight loop:
 scripted scenario fails → triage traces → minimal repro / conformance test →
@@ -136,6 +156,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 046 comctl32 subclass: cross-thread/process, nested removal UAF, v5/v6 split
     (probable cause of an Inventor startup crash; not confirmed)
   - O 049 SysLink `<a>` with extra attributes shown as raw markup (draft)
+  - L 050 Electrical Catalog Browser unzip custom action (MSI 1603)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
