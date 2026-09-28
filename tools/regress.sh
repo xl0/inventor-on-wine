@@ -17,6 +17,8 @@
 #     or more failures, or a new unit not passing), re-runs them REPS (2)
 #     times on NEW's build and BASE's build (from the DIR/info files) and
 #     classifies REAL (every NEW re-run worse, BASE re-runs fine) or FLAKY.
+#     Units absent from BASE aren't re-run on BASE's build; they're listed as
+#     NEW with their re-runs and "consistent" (no re-run passed) or "intermittent".
 #     REAL lines get the commits BASE..NEW touching the module as suspects.
 #
 # Each of JOBS (32) shards gets its own prefix (cp -a of a template made with
@@ -165,16 +167,18 @@ cmd_compare() {
     fi
     [ $jobs -gt $(wc -l < "$W/tasks") ] && jobs=$(wc -l < "$W/tasks")
     (run_units "$ndir" "$W/new" "$jobs" 120 < "$W/tasks")
-    [ -n "$bdir" ] && [ -x "$bdir/wine" ] && (run_units "$bdir" "$W/base" "$jobs" 120 < "$W/tasks")
+    awk 'NR == FNR { if ($3 == "-") new[$1" "$2]; next } !($1" "$2":"$3 in new)' "$W/worse" "$W/tasks" > "$W/btasks"
+    [ -n "$bdir" ] && [ -x "$bdir/wine" ] && [ -s "$W/btasks" ] && (run_units "$bdir" "$W/base" "$jobs" 120 < "$W/btasks")
     mkdir -p "$W/base"; touch "$W/base/results.part"
     awk 'function r(s) { return s == "pass" ? 0 : s == "fail" ? 1 : 2 }
         function worse(s, f, k) { return r(s) > r(bs[k]) || (s == "fail" && bs[k] == "fail" && f > bf[k]) }
         FNR == 1 { f++ }
         f == 1 { k = $1" "$2; bs[k] = $3; bf[k] = $4; ns[k] = $5; nf[k] = $6; order[++n] = k; next }
-        f == 2 { k = $1" "$2; nr[k] = nr[k] " " $3 "/" $4; if (!worse($3, $4, k)) ok[k] = 1; next }
+        f == 2 { k = $1" "$2; nr[k] = nr[k] " " $3 "/" $4; if (!worse($3, $4, k)) ok[k] = 1; if ($3 == "pass") np[k] = 1; next }
         { k = $1" "$2; br[k] = br[k] " " $3 "/" $4; if (worse($3, $4, k)) ok[k] = 1 }
         END { for (i = 1; i <= n; i++) { k = order[i]
-            printf "%s %s %s/%d -> %s/%d | new:%s | base:%s\n", k in ok ? "FLAKY" : "REAL ", k,
+            if (bs[k] == "-") printf "NEW   %s %s/%d | new:%s (%s)\n", k, ns[k], nf[k], nr[k], k in np ? "intermittent" : "consistent"
+            else printf "%s %s %s/%d -> %s/%d | new:%s | base:%s\n", k in ok ? "FLAKY" : "REAL ", k,
                 bs[k], bf[k], ns[k], nf[k], nr[k], k in br ? br[k] : " -" } }' \
         "$W/worse" "$W/new/results.part" "$W/base/results.part" | sort -k1,1r -k2 | while read -r line; do
         echo "$line"
