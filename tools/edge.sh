@@ -25,8 +25,8 @@ $wineserver -k
 # Needs wofutil WofSetFileDataLocation (issue 024).
 echo "$EDGE_SHA  $ROOT/deps/$EDGE" | sha256sum -c --quiet
 "$wine" msiexec /i "Z:${ROOT//\//\\}\\deps\\$EDGE" /qn
-# Workaround for issue 026 (sandboxed renderers never start): remove when fixed.
-e='"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --no-sandbox'
+# Wine's http/https UserChoice ProgId is "http"/"https": point those at Edge too.
+e='"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"'
 for k in http https; do "$wine" reg add "HKLM\\Software\\Classes\\$k\\shell\\open\\command" /ve /d "$e \"%1\"" /f; done
 "$wine" reg add 'HKLM\Software\Classes\MSEdgeHTM\shell\open\command' /ve /d "$e --single-argument %1" /f
 $wineserver -k

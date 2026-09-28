@@ -34,3 +34,6 @@
   screensaver sends no Expose; map+kill a window instead (`xlogo -geometry
   400x400+0+0 & sleep 1; kill $!`). Xvfb + lavapipe
   (`VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json`) presents fine.
+- winex11 state tracking: a managed (activated / captioned) toplevel's map request sets
+  `wm_state_serial`, cleared only by the WM writing WM_STATE. On a WM-less X server (our :98)
+  it never clears: later hides/moves of that window are deferred forever (029).

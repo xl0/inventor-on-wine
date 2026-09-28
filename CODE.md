@@ -101,7 +101,7 @@
   also run on prefixes/inv). Edge is the default browser (its
   installer sets HKCR http/https). The Autodesk sign-in form opens there, and the
   OAuth code comes back through a custom URI scheme registered in the prefix.
-  Edge runs with --no-sandbox (HKCR command) until fix/026 (CreateAppContainerToken) is merged. Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
+  Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
   restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,

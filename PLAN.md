@@ -38,6 +38,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   tools/edge.sh upgraded it to 154 + Edge. Launched from the Start-menu .lnk on
   :98: licensing page renders, "Sign in with your Autodesk ID" opens Edge
   (first-run wizard, then the sign-in form). Next: coordinator signs in on :98.
+  Signed in (028 workaround). integ 6c63dc3c499: Start-menu .lnk → trial welcome
+  dialog → Inventor Home ("Inventor 2027.1", Recent, Open/New) in ~75 s, responsive.
   - VM: installed (not launched yet).
   - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
     base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as
@@ -79,12 +81,13 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 023 dxgi Present1 dirty rects on flip swapchains — merged
   - 024 wofutil WofSetFileDataLocation stub crashed Edge setup — merged
   - 025 SC_MAXIMIZE on maximized hidden window showed it (Edge) — merged
-  - 026 Edge sandbox: CreateAppContainerToken/NtCreateLowBoxToken — merged.
-    Pending (after sign-in, when :98/:107 sessions can restart): rebuild build/,
-    regress run, drop --no-sandbox from tools/edge.sh + both prefixes' HKCR
+  - 026 Edge sandbox: CreateAppContainerToken/NtCreateLowBoxToken — merged;
+    --no-sandbox dropped from tools/edge.sh + prefixes/inv HKCR (inv-vm HKCR still has it).
   - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — open
+  - 029 winex11: hidden managed windows stay mapped without a WM (waits for WM_STATE
+    forever; trial welcome dialog leaves a white box on :98) — open (draft); infra choice
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
     retry delay before software fallback (low; clean-room blocks implementing)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /

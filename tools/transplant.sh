@@ -251,7 +251,7 @@ print('# inv-vm transplant manifest (tools/transplant.sh)\n')
 print('## Redist-installed (Microsoft installers Autodesk ran; run under Wine)')
 print('VC++ 2022 14.50.35719 x86+x64, .NET Windows Desktop Runtime 10.0.9 x64, ASP.NET Core Runtime 10.0.9 x64,')
 print('WebView2 Evergreen Runtime 154.0.4258.37 x64 and Microsoft Edge 154.0.4258.37 x64 (deps/, not Autodesk')
-print('redists; in-box on Windows 11; Edge runs with --no-sandbox as a workaround for issue 026)')
+print('redists; in-box on Windows 11)')
 print('Not reproduced: files Autodesk/redists put in C:\\Windows (Installer cache, NGen images).\n')
 s = collections.Counter(); n = collections.Counter()
 for r in rows:
