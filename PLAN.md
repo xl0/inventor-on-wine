@@ -206,3 +206,6 @@ Review again after the next batch of workers. Notes so far:
 - 006 noticed two possible bugs (cross-process child swapchain doesn't update
   the owner's clip until SetWindowPos; R/B swap on lavapipe) but didn't file
   drafts as the guide asks.
+- UI worker (campaign) noted, not filed: :98 used xfree86 keycodes (now evdev
+  in start.sh); missing Windows symbol font (browser grounded marks show a box);
+  ~13 leftover dll*.tmp theme copies in the prefix (7.5 MB each).
