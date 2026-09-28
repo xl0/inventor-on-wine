@@ -91,8 +91,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
-    (full merged view, kernelbase), in review before merge
-  - 030 COM activation ignores per-user class registrations (low)
+    (full merged view, kernelbase); review found+fixed 2 bugs; merge ONLY with
+    030 (else COM can lose re-registered classes)
+  - 030 COM (combase/ole32) must read the merged HKCR view — in progress,
+    prerequisite for merging 028
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
     PartDocument.ComponentDefinition / ComponentDefinition.Occurrences broken — blocks
     part + assembly modelling via COM (tools/invscen part/asm) — open

@@ -89,3 +89,21 @@ combase msi urlmon ieframe, both arches) vs master 4e819f0 and integ 6c63dc3: 0 
 Success check (scratch prefix): scheme only in HKCU\Software\Classes -> AssocQueryString S_OK,
 ShellExecuteEx launches the handler with the URL (master: 0x80070483 / ERROR_FILE_NOT_FOUND).
 Once merged, the HKLM copies of the IDM schemes in prefixes/inv are no longer needed.
+
+## Review (2026-09-28, wt/028r)
+Fixups on the branch: `fixup! kernelbase: Merge ...` (RegQueryInfoKey counted from a stale enum
+cache: 4 subkeys after deleting one of 4, VM says 3; now counts HKCU-side duplicates, no cache) and
+`server: Share HKCU\Software\Classes\Wow6432Node like the HKLM one.` (+ wine.inf HKCU Wow6432Node
+CLSID/Interface/DirectShow/Media Type/MediaFoundation; better ordered before the kernelbase commit).
+VM ground truth (scratch wow.c): 32-bit view of HKCR\CLSID = `<sid>_Classes\WOW6432Node\CLSID`; a
+64-bit-only per-user CLSID is invisible there. Branch before the fix: 32-bit/KEY_WOW64_32KEY got the
+64-bit user key and, through a user-side HKCR\CLSID handle, the 64-bit HKLM registrations.
+Open (confirmed): writes through HKCR go to an existing HKCU key (Windows does the same), but
+combase/ole32 read HKLM only. `regsvr32 quartz` with a stale HKCU\...\CLSID\{FilterGraph} key
+wrote the registration to HKCU -> CoCreateInstance 0x80040154 (master: HKLM, works). prefixes/inv has
+4 CLSIDs on both sides and 122 CLSIDs + 349 Interfaces per-user only. Needs combase/ole32 to use the
+merged view (they keep a private root so RegOverridePredefKey(HKCR) registration capture doesn't
+hide real classes, so not a plain switch to Reg*).
+Minor (confirmed vs VM): merged RegEnumKeyEx ignores a missing KEY_ENUMERATE_SUB_KEYS (VM: 5).
+Theoretical: enum cache keyed by handle value (stale after CloseHandle/NtClose + handle reuse);
+two threads enumerating the same HKCR handle restart the walk each call (O(n^2)).

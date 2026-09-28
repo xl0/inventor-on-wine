@@ -23,6 +23,10 @@
   Windows' user side is `\REGISTRY\USER\<sid>_Classes` (HKCU\Software\Classes links to it); Wine's
   is `\Registry\User\<sid>\Software\Classes`. combase/ole32 still use a private HKLM-only classes
   root. Before 028 Wine had no merge at all. Ground truth: `tests/hkcr_merge.c`, `tests/hkcu_proto.c`.
+- 32-bit view of HKCR: Windows redirects the user side too (`<sid>_Classes\WOW6432Node\CLSID`).
+  Wine marks both HKLM and (since the 028 review) HKCU `Software\Classes\Wow6432Node` KEY_WOWSHARE:
+  subkeys present there (wine.inf: CLSID, Interface, ...) are redirected, others shared. A
+  Wow6432Node without the flag redirects on path traversal only, which splits 32-bit writes/reads.
 - wineserver applies Wow64 redirection itself for Wow64 callers without KEY_WOW64_64KEY
   (`Software` -> `Software\Wow6432Node`): reopening an already-resolved key name by absolute path
   from a 32-bit process needs KEY_WOW64_64KEY.
