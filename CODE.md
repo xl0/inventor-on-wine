@@ -89,6 +89,11 @@
   installed from deps/. The real Wine install path needs it too, as a prefix
   prerequisite like .NET. Session: `inst/transplant/run-inv.sh [log]` starts
   AdskLicensingService by hand (014 workaround) + Inventor on :107.
+- `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
+  conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
+  software GL/Vulkan, no Gecko/Mono) and diff with flaky/real re-run check.
+  Results cached in `deps/regress/<srcdir HEAD>/`. Master baseline builder:
+  `wt/regress-master` (detached worktree) + `wt/regress-master-build`.
 
 # Running Wine with GPU
 

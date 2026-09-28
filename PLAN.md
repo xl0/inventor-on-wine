@@ -50,7 +50,6 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 014 services run in session 1, not 0 (blocks Go-based Autodesk licensing
     service; found in inv-vm)
   - 015 ServicesPipeTimeout type/default (low)
-  - 016 crypt32 GeneralizedTime 1-2 fraction digits (VC_redist Error 15)
   - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
     aspnetcore time-stamp tokens; installer Error 15) — open, blocks install
