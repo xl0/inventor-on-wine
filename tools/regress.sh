@@ -54,7 +54,8 @@ run_units() {
     mkdir -p "$W/home" "$out"
     HOME=$W/home WINEPREFIX=$W/tpl DISPLAY=:${disps[0]} WINEDEBUG=-all \
         WINEDLLOVERRIDES="mscoree,mshtml=" "$build/wine" wineboot -u > "$W/tpl.log" 2>&1
-    WINEPREFIX=$W/tpl "$build/server/wineserver" -w
+    WINEPREFIX=$W/tpl timeout 120 "$build/server/wineserver" -w || true
+    WINEPREFIX=$W/tpl "$build/server/wineserver" -k 2>/dev/null || true  # never leave template processes behind
     for s in $(seq 0 $((jobs - 1))); do
         mkdir "$W/h$s"; cp -a "$W/tpl" "$W/p$s"
     done
