@@ -1,5 +1,5 @@
 # 050 Electrical Catalog Browser installation fails in AceUnzipZipFiles
-Status: open (draft, low) · Owner: - · Branch: - · Found in: local Inventor 2027.1 installation
+Status: open (not a Wine API bug: missing inbox tar.exe; needs decision) · Owner: worker-050 · Branch: - · Found in: local Inventor 2027.1 installation
 
 ## Symptom
 On Ubuntu 24.04, new-WoW64 `integ 47e296ffde4d`
@@ -48,15 +48,42 @@ No targeted Windows reference result for this action has been recorded.
 The local workstation has no VM. Do not conflate this with Genuine Service's
 `killBeacon` failure ([020](020-genuine-service-msi-1603.md)).
 
-## Investigation
-Root cause unknown; 1603 alone does not establish a Wine bug.
+## Root cause (2026-09-28, server, build/ integ 228616fa47c)
+Missing Windows component, not a Wine API bug: the CA shells out to the
+inbox `C:\Windows\System32\tar.exe` (bsdtar/libarchive, in Windows since 10 1803;
+ODIS requires 10.0.17763). Wine has no tar.exe, so the CA returns 1359.
 
-- Reproduce the CA MSI failure in a disposable prefix, preserving its payload
-  layout and ODIS-supplied properties; collect verbose MSI logging.
-- Inspect the MSI CustomAction table and identify the API failure behind the
-  unzip action and return code 1359. Check source/destination access and archive
-  integrity before attributing it to Wine.
-- Reduce to a standalone repro if possible; obtain Windows ground truth if
-  required. Do not rerun MSI repair/uninstall against the user's live prefix.
+- `AceUnzipZipFiles` = type 3073 (deferred, no-impersonate) DLL CA in Binary
+  `AeCustom` (Autodesk, MFC static, x64), CustomActionData
+  `ProcID|<SourceDir>Documents\ADSK\Content\AceInvLib.zip*[ACELIBLOCATION]`.
+- Unzip helper (AeCustom RVA 0x1c260): temp dir `C:\ACExxxx` (GetTempFileName
+  on `C:`), copies the zip to `ZIPxxxx\`, then `CreateProcessAsUserW(own token,
+  "tar -xf \"ZIP\" -C \"OUT\" --keep-newer-files")`, waits, copies OUT into the
+  destination (std::filesystem). Every failure path returns 0x54f = 1359;
+  here CreateProcessAsUserW fails (`find_exe_file` finds no `tar`).
+- Windows ground truth (VM): `C:\WINDOWS\system32\tar.exe` 10.0.26100.9278 =
+  `bsdtar 3.8.8 - libarchive 3.8.8`; the exact command on AceInvLib.zip exits 0,
+  20 files / 4588032 bytes (matches `unzip -l`).
+- Verified on Wine: with a scratch-only `tar.exe` shim in system32 (forwarded
+  `-xf/-C` to host unzip), the CA MSI installs (msiexec 0, 20 files in
+  `C:\users\Public\Documents\Autodesk\Inventor Electrical Library 2027\`,
+  temp dir cleaned). Rest of the CA path (CreateProcessAsUserW, filesystem copy)
+  works on Wine.
+- Repro: scratch prefix (copy of inv-net48), payload copied to `C:\t\ace`,
+  `msiexec /i C:\t\ace\AceInvAddIn-ca.msi /qn /l*vx LOG MSIFASTINSTALL=7
+  ARPSYSTEMCOMPONENT=1 REBOOT=ReallySuppress ADSK_ODIS_SETUP=1`
+  (ODIS params; its INSTALLDIR is unused by this MSI's CA path).
+- Side finding: the rolled-back install deleted a pre-existing empty
+  `C:\users\Public\Documents` → [051](051-msi-removes-preexisting-empty-dirs.md).
+  In prefixes/inv that folder had other content, so no harm there.
 
-Workaround: omit Electrical Catalog Browser unless its functionality is needed.
+## Options (coordinator/user decision)
+1. Prefix fix, most faithful: install libarchive's own Windows bsdtar build
+   (same code Microsoft ships as tar.exe, BSD license) as `system32\tar.exe`
+   (+ syswow64), pinned in deps/ like Edge/WebView2, via a small tools/ script.
+   Needs approval for the download.
+2. Wine fix: new `programs/tar` (bsdtar-compatible subset: `-x -f -C`, zip
+   stored/deflate via bundled zlib, ignore `--keep-newer-files`; tar/gz later).
+   Upstreamable in principle but a new program (~few hundred lines) for one CA.
+3. Accept: optional add-on, ODIS rolls it back and continues. Manual
+   workaround: extract AceInvLib.zip into the destination above.
