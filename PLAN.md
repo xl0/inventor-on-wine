@@ -42,8 +42,8 @@ commits or screenshots). Read-only mode may remain after expiry.
     (build/ rebuild pending: 010 worker uses it)
   - 011 crypt32 partial chains + AUTHENTICODE_TS policy — merged
   - 012 crypt32 base policy lacks basic constraints check (low)
-  - 010 regf hive loading + RegLoadAppKey (installer Error 4000) — fixed,
-    in adversarial review before merge
+  - 010 regf hive loading + RegLoadAppKey (installer Error 4000) — merged
+    after adversarial review (4 bugs found+fixed, folded in)
   - 013 crypt32 array decoder skip bug (exposed by 009; .NET runtime
     Error 15) — merged
   - next after 013: AceInvAddIn-ca.msi 1603, DWG TrueView / Electrical
@@ -65,6 +65,9 @@ differential vs cached master baseline) and reports only regressions. Workers re
 new bugs as draft issues and infra breakage instead of routing around it.
 Disassembling third-party (Autodesk) code is OK; Microsoft code never.
 Review again after the next batch of workers. Notes so far:
+- Adversarial review of risky code (parsers in wineserver) paid off: 010 had
+  a server crash, memory/CPU exhaustion and privilege-free key deletion.
+  Do it for any code parsing app-supplied data in shared processes.
 - 011 also left a gap unfiled (basic constraints; filed by coordinator as 012).
 - 006 noticed two possible bugs (cross-process child swapchain doesn't update
   the owner's clip until SetWindowPos; R/B swap on lavapipe) but didn't file
