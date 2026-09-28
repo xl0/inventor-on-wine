@@ -26,8 +26,9 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [ ] Inventor 2027.1 install (web installer, no optional components)
   - VM: installed, was finalizing when paused. Do NOT click Start/launch
     (starts the 30-day trial).
-  - Wine: original web installer (inst/webinstall) runs on integ, UI renders;
-    at the first page. Next: install location → install.
+  - Wine (integ 2d9c0d96550, 001–013): rerun (optional components unticked;
+    Content Libraries already installed) fails ~1 min in: Error 15, WinVerifyTrust
+    on VC_redist.x64.exe → 016. Error dialog left open (don't click Exit).
 - [ ] Wine bugs: one file each in `issues/` (index below). Coordinator drives
   Inventor and finds bugs; workers fix one issue each in a wine-src worktree.
   - 001 SxS app config privatePath probing — merged
@@ -49,8 +50,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 014 services run in session 1, not 0 (blocks Go-based Autodesk licensing
     service; found in inv-vm)
   - 015 ServicesPipeTimeout type/default (low)
-  - next after 013: AceInvAddIn-ca.msi 1603, DWG TrueView / Electrical
-    Catalog Browser failures (uninvestigated; maybe knock-on)
+  - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
+    aspnetcore time-stamp tokens; installer Error 15) — open, blocks install
+  - uninvestigated: AceInvAddIn-ca.msi 1603 (Electrical Catalog Browser,
+    optional, now unticked); TrueView failed only via .NET Error 15 (013)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
   on master; `build/` runs it. Tracks upstream master tip: periodically
   `git rebase master integ` (upstreamed patches drop out), rebuild, retest,
@@ -71,6 +74,8 @@ Review again after the next batch of workers. Notes so far:
 - Adversarial review of risky code (parsers in wineserver) paid off: 010 had
   a server crash, memory/CPU exhaustion and privilege-free key deletion.
   Do it for any code parsing app-supplied data in shared processes.
+- Workers leave Wine processes behind (010 reviewer: 24 procs for a day);
+  guide now says to clean up.
 - Coordinator mistake: `git add -A` swept a worker's in-progress edit
   (decomp.sh without msbin.py) into a commit. Stage explicit paths only while
   workers are editing the project repo.

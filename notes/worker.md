@@ -71,6 +71,12 @@ squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
 - Same exe on Windows: `WINRUN_ID=NNN vm/winrun.sh path/to/X.exe args`
   (own task + `C:\t\NNN`; `WINRUN_TIMEOUT` default 600 s, exit 124).
 - i386 variants live in `.../tests/i386-windows/`.
+- Regression check of touched modules: `tools/regress.sh run wt/NNN-build -o
+  wt/NNN-regress -j 8 -m '^(ntdll|kernel32)$'`, then `compare` against the same
+  filter run on `wt/regress-master-build`. Full runs are the coordinator's.
+
+Before finishing: `wineserver -k` every prefix you started and kill your
+Xvfb/Xorg servers (unless the brief says to leave something running).
 
 ## Final report
 Concise: result (root cause / fix), new Windows ground truth, commits, test
