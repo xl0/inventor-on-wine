@@ -18,3 +18,7 @@
   enumerates in insertion/file order.
 - Handy tools: `tests/regloadkey_hive.c HIVE` dumps a loaded hive (names,
   types, sizes, data checksums) for Wine/VM diffing.
+- HKCR is only `HKLM\Software\Classes` in Wine (kernelbase `open_classes_root`); Windows
+  merges `HKCU\Software\Classes` over it (advapi32 `test_classesroot` todo_wine). Per-user
+  registrations (URL protocols, file types written by apps without admin) are invisible to
+  AssocQueryString / ShellExecute. Issue 028; `tests/hkcu_proto.c`.

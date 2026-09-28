@@ -83,6 +83,8 @@ commits or screenshots). Read-only mode may remain after expiry.
     Pending (after sign-in, when :98/:107 sessions can restart): rebuild build/,
     regress run, drop --no-sandbox from tools/edge.sh + both prefixes' HKCR
   - 027 GPU child content hidden in colour-keyed layered windows — merged
+  - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
+    callback; workaround: copy scheme keys to HKLM\Software\Classes) — open
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
     retry delay before software fallback (low; clean-room blocks implementing)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
