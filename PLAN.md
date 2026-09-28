@@ -26,10 +26,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [ ] Inventor 2027.1 install (web installer, no optional components)
   - VM: installed, was finalizing when paused. Do NOT click Start/launch
     (starts the 30-day trial).
-  - Wine (build/ d1fbaf04951, 001–013+016; optional components unticked,
-    Content Libraries already installed): fails ~30 s in, Error 1627 = CER
-    Service start 1053 (014, in integ but not in build/). Next: rebuild build/
-    at integ tip, rerun. Error dialog left open (don't click Exit).
+  - Wine (build/ integ 77645e2b221, optional components unticked): base
+    product INSTALLED (all core packages, Summary.log 01:34); the bundled
+    2027.1 update fails (WinVerifyTrust NOSIGNATURE on the 3.3 GB update exe,
+    cert table past 2 GB) → "Installation incomplete" → 019. Dialog left open.
+    Autodesk Genuine Service msi 1603 in custom action killBeacon, ODIS treats
+    it as success (uninvestigated).
   - Prefix fixes: users/xl0/Documents was a symlink to the read-only host
     ~/Documents (RSA Engine "REP_Init: Cannot create ...\Documents\Autodesk
     \Output"); now a real dir. A stray `WindowsUpdate\Auto Update\RebootRequired`
@@ -60,6 +62,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
     aspnetcore time-stamp tokens; installer Error 15) — merged
+  - 019 imagehlp certificate offsets > 2 GB (2027.1 update exe) — open, blocks
   - uninvestigated: AceInvAddIn-ca.msi 1603 (Electrical Catalog Browser,
     optional, now unticked); TrueView failed only via .NET Error 15 (013)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
