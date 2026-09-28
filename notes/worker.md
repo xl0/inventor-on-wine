@@ -68,6 +68,10 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Prefixes with auto-start Autodesk services: on builds with 014 (services in
   session 0) wineserver idles once user processes exit; older builds hang on
   `wineserver -w` — use `wineserver -k` to be safe.
+- Inventor prefixes (inv, inv2, inv3) share one AdskLicensingService on
+  127.0.0.1:39683, the one that started first. Never `wineserver -k` an Inventor
+  prefix while other Inventor sessions run (they lose licensing and quit). Kill
+  Inventor.exe by PID instead. If a -k is unavoidable, restart the other Inventors.
 - X display numbers: :98/:99 are the Inventor GPU displays, tools/regress.sh
   uses :120–:151 for its shards (and cleans them up) — pick your own Xvfb
   display from :200 up.

@@ -30,11 +30,16 @@ if [ "$S" = all ]; then
 	for s in $SUITE; do
 		echo "== $s" >&2
 		# A crashed Inventor (issue 034) lingers in winedbg --auto + CER dialog and
-		# blocks connect: restart the prefix so the scenario starts a fresh one.
+		# blocks connect: kill them so the scenario starts a fresh Inventor. Never
+		# wineserver -k: this prefix's AdskLicensingService may serve the other
+		# prefixes' Inventors too (one service on 127.0.0.1:39683 for all).
 		for p in $(ps -eo pid,args | awk '$2 ~ /winedbg/ && $3 == "--auto" { print $1 }'); do
 			if [ -z "$VM" ] && tr '\0' '\n' </proc/$p/environ | grep -qx "WINEPREFIX=$WP"; then
-				echo "Inventor crashed: restarting $WP" >&2
-				WINEPREFIX=$WP $W/server/wineserver -k; sleep 2; break
+				echo "Inventor crashed: killing $WP's Inventor, winedbg, CER dialog" >&2
+				for q in $(ps -eo pid,args | awk '$2 !~ /^(awk|sh|bash|\/bin\/sh)$/ && /Inventor\.exe|winedbg|senddmp\.exe|Autodesk CER.dialog/ { print $1 }'); do
+					if tr '\0' '\n' </proc/$q/environ 2>/dev/null | grep -qx "WINEPREFIX=$WP"; then kill -9 $q 2>/dev/null || true; fi
+				done
+				sleep 5; break
 			fi
 		done
 		"$0" ${VM:+--vm} $s >$L/$s.txt 2>&1 </dev/null || true

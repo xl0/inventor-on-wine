@@ -49,11 +49,18 @@
   ICommDlgBrowser / IExplorerBrowserEvents / DShellFolderViewEvents log, clicks the first file (041, 043).
   `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
   callback, cross-thread/process calls (046).
+  `syslink_attr.c`: SysLink `<a>` parsing with extra attributes (049).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
   `x/vnc.sh 99` → VNC 5903, `x/shot.sh out.png 99`. :99 + `prefixes/inv2` (copy of inv,
   signed in) is a second Inventor setup, independent of :98/inv.
+  Third: `x/start.sh 100 PCI:22:0:0` (GPU 16:00.0, `DRI_PRIME=pci-0000_16_00_0`),
+  `x/vnc.sh 100` → VNC 5904, `prefixes/inv3` (copy of inv minus the installer Temp cache).
+  Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
+  the Inventors of all prefixes, whichever prefix's service bound it first. Never
+  wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
+  restart the other Inventors afterwards (they show "Licensing error" and quit).
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
   `run.sh [install]`, `shot.sh [png]` (screendump via HMP `mon.sock`).
   SSH: `ssh -i vm/id_ed25519 -p 2222 -o StrictHostKeyChecking=no
@@ -145,7 +152,10 @@
   drawing feat params sheetmetal asmcon asmbig drawing2 script export; asm/drawing
   use part/box.ipt, the rest are self-contained), logs to inst/invscen/results/S.txt
   (`--vm all`: ref/S.txt), prints a PASS/FAIL table and steps >3x slower than
-  ref/S.txt; restarts the prefix when a crashed Inventor sits in winedbg (034).
+  ref/S.txt; when a crashed Inventor sits in winedbg (034) it kills that prefix's
+  Inventor/winedbg/CER dialog by PID (never wineserver -k, see licensing below).
+  The harness aborts a step at once on Inventor's "Licensing error" dialog or when
+  Inventor is gone (RPC unavailable); timeouts list Inventor's visible dialogs.
   Expectations are analytic (volumes, centroids, flat-pattern lengths, view extents)
   or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
@@ -154,6 +164,12 @@
   (artifacts in inst/invscen/inv2/). csc wants backslash paths; `using Inventor` clashes with System names
   (File, Environment, Attribute): qualify them. Embedded interop types don't
   inherit (PartDocument is not a Document): cast at runtime (`(Document)obj`).
+  `samples` / `samples2016` (symlink): Autodesk's official sample sets
+  (inst/samples/, C:\t\samples\{2022,2016} in the prefix and on the VM; open, mass,
+  BOM, rebuild, save-as copy, reopen per top-level doc; no expectations, diff vs VM).
+  autodesk_inventor_2022_samples.zip sha256 1eeb4164…09292b,
+  autodesk_inventor_2016_samples.zip 9d3096f6…41f501c, both from damassets.autodesk.net
+  (links on the "Inventor Sample Files" support article; www.autodesk.com zips 403 curl).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and

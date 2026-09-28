@@ -3,6 +3,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Linq;
 using System.Threading;
 using Inventor;
 
@@ -25,19 +26,63 @@ static class H
         var t = new Thread(() => { try { detail = body(); } catch (Exception e) { err = e; } });
         t.IsBackground = true;
         t.Start();
-        if (!t.Join(timeoutSec * 1000))
+        // Poll for Inventor's modal "Licensing error" (the licensing service went away,
+        // Inventor quits on OK): the step can't finish, abort with its text.
+        while (!t.Join(Math.Min(5000, Math.Max(0, timeoutSec * 1000 - (int)sw.ElapsedMilliseconds))))
         {
-            Console.WriteLine("FAIL {0} ({1:F1}s): TIMEOUT after {2}s", name, sw.Elapsed.TotalSeconds, timeoutSec);
+            string dlg = Dialogs();
+            bool lic = dlg.Contains("'Licensing error'");
+            if (!lic && sw.ElapsedMilliseconds < timeoutSec * 1000L) continue;
+            Console.WriteLine("FAIL {0} ({1:F1}s): {2}; Inventor dialogs: {3}", name, sw.Elapsed.TotalSeconds,
+                lic ? "LICENSING ERROR" : "TIMEOUT after " + timeoutSec + "s", dlg == "" ? "none" : dlg);
             System.Environment.Exit(2);
         }
         if (err != null)
         {
             fails++; failed++;
             Console.WriteLine("FAIL {0} ({1:F1}s): HRESULT 0x{2:X8} {3}", name, sw.Elapsed.TotalSeconds, err.HResult, err);
+            // RPC_S_SERVER_UNAVAILABLE / RPC_E_DISCONNECTED: Inventor is gone, nothing else can pass
+            if ((uint)err.HResult == 0x800706BA || (uint)err.HResult == 0x80010108)
+            {
+                Console.WriteLine("ABORT: Inventor exited (crash, or quit after a licensing error)");
+                System.Environment.Exit(2);
+            }
         }
         else
             Console.WriteLine("PASS {0} ({1:F1}s){2}", name, sw.Elapsed.TotalSeconds,
                 string.IsNullOrEmpty(detail) ? "" : ": " + detail);
+    }
+
+    [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr p);
+    [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr w, EnumProc f, IntPtr p);
+    [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w, out uint pid);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr w);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr w, System.Text.StringBuilder s, int n);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr w, System.Text.StringBuilder s, int n);
+    delegate bool EnumProc(IntPtr w, IntPtr p);
+    static string Text(IntPtr w, bool cls = false)
+    {
+        var b = new System.Text.StringBuilder(1024);
+        if (cls) GetClassName(w, b, b.Capacity); else GetWindowText(w, b, b.Capacity);
+        return b.ToString();
+    }
+
+    // Visible dialog boxes (#32770) of Inventor.exe: 'title' [child texts | ...]; ...
+    public static string Dialogs()
+    {
+        var pids = new System.Collections.Generic.HashSet<uint>();
+        foreach (var p in Process.GetProcessesByName("Inventor")) pids.Add((uint)p.Id);
+        var r = new System.Collections.Generic.List<string>();
+        EnumWindows((w, _) =>
+        {
+            uint pid; GetWindowThreadProcessId(w, out pid);
+            if (!pids.Contains(pid) || !IsWindowVisible(w) || Text(w, true) != "#32770") return true;
+            var kids = new System.Collections.Generic.List<string>();
+            EnumChildWindows(w, (c, __) => { string x = Text(c); if (x != "") kids.Add(x); return true; }, IntPtr.Zero);
+            r.Add("'" + Text(w) + "' [" + string.Join(" | ", kids.Take(8)) + "]");
+            return true;
+        }, IntPtr.Zero);
+        return string.Join("; ", r);
     }
 
     // Throws unless |actual - expected| <= tol * |expected|.

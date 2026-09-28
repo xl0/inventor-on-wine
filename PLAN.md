@@ -135,6 +135,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 044 DateTimePicker gap · O 045 maximized undecorated offset (draft)
   - M 046 comctl32 subclass: cross-thread/process, nested removal UAF, v5/v6 split
     (probable cause of an Inventor startup crash; not confirmed)
+  - O 049 SysLink `<a>` with extra attributes shown as raw markup (draft)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
