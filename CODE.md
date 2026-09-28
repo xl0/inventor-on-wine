@@ -40,7 +40,8 @@
   dump visible top-level windows + children (class, text, rect, pid, styles).
   `dragdrop_revoke.c`: RegisterDragDrop/RevokeDragDrop across threads/apartments/processes (034).
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
-  `ctrlchar_text.c`: "Pan\r" via ExtTextOut/DrawText/combo/listbox (039, screenshot it).
+  `ctrlchar_text.c [FONT..|show]`: per-API table of how control chars are drawn/measured
+  (GDI, DrawText, GCP, Uniscribe); `show`: "Pan\r" in ExtTextOut/DrawText/combo/listbox (039).
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
   `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
