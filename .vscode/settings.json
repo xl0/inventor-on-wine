@@ -1,0 +1,6 @@
+{
+  "files.exclude": { "prefixes/**": true, "wt/**": true, "build/**": true, "deps/**": true, "iso/**": true, "inst/webinstall/**": true, "vm/*.qcow2": true, ".claude/**": true },
+  "search.exclude": { "prefixes/**": true, "wt/**": true, "build/**": true, "deps/**": true, "iso/**": true, "inst/**": true, "wine-src/**": true, ".claude/**": true },
+  "files.watcherExclude": { "prefixes/**": true, "wt/**": true, "build/**": true, "deps/**": true, "iso/**": true, "inst/**": true, "vm/**": true, "wine-src/**": true, ".claude/**": true },
+  "search.followSymlinks": false
+}

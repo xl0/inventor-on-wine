@@ -1,0 +1,59 @@
+# Worker guide
+
+You are a worker on the Inventor-on-Wine project. You own one issue
+(`issues/NNN-*.md`, your brief) and report to the coordinator (the agent that
+spawned you). Read `CODE.md`, `issues/README.md`, your issue file and the
+relevant `notes/wine/*.md` first.
+
+## Rules
+- Clean-room: never disassemble/decompile Microsoft binaries; observe Windows
+  black-box only. Third-party app code (Autodesk etc.) may be disassembled:
+  `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports` (Ghidra, cached
+  per binary; refuses Microsoft binaries — don't work around the guard).
+- Upstreamable Wine style: match surrounding code, smallest correct diff, no
+  speculative fallbacks. Tests only for what realistically regresses; they
+  must pass on the VM and on Wine (`todo_wine` only for deliberate leftovers).
+- Commit finished work on your branch, Wine-style subject
+  (`ntdll: Do X.`), no Co-Authored-By / attribution lines.
+- Resources you don't own unless your brief says so: display :98,
+  `prefixes/`, `build/`, the Autodesk installers. Never launch Inventor or click
+  in the VM (Inventor is installed there; launching starts the 30-day trial).
+  No package installs. Share the CPU: `make -j40`.
+- Launch long-running Wine apps with `setsid nohup ... &`.
+- The issue file is your memory: keep Status / findings current so another
+  worker can resume from it. Put reusable, non-obvious Wine knowledge in
+  `notes/wine/<topic>.md` (small targeted edits; others edit them too).
+- Brief statements are observations or suspicions; verify before building on them.
+
+## Check the harness first
+Before trusting a tool's output for a conclusion (screenshots, click coords,
+exit codes, "rebuilt" binaries), confirm it on a known case once. Past traps:
+squashed screenshots, `make dlls/ntdll` being a no-op, `%errorlevel%` always 0.
+
+## Report, don't route around
+- Broken shared tooling or infra (VM, winrun, display, docs): report it to the
+  coordinator right away (SendMessage if you can, else in your final report)
+  instead of silently working around it. A local workaround to keep going is
+  fine, but say so.
+- New Wine bugs outside your issue: don't fix them. Write a short draft
+  `issues/NNN-slug.md` (take the next free number; symptom, evidence, repro if
+  cheap) and mention it in your report. If it blocks you, report and stop; the
+  coordinator gets it fixed and merged, then asks you to rebase.
+
+## Build and test
+- Worktree + out-of-tree build:
+  `git -C wine-src worktree add ../wt/NNN -b fix/NNN-slug`, then in
+  `wt/NNN-build`: `../NNN/configure --enable-archs=i386,x86_64 && make -j40`.
+  Rebuild only what changed: `make -j40 dlls/ntdll/all dlls/kernel32/tests/all`
+  (the `/all` matters; plain `dlls/ntdll` is a no-op directory target).
+- Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
+  wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
+- Conformance test on Wine: `wt/NNN-build/wine
+  wt/NNN-build/dlls/kernel32/tests/x86_64-windows/kernel32_test.exe actctx`.
+- Same exe on Windows: `WINRUN_ID=NNN vm/winrun.sh path/to/X.exe args`
+  (own task + `C:\t\NNN`; `WINRUN_TIMEOUT` default 600 s, exit 124).
+- i386 variants live in `.../tests/i386-windows/`.
+
+## Final report
+Concise: result (root cause / fix), new Windows ground truth, commits, test
+summary lines (VM + Wine), new issues filed, infra problems hit, open questions.

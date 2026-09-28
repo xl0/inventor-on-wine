@@ -1,0 +1,30 @@
+# Allowlist: big/binary/third-party/secret stuff stays out (VM disks, prefixes,
+# Autodesk installers, wine-src (own repo), builds, vm/id_ed25519).
+/*
+!/.gitignore
+!/.vscode/
+!/CODE.md
+!/PLAN.md
+!/issues/
+!/notes/
+!/tools/
+!/x/
+!/tests/
+!/vm/
+!/deps/
+/deps/*
+!/deps/dxvk.sh
+/vm/*
+!/vm/autounattend.xml
+!/vm/setup.ps1
+!/vm/run.sh
+!/vm/shot.sh
+!/vm/input.py
+!/vm/winrun.sh
+*.log
+*.log.old
+*.exe
+*.res
+*.tgz
+/x/xorg.out
+/tests/sxs_probe/cases/

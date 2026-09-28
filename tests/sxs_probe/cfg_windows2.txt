@@ -1,0 +1,155 @@
+launch C:\t\cfg\r2_nocfg:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_nocfg:
+  default (flags 0):
+    cfg type=1 chars=0 path=(null)
+    root type=2 path=C:\t\cfg\r2_nocfg\child.exe.Manifest appdir=C:\t\cfg\r2_nocfg\
+    asm 2: C:\t\cfg\r2_nocfg\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=1 chars=0 path=(null)
+    root type=2 path=C:\t\cfg\r2_nocfg\child.exe.Manifest appdir=C:\t\cfg\r2_nocfg\
+    asm 2: C:\t\cfg\r2_nocfg\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=1 chars=0 path=(null)
+    root type=2 path=C:\t\cfg\r2_nocfg\child.exe.manifest appdir=C:\t\cfg\r2_nocfg\
+    asm 2: C:\t\cfg\r2_nocfg\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_abs:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_trailing:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_spaces:
+  default (flags 0):
+    cfg type=2 chars=35 path=C:\t\cfg\r2_spaces\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_spaces\child.exe.Manifest appdir=C:\t\cfg\r2_spaces\
+    asm 2: C:\t\cfg\r2_spaces\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=35 path=C:\t\cfg\r2_spaces\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_spaces\child.exe.Manifest appdir=C:\t\cfg\r2_spaces\
+    asm 2: C:\t\cfg\r2_spaces\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=35 path=C:\t\cfg\r2_spaces\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_spaces\child.exe.manifest appdir=C:\t\cfg\r2_spaces\
+    asm 2: C:\t\cfg\r2_spaces\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_badxml:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_nsonly:
+  default (flags 0):
+    cfg type=2 chars=35 path=C:\t\cfg\r2_nsonly\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_nsonly\child.exe.Manifest appdir=C:\t\cfg\r2_nsonly\
+    asm 2: C:\t\cfg\r2_nsonly\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=35 path=C:\t\cfg\r2_nsonly\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_nsonly\child.exe.Manifest appdir=C:\t\cfg\r2_nsonly\
+    asm 2: C:\t\cfg\r2_nsonly\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=35 path=C:\t\cfg\r2_nsonly\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_nsonly\child.exe.manifest appdir=C:\t\cfg\r2_nsonly\
+    asm 2: C:\t\cfg\r2_nsonly\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_up:
+  default (flags 0):
+    cfg type=2 chars=31 path=C:\t\cfg\r2_up\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_up\child.exe.Manifest appdir=C:\t\cfg\r2_up\
+    asm 2: C:\t\cfg\r2_up\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=31 path=C:\t\cfg\r2_up\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_up\child.exe.Manifest appdir=C:\t\cfg\r2_up\
+    asm 2: C:\t\cfg\r2_up\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=31 path=C:\t\cfg\r2_up\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_up\child.exe.manifest appdir=C:\t\cfg\r2_up\
+    asm 2: C:\t\cfg\r2_up\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_empty:
+  default (flags 0):
+    cfg type=2 chars=34 path=C:\t\cfg\r2_empty\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_empty\child.exe.Manifest appdir=C:\t\cfg\r2_empty\
+    asm 2: C:\t\cfg\r2_empty\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=34 path=C:\t\cfg\r2_empty\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_empty\child.exe.Manifest appdir=C:\t\cfg\r2_empty\
+    asm 2: C:\t\cfg\r2_empty\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=34 path=C:\t\cfg\r2_empty\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_empty\child.exe.manifest appdir=C:\t\cfg\r2_empty\
+    asm 2: C:\t\cfg\r2_empty\privtest\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_trailfwd:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_trailsemi:
+  default (flags 0):
+    cfg type=2 chars=38 path=C:\t\cfg\r2_trailsemi\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_trailsemi\child.exe.Manifest appdir=C:\t\cfg\r2_trailsemi\
+    asm 2: C:\t\cfg\r2_trailsemi\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=38 path=C:\t\cfg\r2_trailsemi\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_trailsemi\child.exe.Manifest appdir=C:\t\cfg\r2_trailsemi\
+    asm 2: C:\t\cfg\r2_trailsemi\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=38 path=C:\t\cfg\r2_trailsemi\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_trailsemi\child.exe.manifest appdir=C:\t\cfg\r2_trailsemi\
+    asm 2: C:\t\cfg\r2_trailsemi\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_dot:
+  default (flags 0):
+    cfg type=2 chars=32 path=C:\t\cfg\r2_dot\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_dot\child.exe.Manifest appdir=C:\t\cfg\r2_dot\
+    asm 2: C:\t\cfg\r2_dot\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=32 path=C:\t\cfg\r2_dot\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_dot\child.exe.Manifest appdir=C:\t\cfg\r2_dot\
+    asm 2: C:\t\cfg\r2_dot\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=32 path=C:\t\cfg\r2_dot\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_dot\child.exe.manifest appdir=C:\t\cfg\r2_dot\
+    asm 2: C:\t\cfg\r2_dot\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_twoprobing:
+  default (flags 0):
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twoprobing\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twoprobing\child.exe.Manifest appdir=C:\t\cfg\r2_twoprobing\
+    asm 2: C:\t\cfg\r2_twoprobing\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twoprobing\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twoprobing\child.exe.Manifest appdir=C:\t\cfg\r2_twoprobing\
+    asm 2: C:\t\cfg\r2_twoprobing\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twoprobing\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twoprobing\child.exe.manifest appdir=C:\t\cfg\r2_twoprobing\
+    asm 2: C:\t\cfg\r2_twoprobing\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_twobinding:
+  default (flags 0):
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twobinding\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twobinding\child.exe.Manifest appdir=C:\t\cfg\r2_twobinding\
+    asm 2: C:\t\cfg\r2_twobinding\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  USE_ACTIVE:
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twobinding\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twobinding\child.exe.Manifest appdir=C:\t\cfg\r2_twobinding\
+    asm 2: C:\t\cfg\r2_twobinding\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+  create own manifest file (child.exe.manifest): ok
+    cfg type=2 chars=39 path=C:\t\cfg\r2_twobinding\child.exe.Config
+    root type=2 path=C:\t\cfg\r2_twobinding\child.exe.manifest appdir=C:\t\cfg\r2_twobinding\
+    asm 2: C:\t\cfg\r2_twobinding\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+launch C:\t\cfg\r2_extra:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_nodeps:
+    CreateProcess err=14001
+launch C:\t\cfg\r2_nomani:
+    CreateProcess err=2
+create m\app.manifest: ok
+    cfg type=2 chars=24 path=C:\t\cfg\cb\m\app.Config
+    root type=2 path=C:\t\cfg\cb\m\app.manifest appdir=C:\t\cfg\cb\m\
+    asm 2: C:\t\cfg\cb\m\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+create m\app.manifest appname=a\: ok err=0
+    cfg type=2 chars=24 path=C:\t\cfg\cb\m\app.Config
+    root type=2 path=C:\t\cfg\cb\m\app.manifest appdir=C:\t\cfg\cb\m\
+    asm 2: C:\t\cfg\cb\m\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+create m\app.manifest appname=a\, priv in a\sub: FAIL err=14001
+create m\foo.xml: FAIL
+    err=14001
+create m\noext: ok
+    cfg type=2 chars=26 path=C:\t\cfg\cb\m\noext.Config
+    root type=2 path=C:\t\cfg\cb\m\noext appdir=C:\t\cfg\cb\m\
+    asm 2: C:\t\cfg\cb\m\sub\privtest.MANIFEST dir=amd64_privtest_none_1.0.0.0_none_1fe4832bd731da49
+create m\bad.manifest (garbage cfg): FAIL
+    err=14001
+create m\nocfg.manifest: FAIL
+    err=14001
+self default:
+    cfg type=0 chars=0 path=(null)
+    root type=0 path=(null) appdir=(null)

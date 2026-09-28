@@ -1,0 +1,26 @@
+-
+  ^ none           CreateProcess err=14001
+C:\t\sxs\appdir\privtest.MANIFEST
+  ^ appdir         exit=42
+-
+  ^ sub_nocfg      CreateProcess err=14001
+C:\t\sxs\sub_cfg\sub\privtest\privtest.MANIFEST
+  ^ sub_cfg        exit=42
+C:\t\sxs\flat_cfg\sub\privtest.MANIFEST
+  ^ flat_cfg       exit=42
+C:\t\sxs\multi_cfg\b\privtest\privtest.MANIFEST
+  ^ multi_cfg      exit=42
+C:\t\sxs\nested_cfg\x\y\privtest\privtest.MANIFEST
+  ^ nested_cfg     exit=42
+C:\t\sxs\up_cfg\lib\privtest\privtest.MANIFEST
+  ^ up_cfg\app     exit=42
+-
+  ^ wrongname      CreateProcess err=14001
+-
+  ^ nons_cfg       CreateProcess err=14001
+-
+  ^ dotnet_cfg     CreateProcess err=14001
+C:\t\sxs\both_cfg\privtest\privtest.MANIFEST
+  ^ both_cfg       exit=42
+C:\t\sxs\both2_cfg\privtest.MANIFEST
+  ^ both2_cfg      exit=42
