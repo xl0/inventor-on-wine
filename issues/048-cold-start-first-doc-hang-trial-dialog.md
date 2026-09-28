@@ -15,3 +15,8 @@ mid-suite without blocking anything, so the popup alone is not the cause.
 If it recurs: winedbg backtrace of all Inventor threads (main thread wait target),
 `xwininfo -root -children` for the popup's owner. Probably a race between the first
 document's view creation and the licensing popup (029/037 area).
+
+## Coordinator note
+Possibly the shared licensing service effect (one AdskLicensingService on
+127.0.0.1:39683 serves all prefixes; see CODE.md): if another prefix's services
+restarted at that moment, the trial popup could fail like this. Unverified.
