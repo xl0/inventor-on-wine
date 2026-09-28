@@ -40,7 +40,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   (first-run wizard, then the sign-in form). Next: coordinator signs in on :98.
   Signed in (028 workaround). integ 6c63dc3c499: Start-menu .lnk → trial welcome
   dialog → Inventor Home ("Inventor 2027.1", Recent, Open/New) in ~75 s, responsive.
-  - VM: installed (not launched yet).
+  - VM: installed; signed in 2026-09-28 13:15 (user solved hCaptcha); Inventor
+    Home up, running in the desktop session (reference for scenarios).
   - Wine (integ ec5464293b0): "Install and update complete" 2026-09-28 02:03;
     base bundle + 2027.1 Update bundle INSTALLED (incl. DWG TrueView as
     Essential, as on the VM). UI left at the Start screen (not clicked).
