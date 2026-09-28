@@ -1,5 +1,6 @@
 #!/bin/sh
 # Usage: tools/invscen/run.sh [--vm] SCENARIO
+#   WINE_BUILD=dir picks the Wine build (default build/).
 # Builds tools/invscen/{Harness,SCENARIO}.cs with the prefix's .NET 4.8 csc
 # (Inventor interop types embedded, /link) and runs it against the Inventor
 # running in prefixes/inv on :98 (starts it if needed). Artifacts go to
@@ -8,6 +9,7 @@
 # the Inventor already running there; never starts it), artifacts in
 # C:\t\scen\SCENARIO, copied back to inst/invscen/vm/SCENARIO/.
 set -e
+W=${WINE_BUILD:-build}  # Wine build dir to run under
 cd "$(dirname "$0")/../.."
 VM=; [ "$1" = --vm ] && VM=1 && shift
 S=${1:?usage: $0 [--vm] SCENARIO}
@@ -17,7 +19,7 @@ export WINEPREFIX=$PWD/prefixes/inv DISPLAY=${DISPLAY:-:98} \
 B=inst/invscen/bin O=inst/invscen/$S
 mkdir -p $B $O
 if [ ! -e $B/$S.exe ] || [ tools/invscen/$S.cs -nt $B/$S.exe ] || [ tools/invscen/Harness.cs -nt $B/$S.exe ]; then
-	build/wine 'C:\windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe' /nologo /debug- \
+	$W/wine 'C:\windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe' /nologo /debug- \
 		/out:"inst\\invscen\\bin\\$S.exe" /link:'C:\Program Files\Autodesk\Inventor 2027\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll' \
 		"tools\\invscen\\Harness.cs" "tools\\invscen\\$S.cs"
 fi
@@ -32,6 +34,6 @@ fi
 # Not prefix-specific: assumes no other prefix runs Inventor.
 if ! ps -eo args | grep -q '^C:.*\\Inventor\.exe'; then
 	echo "starting Inventor" >&2
-	setsid nohup build/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe' >>inst/invscen/inventor.log 2>&1 &
+	setsid nohup $W/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe' >>inst/invscen/inventor.log 2>&1 &
 fi
-exec timeout ${INVSCEN_TIMEOUT:-1800} build/wine $B/$S.exe "$(build/wine winepath -w $O)"
+exec timeout ${INVSCEN_TIMEOUT:-1800} $W/wine $B/$S.exe "$($W/wine winepath -w $O)"
