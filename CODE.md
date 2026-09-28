@@ -240,7 +240,8 @@ are not present here.
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
   command: wine children inherit the pipe and the reader never sees EOF.
   Other setup: `INV_PREFIX=prefixes/inv2 DISPLAY=:99 DRI_PRIME=pci-0000_34_00_0`
-  (artifacts in inst/invscen/inv2/). csc wants backslash paths; `using Inventor` clashes with System names
+  (artifacts in inst/invscen/inv2/). `view`: reopens part/box.ipt visible, SaveAsBitmap,
+  leaves it open for a viewport screenshot (037). csc wants backslash paths; `using Inventor` clashes with System names
   (File, Environment, Attribute): qualify them. Embedded interop types don't
   inherit (PartDocument is not a Document): cast at runtime (`(Document)obj`).
   `samples` / `samples2016` (symlink): Autodesk's official sample sets

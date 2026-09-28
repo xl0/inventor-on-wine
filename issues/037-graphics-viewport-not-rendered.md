@@ -1,55 +1,66 @@
 # 037 Inventor graphics window: stale Home page in the viewport, SaveAsBitmap unshaded
-Status: open (draft) · Owner: - · Branch: - · Found in: test campaign (invscen part, probe)
+Status: fixed · Owner: worker-037 · Branch: fix/037-d3d11-display-fx-statics (wine-src, on master)
+Found in: test campaign (invscen part, probe)
 
 ## Symptoms (integ 91495f487ad, :98, WINE_D3D_CONFIG=renderer=vulkan)
-1. After `Documents.Add(part, visible=true)` the part tab is active (ribbon
-   3D Model, browser shows Part/Extrusion1) but the graphics area keeps
-   showing the Home page (Recent list), shifted right by the browser pane
-   width. Clicking the part tab doesn't change it.
+1. After `Documents.Add(part, visible=true)` the part tab is active but the graphics
+   area keeps showing the Home page (nothing is ever presented there).
    ![viewport](attachments/037-part-viewport-wine.png)
-2. `View.SaveAsBitmap(png, 800, 600)` of a 4x3x2 box after `GoHome()`:
-   Windows gives the grey-gradient background with shaded faces + edges
-   (124 KB); Wine gives a black background with only the silhouette/edge
-   lines (4.5 KB).
+2. `View.SaveAsBitmap(png, 800, 600)` of a 4x3x2 box after `GoHome()`: Windows gives
+   the grey-gradient background with shaded faces + edges; Wine gave black with only
+   edge lines, and framed off-centre.
    - VM: ![vm](attachments/037-saveasbitmap-vm.png)
    - Wine: ![wine](attachments/037-saveasbitmap-wine.png)
-   Saved .ipt/.idw files are smaller on Wine (box.ipt 71 KB vs 128 KB,
-   holed.idw 249 KB vs 298 KB), presumably the embedded thumbnail.
+   Saved .ipt were smaller (box.ipt 71 KB vs 128 KB): the embedded thumbnail.
 
-3. Early in a session (first ~1-2 min after an Inventor start, 3 of 3 cold
-   starts): right after `Documents.Add(part, visible)` + sketch/extrude,
-   `Application.ActiveView` is null (`new part` of the very first document
-   also took 10 s). Later in the session it is set. Not checked on Windows
-   (the VM's Inventor is never restarted). `run.sh hello` checks ActiveView of
-   the first part; part/export now use `doc.Views[1]` instead.
-4. SaveAsBitmap varies between calls on Wine: in `run.sh export` the BMP is
-   black background + edges, the JPG/PNG right after it white background +
-   white faces with only the hole shaded; Windows gives the same shaded image
-   (39% light pixels) for all three.
+## Graphics stack
+Inventor renders through Autodesk OGS: OGSDeviceDX11.dll (D3D11; no D3D12 device is
+created although OGSDeviceDX12/d3d12 get loaded). Shaders are HLSL effects compiled at
+run time with D3DCompile(fx_5_0) and loaded by an Effects11 (FX11) copy linked into
+OGSDeviceDX11. D3DCOMPILER_47 is a static import; Inventor ships an app-local MS
+d3dcompiler_47, but Wine's version heuristic (Microsoft CompanyName) loads the builtin
+(vkd3d-shader) instead, like the in-box one on Windows.
+Same result on wined3d-vk, wined3d-GL and DXVK 3.1.1 (all use Wine's d3dcompiler).
+`WINEDLLOVERRIDES=d3dcompiler_47=n` fixed symptom 2 only (workaround, no longer needed).
 
-Symptom 2 is independent of the window (offscreen render), so the
-renderer itself loses faces/background (triangles or clears not drawn,
-lines are). Symptom 1 may be a separate composition issue (Home WebView2
-surface left above the graphics child) or the same renderer failure.
+## Cause and fix (two bugs)
+- Symptom 2: vkd3d-shader fx_4/fx_5 writer emitted `static` globals (e.g. OGS's
+  `static float2 gTexelSize = 1.0 / gScreenSize;` in Common10.fxh) as effect
+  variables in `$Globals`, all at offset 0 overlapping real uniforms. Native omits
+  them (VM: d3d10 effect test). Effects11 then sets wrong constants; the tone-mapping
+  (Canon curve) and SSAO passes write black, only the edge pass survives.
+  Fix: skip non-uniform globals in write_fx_4_buffer (libs/vkd3d fx.c). Upstream vkd3d
+  master (e75e92b1, 2026-09-28) still has the bug.
+- Symptom 1: d3d11 CheckFormatSupport never reported D3D11_FORMAT_SUPPORT_DISPLAY.
+  OGS picks its swapchain format among formats with DISPLAY; with none it calls
+  CreateSwapChain with DXGI_FORMAT_UNKNOWN, which fails with E_INVALIDARG (same on
+  Windows, tested) and the view is never presented. Fix: report DISPLAY for the DXGI
+  display formats (R8G8B8A8/B8G8R8A8 (+SRGB); R16G16B16A16_FLOAT, R10G10B10A2 and
+  XR_BIAS from FL 10_0) when they are render targets. Existing d3d11/d3d10core tests
+  had todo_wine for this; removed (XR_BIAS stays todo: wined3d doesn't support it).
+  Still missing vs Windows (VM, format 28): MIP_AUTOGEN, BLENDABLE, CPU_LOCKABLE,
+  BACK_BUFFER_CAST; not needed by Inventor.
 
-## Repro
-`tools/invscen/run.sh part` → inst/invscen/part/box.png (VM reference:
-inst/invscen/vm/part/box.png). For 1: any scenario leaving a part open,
-then `x/shot.sh`.
+## Commits (fix/037-d3d11-display-fx-statics)
+- 060a762cf79 vkd3d-shader/fx: Do not write static globals as fx_4/fx_5 buffer variables.
+  (+ d3d10/tests/effect.c test_effect_compiler: static global not an effect variable)
+- 8045bdc09a3 d3d11: Report D3D11_FORMAT_SUPPORT_DISPLAY for swapchain formats.
 
-## Next
-Which API the viewport uses (Inventor.exe loads d3d11, d3d9, opengl32;
-Application Options > Display > graphics settings / "Software graphics"),
-WINEDEBUG=+d3d11,+d3d warnings during SaveAsBitmap, compare with DXVK
-(deps/dxvk.sh on a copy of the prefix).
+## Tests
+- d3d10 effect: VM 5052 tests, 0 failures; Wine x86_64 + i386 0 failures (4 before the fix).
+- d3d10core: VM 195865 tests, 0 failures; Wine pass (DISPLAY todos removed).
+- tools/regress.sh on d3d11 d3d10 d3d10_1 d3d10core dxgi d3dcompiler_43/47 d3dx10_43
+  d3dx11_43 d3d9 d3d8 vs master baseline 4e819f054dd: no regressions (d3d11: 36 fewer todos).
+- Inventor (inv2, :99, integ 228616fa47c + both commits): `run.sh part` PASS 3/3,
+  box.png equals the VM reference (mean abs diff 0.05/255), box.ipt 117 KB; the live
+  viewport renders the part (ViewCube, nav bar):
+  ![fixed viewport](attachments/037-part-viewport-fixed.png)
+  ![fixed bitmap](attachments/037-saveasbitmap-fixed.png)
 
-## UI campaign (manual, :98, integ d53133a66a1)
-Viewport stays blank (background only) in part/assembly/drawing: no model,
-sketch geometry, ViewCube, navigation bar, origin, orbit overlay; same for
-all visual styles. Input still reaches it (status bar coordinates track the
-mouse; rectangle corners and component placement by click work; heads-up
-value boxes render). Picking does not: edges/faces never prehighlight or
-select (Dimension, Fillet edge pick, face click), so fillet-by-pick, drag
-component and pick-based constraints are blocked. Possibly GPU-based
-selection failing with the renderer, or a separate bug: recheck once
-rendering works. The Save As preview of a drawing sheet did render.
+## Notes
+- One run crashed Inventor during GoHome with issue 047's signature
+  (ogsdevicedx11+0x32ebb on a TBB worker, dump inv2 Temp\Inventor260928160346.dmp);
+  pre-existing, intermittent, not caused by these fixes.
+- OGS's include handler (FXDx11IncludeHandler::Open) fails unless GetLastError() is 0
+  on entry (it checks it after MultiByteToWideChar). Wine behaves like Windows here;
+  it only bit my own instrumentation (CreateFile OPEN_ALWAYS left 183).
