@@ -148,7 +148,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 031 typelib offsets > 32 KB · M 032 typelib load speed
   - L 033 Wow6432Node marker keys · M 034 RevokeDragDrop wrong thread
   - M 035 DOS device names (Win11) · X 036 black dialogs (xwd artifact)
-  - O 037 3D viewport: HLSL fx_5_0 miscompile + swapchain E_INVALIDARG (in progress)
+  - M 037 3D viewport: vkd3d-shader fx statics in $Globals + d3d11 FORMAT_SUPPORT_DISPLAY
   - L 038 NTFS stream names · M 039 unmapped control chars zero-width (+ DrawText tab break)
   - M 040 custom title bar vs WM decorations · M 041 file dialog breadcrumb
   - L 042 popup shadows black · M 043 file dialog selection
