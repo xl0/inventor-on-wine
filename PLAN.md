@@ -32,9 +32,12 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
   - 003 installer "hang" — not a Wine bug (our x/shot.sh was wrong; spin is Autodesk's, same on Windows)
   - 004 CreateProcess should fail (14001) on missing manifest dependency (low)
   - 005 lost GPU window content after expose (win32u) — merged
-  - 006 winex11 empty surface clip = no clip — merged (build/ not yet rebuilt)
+  - 006 winex11 empty surface clip = no clip — merged
   - 007 tasklist no-match output (installer Error 101) — merged
-  - 008 .adix package reader fails (installer Error 4005)
+  - 008 wintrust p7x blob verification (installer Error 4005) — merged
+  - 009 wintrust accepts SHA-256 signatures without chain check; unverified
+    RFC 3161 tokens (security)
+  - 010 RegLoadKey rejects Registry.dat hive from .adix (installer Error 4000)
 - [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
   runs it. Tracks upstream master tip: periodically recreate integ on current
   master + open fix branches, rerun tests + the Inventor steps.
