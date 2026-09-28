@@ -44,8 +44,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 012 crypt32 base policy lacks basic constraints check (low)
   - 010 regf hive loading + RegLoadAppKey (installer Error 4000) — fixed,
     in adversarial review before merge
-  - 013 regression from 009: CMS attr cert in TSA token breaks MSG store
-    (.NET Desktop Runtime Error 15)
+  - 013 crypt32 array decoder skip bug (exposed by 009; .NET runtime
+    Error 15) — merged
   - next after 013: AceInvAddIn-ca.msi 1603, DWG TrueView / Electrical
     Catalog Browser failures (uninvestigated; maybe knock-on)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits

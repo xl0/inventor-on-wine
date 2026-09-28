@@ -23,5 +23,9 @@
   szOID_RSA_data or version >= 3 (CMS), both for CMSG_CONTENT_PARAM and the
   signer hash (Windows behaviour). Authenticode (v1) hashes the SEQUENCE's
   content octets.
+- CMS v3 certificates: Windows exposes `[1]` choices as attribute certs and drops
+  other non-SEQUENCE choices; Wine drops every element that isn't a valid
+  certificate (decode.c CRYPT_AsnDecodeArray skip path, issue 013). Microsoft
+  time-stamp tokens carry a `[1]` attr cert.
 - Handy harness: `tests/p7x_winverifytrust.c` dumps chain/policy/WinVerifyTrust
   signer state; `tests/p7x_gen.py` makes signed p7x test blobs (python3-cryptography).
