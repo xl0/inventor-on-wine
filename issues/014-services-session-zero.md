@@ -85,7 +85,11 @@ Behaviour changes / risks (all match Windows):
 - COM LocalServers are started by the client (combase), unaffected.
 
 ## Outcome (branch fix/014-services-session0, on master 4e819f054dd)
-Implemented as designed (8 commits incl. 015). Wine now matches the VM table
+Implemented as designed (9 commits incl. 015), plus
+`server: Keep window station enumeration and hardware input within their
+session.` (regress found user32:winstation listing session 0's
+__wineservice_winstation from session 1; hardware input without a target
+window now picks the console session's WinSta0 only). Wine now matches the VM table
 except: services' winstation is still `__wineservice_winstation`, and
 WTSEnumerateSessions/WTSQuerySessionInformation stay semi-stubs listing only
 the caller's session (a service sees just session 0 "Console").
