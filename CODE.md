@@ -125,6 +125,8 @@ are not present here.
   `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
   callback, cross-thread/process calls (046).
   `syslink_attr.c`: SysLink `<a>` parsing with extra attributes (049).
+  `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
+  then paths/CreateProcess through it (052).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
@@ -132,6 +134,8 @@ are not present here.
   signed in) is a second Inventor setup, independent of :98/inv.
   Third: `x/start.sh 100 PCI:22:0:0` (GPU 16:00.0, `DRI_PRIME=pci-0000_16_00_0`),
   `x/vnc.sh 100` → VNC 5904, `prefixes/inv3` (copy of inv minus the installer Temp cache).
+  inv2/inv3 were copied without xattrs: their 3 Autodesk junctions are plain `X?`
+  dirs until repaired (052, notes/wine/reparse.md). Copy prefixes with `cp -a`.
   Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
