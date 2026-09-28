@@ -59,7 +59,9 @@ commits or screenshots). Read-only mode may remain after expiry.
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue
 (briefed by `notes/worker.md` + the issue file), reviews, cherry-picks onto `integ`,
-rebuilds `build/`, deletes merged worktrees (branches kept). Workers report
+rebuilds `build/`, deletes merged worktrees (branches kept).
+After each `integ` update: a subagent runs `tools/regress.sh` (full suite,
+differential vs cached master baseline) and reports only regressions. Workers report
 new bugs as draft issues and infra breakage instead of routing around it.
 Disassembling third-party (Autodesk) code is OK; Microsoft code never.
 Review again after the next batch of workers. Notes so far:
