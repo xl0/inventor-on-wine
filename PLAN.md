@@ -12,8 +12,9 @@ Drive via Inventor COM API where possible, screenshots only for UI/render checks
 
 Licensing: 30-day trial per Autodesk account. User approved starting the clock
 (2026-09-27). First launch needs the user's Autodesk sign-in (credentials are
-the user's: leave the sign-in page on :98 for them via VNC; never screenshot/
-commit it). Read-only mode may remain after expiry.
+the user's, in `login.txt` — git-ignored, mode 600; only the coordinator
+types them, via xdotool on :98; never paste them into prompts, logs, issues,
+commits or screenshots). Read-only mode may remain after expiry.
 
 ## TODO
 - [x] Wine built from source (new WoW64), prefix boots
