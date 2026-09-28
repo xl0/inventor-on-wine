@@ -40,9 +40,9 @@ static class Scenario
         H.Step("mass properties", () => MassProps(doc));
         H.Step("view bitmap", () =>
         {
-            app.ActiveView.GoHome();
+            doc.Views[1].GoHome();  // not ActiveView: null early in a session on Wine (037)
             string bmp = H.Out + "\\box.png";
-            app.ActiveView.SaveAsBitmap(bmp, 800, 600);
+            doc.Views[1].SaveAsBitmap(bmp, 800, 600);
             return bmp + " " + new FileInfo(bmp).Length + " bytes";
         });
         H.Step("save", () =>

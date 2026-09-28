@@ -34,6 +34,20 @@ commits or screenshots). Read-only mode may remain after expiry.
   per-step timings. UI (:98): ribbon tabs + main dialogs, manual sketch/extrude,
   viewport navigation + visual styles screenshot-diffed vs VM (wined3d, then
   DXVK), browser/context menus/undo, Assistant panel, help links.
+  - API suite done (`tools/invscen/run.sh all`, 13 scenarios, ~130 steps; VM
+    reference logs + outputs in inst/invscen/ref/). integ 91495f487ad: all
+    modelling, parameters/iProperties/materials, sheet metal + flat pattern,
+    constraints/BOM/interference, 200-occurrence asm, drawings (section/
+    detail/dims/parts list/sheet formats, .idw), STEP/IGES/SAT/Parasolid/STL
+    round trips, PDF/DWG/DXF export and iLogic PASS with the VM's values.
+    Wine-only failures: SaveAsBitmap unshaded (037), view extents/cold-start
+    ActiveView (037), black Inventor dialogs (036), con.iam (035, fixed),
+    Inventor crashes in RevokeDragDrop (034, 3 in ~1 h of suite runs).
+    Infra: prefix has no Wine Gecko; Inventor's first STEP import per session
+    loads mshtml → "install Gecko" prompt blocks Inventor (export runs last).
+    Not testable: VBA (not installed), Apprentice (not registered) — same on VM.
+    Speed: suites 1.1-2.5x the VM; constraints 5-10x (mate/flush 2.7 s vs
+    0.4 s, angle 2.0 vs 0.2), placing 200 occurrences 19 s vs 7 s.
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
@@ -110,10 +124,12 @@ commits or screenshots). Read-only mode may remain after expiry.
     via COM) — merged
   - 032 typelib load quadratic + PSDispatch loading typelibs (COM 10–500x
     slower) — merged; COM now ~VM speed (asm 163 s → 4 s)
-  - 034 intermittent Inventor startup crash in ole32 IDropTarget_Release
+  - 034 intermittent Inventor crash in ole32 RevokeDragDrop/IDropTarget_Release
+    (startup and early session; 3x in ~1 h of suite runs)
   - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged,
     build/ rebuild pending (campaign running)
-  - 036 DWG export options wizard renders black — queued (needs an Inventor)
+  - 036 Inventor dialogs render black (DWG export wizard, plain #32770
+    message box) — queued (needs an Inventor)
   - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
     (+ second Inventor env inv2 on :99)
   - 038 NTFS alternate data stream name syntax unsupported (low)

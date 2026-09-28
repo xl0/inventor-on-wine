@@ -36,8 +36,13 @@
   `tlb_cache.c`: typelib cache + PSDispatch/PSOAInterface proxy/stub probe and benchmark (032).
   `com_peruser.c`: COM vs per-user classes (CLSID/ProgID/Interface/OleRegGetUserType,
   RegOpenUserClassesRoot); run elevated and non-elevated, modes as argv[1] for fresh processes.
+  `dosdev_name.c`: DOS device names in paths (035). `wintext.c` (`wintext.exe [TITLE]`):
+  dump visible top-level windows + children (class, text, rect, pid), for dialogs that don't render.
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
+  `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
+  `x/vnc.sh 99` → VNC 5903, `x/shot.sh out.png 99`. :99 + `prefixes/inv2` (copy of inv,
+  signed in) is a second Inventor setup, independent of :98/inv.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
   `run.sh [install]`, `shot.sh [png]` (screendump via HMP `mon.sock`).
   SSH: `ssh -i vm/id_ed25519 -p 2222 -o StrictHostKeyChecking=no
@@ -110,17 +115,29 @@
   OAuth code comes back through a custom URI scheme registered in the prefix.
   Session: `[B=<build>] inst/transplant/run-inv.sh [log]`
   restarts the prefix and launches Inventor on :107 (licensing service auto-starts since 014).
-- `tools/invscen/run.sh [--vm] SCENARIO` — Inventor COM API scenarios. Compiles
+- `tools/invscen/run.sh [--vm] SCENARIO|all` — Inventor COM API scenarios. Compiles
   `Harness.cs` + `SCENARIO.cs` with the prefix's .NET 4.8 csc (Inventor interop types
   embedded via /link, so the exe also runs on the VM), attaches to the running
   Inventor (GetActiveObject; starts Inventor.exe in prefixes/inv if none runs; the
   VM side never starts it), closes all docs, prints PASS/FAIL/SKIP per step with
-  values + timings (step timeout aborts the run; first failure skips the rest).
-  Artifacts: inst/invscen/SCENARIO/ (VM: C:\t\scen\SCENARIO, copied to
-  inst/invscen/vm/). Scenarios: hello (connect), part (sketch/extrude/mass
-  props/save/reopen), asm and drawing (use part/box.ipt), tlb (typelib check, 031).
-  csc wants backslash paths; `using Inventor` clashes with System names
-  (File, Environment, Attribute): qualify them.
+  values + timings (step timeout aborts the run; a failure skips the rest of its
+  section, `H.Reset()` starts an independent one). Harness helpers: NewPart, Box,
+  Vol/Mass (analytic volume checks), EdgeAt/FaceAt, Save, Translate (export via a
+  translator add-in).
+  Artifacts: inst/invscen/SCENARIO/; `--vm`: C:\t\scen\SCENARIO copied to
+  inst/invscen/ref/ (the VM reference). `all` runs the suite (hello tlb part asm
+  drawing feat params sheetmetal asmcon asmbig drawing2 script export; asm/drawing
+  use part/box.ipt, the rest are self-contained), logs to inst/invscen/results/S.txt
+  (`--vm all`: ref/S.txt), prints a PASS/FAIL table and steps >3x slower than
+  ref/S.txt; restarts the prefix when a crashed Inventor sits in winedbg (034).
+  Expectations are analytic (volumes, centroids, flat-pattern lengths, view extents)
+  or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
+  triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
+  command: wine children inherit the pipe and the reader never sees EOF.
+  Other setup: `INV_PREFIX=prefixes/inv2 DISPLAY=:99 DRI_PRIME=pci-0000_34_00_0`
+  (artifacts in inst/invscen/inv2/). csc wants backslash paths; `using Inventor` clashes with System names
+  (File, Environment, Attribute): qualify them. Embedded interop types don't
+  inherit (PartDocument is not a Document): cast at runtime (`(Document)obj`).
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and
