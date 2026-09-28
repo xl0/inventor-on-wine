@@ -88,6 +88,10 @@
   matched the VM. The file is the pin, so keep it.
   MicrosoftEdgeEnterpriseX64-154.0.4258.37.msi: Edge Stable x64, sha256
   4d8d922c…258246 (matches edgeupdates.microsoft.com/api/products?view=enterprise).
+- Wine Gecko 2.47.4 (the version wine-src's appwiz.cpl expects), x86 + x86_64
+  MSIs in deps/, sha256 = GECKO_SHA in dlls/appwiz.cpl/addons.c; installed with
+  `wine msiexec /i wine-gecko-2.47.4-<arch>.msi /qn` into inv-net48, inv, inv2
+  (prefixes are created with mshtml= to skip the prompt; mshtml needs Gecko).
 - `deps/dxvk.sh PREFIX` — pinned + sha256-checked DXVK 3.1.1 and vkd3d-proton
   3.0.1, copied into the prefix with native DllOverrides. Tarballs cached in deps/.
 - Ghidra 12.1.4 (`deps/ghidra_12.1.4_PUBLIC`, zip sha256 ddac49f9…d2d4db, from
