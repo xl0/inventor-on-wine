@@ -171,7 +171,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 054 DeleteFile/RemoveDirectory lack POSIX semantics (name stays while handles open)
   - L 055 ucrtbase math last-bit differences; sample rebuild volumes differ 5e-6..5e-5 (unconfirmed link)
   - O 056 COM stub lets C++ (noncontinuable) exceptions escape: Inventor crashes instead of RPC_E_SERVERFAULT
-  - O 053 packager OLE object lacks default-handler ifaces (sample parts) — in progress
+  - M 053 packager IViewObject2 + IOleObject + IPersistStorage::Save (Arm_Rest.ipt)
   - M 054 POSIX delete semantics in DeleteFile/RemoveDirectory (+3 server fixes)
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)

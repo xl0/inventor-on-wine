@@ -1,4 +1,4 @@
-# Local workstation
+# Local workstation (the user's laptop — NOT the server; skip this section on the server)
 
 Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
 no reference VM. The server environment and populated prefixes described below
@@ -124,8 +124,13 @@ are not present here.
   ICommDlgBrowser / IExplorerBrowserEvents / DShellFolderViewEvents log, clicks the first file (041, 043).
   `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
   callback, cross-thread/process calls (046).
+  `d3d11_deferred_race.c [N] [warp]`: CreateDeferredContext while another thread loops
+  immediate ClearState; counts failures (Windows 0, unfixed Wine ~14%) (047).
   `syslink_attr.c`: SysLink `<a>` parsing with extra attributes (049).
+  `packager_ole.c`: OleLoad of a Package embedding + QI set (053).
   `delete_open_dir.c`: delete a tree while handles are open (POSIX delete semantics, 054).
+  `delete_posix.c [DIR\\]`: DeleteFile/RemoveDirectory/disposition classes with other handles open,
+  what those handles see, mappings, locks (054; `-lntdll`).
   `crt_math.c`: ucrtbase math results bit-for-bit (writes crt_math.bin to compare, 055).
   `stub_exception.c [MODE]`: exception raised in a COM server method: cross-apartment IDispatch/IPersist
   calls, the stub called directly, a custom stub; per case in a child (056).
