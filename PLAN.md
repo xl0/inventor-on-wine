@@ -176,6 +176,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 054 POSIX delete semantics in DeleteFile/RemoveDirectory (+3 server fixes)
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
   - O 057 multi-file assembly open/reopen 2.5–7x slower (perf)
+  - O 058 C++ throw from a catch funclet escapes outer SEH (Inventor crash)
+  - O 059 Buffer Prep Skid save-as E_FAIL only in full samples sequence
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
