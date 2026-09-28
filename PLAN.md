@@ -46,6 +46,9 @@ commits or screenshots). Read-only mode may remain after expiry.
     after adversarial review (4 bugs found+fixed, folded in)
   - 013 crypt32 array decoder skip bug (exposed by 009; .NET runtime
     Error 15) — merged
+  - 014 services run in session 1, not 0 (blocks Go-based Autodesk licensing
+    service; found in inv-vm)
+  - 015 ServicesPipeTimeout type/default (low)
   - next after 013: AceInvAddIn-ca.msi 1603, DWG TrueView / Electrical
     Catalog Browser failures (uninvestigated; maybe knock-on)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
