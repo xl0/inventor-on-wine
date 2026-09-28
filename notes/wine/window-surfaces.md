@@ -20,8 +20,12 @@
   non-NULL); clearing it passes rects NULL. fix/006 clips everything on count 0.
 - Client surfaces of a *foreign* toplevel are only visible when offscreen
   (needs_offscreen_rendering: child window / DPI scaling); otherwise the client
-  X window stays under the dummy parent. A foreign child's pixel format doesn't
-  refresh the owner's surface clip until the owner's next SetWindowPos.
+  X window stays under the dummy parent. A foreign child's pixel format now makes
+  the child's process post WM_WINE_UPDATEWINDOWSTATE to the surface owner
+  (fix/027), so the owner's clip excludes it.
+- Colour-keyed / alpha layered surfaces: shape bits outside the clip region
+  (client surfaces) are forced opaque (fix/027). Otherwise key-coloured pixels
+  under GPU children cut holes.
 - Cross-process GL (wglSetPixelFormat on a foreign HWND) fails; Vulkan/DXGI works.
 - GDI on an own child window of a foreign top-level draws nothing: children have no
   surface of their own and the parent's lives in the other process (dcomp.md).

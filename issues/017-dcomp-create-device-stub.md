@@ -77,3 +77,21 @@ composites. Then re-run inv-vm to the Autodesk sign-in page.
   back to software compositing: it QIs the desktop device for an undocumented
   interface (Win11: S_OK). Filed as 022.
 - Knowledge: notes/wine/dcomp.md.
+
+## Follow-up (after merge into integ 097e87834f4)
+- Regress fixups on fix/017-dcomp-staging:
+  - server: the Composition type's valid access is STANDARD_RIGHTS_REQUIRED|QUERY|MODIFY
+    (ntdll:om).
+  - dcomp: fall back to 60 Hz when VREFRESH is 0/1. On Xvfb the compositor slept 1 s per
+    frame and dcomp:dcomp's Commit tests (500 ms wait) failed.
+  - Filtered regress (user32 win32u dxgi dcomp ntdll wofutil d3d11 gdi32) vs integ:
+    no regressions; ntdll:om and dcomp:dcomp now pass on both arches.
+- Sign-in flow: "Sign in with your Autodesk ID" opens AdskIdentityManager (its own
+  WebView2 dialog), which launches the default browser (IdServices.log:
+  LaunchNativeBrowser). The form is in the browser. Microsoft Edge 154 is installed in
+  inv-vm (coordinator's choice: the OAuth round trip stays inside Wine).
+  Bugs found on the way: 023 (dxgi dirty rects), 024 (wofutil, Edge setup),
+  025 (SC_MAXIMIZE, Edge crash), 026 (Edge sandboxed renderers; worked around with
+  --no-sandbox), 027 (black IDM dialog).
+- Result: the Autodesk sign-in form (email field + Next) renders in Edge on :107,
+  and the IDM dialog renders behind it.

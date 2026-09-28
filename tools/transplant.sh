@@ -16,7 +16,8 @@
 # desktop/aspnetcore) are installed by running the same hash-pinned redist
 # installers Autodesk ran; nothing is copied from C:\Windows. WebView2 (part of
 # Windows 11, needed by AdskLicensingAgent's sign-in UI) comes from Microsoft's
-# pinned standalone installer in deps/, same version as the VM. HKLM/HKCU Run
+# pinned standalone installer in deps/, same version as the VM; so does Edge (the default
+# browser, where the Autodesk sign-in form opens). HKLM/HKCU Run
 # entries are not imported (Autodesk Access would autostart on every boot).
 # Data: inst/transplant/ (gitignored): base/ cur/ dumps, files/ (C:\ mirror),
 # redist/, delta.reg, manifest.txt.
@@ -98,6 +99,10 @@ REDIST=(
 # WebView2 Evergreen Runtime 154.0.4258.37 x64 (= VM), https://go.microsoft.com/fwlink/?linkid=2124701
 WV2=MicrosoftEdgeWebView2RuntimeInstallerX64.exe
 WV2_SHA=771042db15cb5c463bac51a8408e70183d7130e8ac946709384c2223da582c1b
+# Microsoft Edge Stable 154.0.4258.37 x64 enterprise MSI (default browser of Windows 11; the
+# Autodesk sign-in runs in it). URL + sha256 from edgeupdates.microsoft.com/api/products?view=enterprise
+EDGE=MicrosoftEdgeEnterpriseX64-154.0.4258.37.msi
+EDGE_SHA=4d8d922c8b2470084a380142cdfd51b2b28a83af7982d8f023cb8facbf258246
 
 fetch() {
 	# Transplant set: new or changed (sha256) files under Autodesk/FlexNet roots.
@@ -236,6 +241,15 @@ EOF
 	echo "$WV2_SHA  $ROOT/deps/$WV2" | sha256sum -c --quiet
 	"$ROOT/build/wine" "$ROOT/deps/$WV2" /silent /install
 	$wineserver -k
+	# Edge registers itself as the http/https handler (HKCR), like on Windows.
+	# Needs wofutil WofSetFileDataLocation (issue 024).
+	echo "$EDGE_SHA  $ROOT/deps/$EDGE" | sha256sum -c --quiet
+	"$ROOT/build/wine" msiexec /i "$(winepath_w "$ROOT/deps/$EDGE")" /qn
+	# Workaround for issue 026 (sandboxed renderers never start): remove when fixed.
+	local e='"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --no-sandbox'
+	for k in http https; do "$ROOT/build/wine" reg add "HKLM\\Software\\Classes\\$k\\shell\\open\\command" /ve /d "$e \"%1\"" /f; done
+	"$ROOT/build/wine" reg add 'HKLM\Software\Classes\MSEdgeHTM\shell\open\command' /ve /d "$e --single-argument %1" /f
+	$wineserver -k
 	manifest
 }
 
@@ -256,7 +270,8 @@ for i in range(0, len(paths), 500):
 print('# inv-vm transplant manifest (tools/transplant.sh)\n')
 print('## Redist-installed (Microsoft installers Autodesk ran; run under Wine)')
 print('VC++ 2022 14.50.35719 x86+x64, .NET Windows Desktop Runtime 10.0.9 x64, ASP.NET Core Runtime 10.0.9 x64,')
-print('WebView2 Evergreen Runtime 154.0.4258.37 x64 (deps/, not an Autodesk redist; in-box on Windows 11)')
+print('WebView2 Evergreen Runtime 154.0.4258.37 x64 and Microsoft Edge 154.0.4258.37 x64 (deps/, not Autodesk')
+print('redists; in-box on Windows 11; Edge runs with --no-sandbox as a workaround for issue 026)')
 print('Not reproduced: files Autodesk/redists put in C:\\Windows (Installer cache, NGen images).\n')
 s = collections.Counter(); n = collections.Counter()
 for r in rows:

@@ -22,7 +22,13 @@
     QI IDCompositionDevice3, then QI undocumented {4ca97a18-cbfd-4b0d-89e1-f7fa86d8d63e}
     (Win11 S_OK, tests/dcomp_qi.c); E_NOINTERFACE -> CHECK. 6 crashes (~30 s), then
     software compositing.
-  - software path: DCompositionCreateDevice(NULL), CreateTargetForHwnd(its own child
+  - software path (see also 023: it presents with a dirty rect): DCompositionCreateDevice(NULL), CreateTargetForHwnd(its own child
     window, reparented into the browser window), CreateVisual, composition swapchain
     (B8G8R8A8, 2 buffers, FLIP_SEQUENTIAL, premultiplied), SetContent, SetRoot, one
     Commit; per frame GetDC on buffer 0 + Present1.
+- Chromium's GPU output window is WS_EX_TRANSPARENT|WS_EX_LAYERED|WS_EX_NOREDIRECTIONBITMAP,
+  owned by the GPU process, and parented into the browser's window, which sits in the
+  host app's toplevel (three processes). 027: the server ignored transparent children
+  when clipping the parent surface.
+- Edge (the browser) needs --no-sandbox under Wine for now (026). It launches from
+  AdskIdentityManager through HKCR https.
