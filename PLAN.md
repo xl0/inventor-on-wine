@@ -25,7 +25,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - [x] Prefix `inv` with native .NET 4.8 (winetricks), win11; pristine copy `inv-net48`
 - [x] Inventor 2027.1 install (web installer, no optional components)
 - [ ] First launch + sign-in. inv-vm (transplant): WebView2 renders the
-  licensing page; the sign-in window is black (017 worker). Then switch the main
+  licensing page. Sign-in is OAuth in the system browser (IdentityManager
+  LaunchNativeBrowser; code returns via a custom URI protocol) → install Edge
+  in the prefix as default browser, keep the round trip inside Wine.
+  Rendering fixes found: 023 dxgi Present1 dirty rects; layered colorkey
+  window hides GPU child content. Then switch the main
   path to prefixes/inv (real install): rebuild build/ with dcomp, launch on
   :98 (user can watch via VNC), coordinator signs in.
   - VM: installed (not launched yet).
