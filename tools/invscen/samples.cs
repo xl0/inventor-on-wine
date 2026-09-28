@@ -1,6 +1,7 @@
 // Autodesk's official "Inventor 2022 Sample Files" (inst/samples/, see CODE.md),
 // copied to C:\t\samples\2022 on both sides (samples2016, a symlink to this
-// file: the 2016 set in ...\2016). Activates samples.ipj, then per top-level
+// file: the 2016 set in ...\2016), restored from a pristine ...\<set>.orig at
+// the start of each run. Activates samples.ipj, then per top-level
 // document: open (counts, missing refs, NeedsMigrating), mass properties
 // (part/asm), BOM rows (asm), rebuild all (drawings: Update2), save-as copy
 // into the run dir (migrates to 2027), close, reopen the copy and compare.
@@ -114,11 +115,46 @@ static class Scenario
         return s + string.Format(", com ({0:G6}, {1:G6}, {2:G6})", c.X, c.Y, c.Z);
     }
 
+    // Saving a rebuilt top document also saves its dirty (migrated) dependents in
+    // place, so every run first restores the work tree from the pristine Root.orig.
+    static void Mirror(string src, string dst)
+    {
+        // In place: removing a directory Inventor watches fails on Wine (issue 054).
+        System.IO.Directory.CreateDirectory(dst);
+        Func<string, string, string> to = (p, d) => d + "\\" + System.IO.Path.GetFileName(p);
+        foreach (string f in System.IO.Directory.GetFiles(dst))
+            if (!System.IO.File.Exists(to(f, src))) System.IO.File.Delete(f);
+        foreach (string d in System.IO.Directory.GetDirectories(dst))
+            if (!System.IO.Directory.Exists(to(d, src))) System.IO.Directory.Delete(d, true);
+        foreach (string f in System.IO.Directory.GetFiles(src)) System.IO.File.Copy(f, to(f, dst), true);
+        foreach (string d in System.IO.Directory.GetDirectories(src)) Mirror(d, to(d, dst));
+    }
+
+    // Copies go to C: on both sides: on Wine H.Out is on Z:, and a copy on another
+    // drive than the models loses its relative references on reopen.
+    static readonly string CopyDir = @"C:\t\scen\" + System.IO.Path.GetFileName(H.Out);
+
     public static void Run()
     {
         var app = H.App;
+        System.IO.Directory.CreateDirectory(CopyDir);
         var dpm = app.DesignProjectManager;
         string prev = dpm.ActiveDesignProject.FullFileName;
+        bool restored = false;
+        H.Step("restore pristine samples", () =>
+        {
+            // An aborted run leaves a samples.ipj active, which Inventor keeps open
+            // (sharing violation on restore): switch to Default first.
+            if (prev.EndsWith(@"\samples.ipj", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (DesignProject q in dpm.DesignProjects) if (q.Name == "Default") q.Activate(true);
+                prev = dpm.ActiveDesignProject.FullFileName;
+            }
+            Mirror(Root + ".orig", Root);
+            restored = true;
+            return System.IO.Directory.GetFiles(Root, "*", System.IO.SearchOption.AllDirectories).Length + " files";
+        }, 600);
+        if (!restored) return;
         H.Step("activate samples.ipj", () =>
         {
             DesignProject p = null;
@@ -137,7 +173,7 @@ static class Scenario
             if (!string.IsNullOrEmpty(only) && rel.IndexOf(only, StringComparison.OrdinalIgnoreCase) < 0) continue;
             string path = Root + @"\Models\" + rel, name = System.IO.Path.GetFileName(rel);
             if (!System.IO.File.Exists(path)) { Console.WriteLine("SKIP open " + rel + " (not in this set)"); continue; }
-            string copy = H.Out + "\\" + idx.ToString("D2") + "_" + name;
+            string copy = CopyDir + "\\" + idx.ToString("D2") + "_" + name;
             string counts = null, mass = null;
             Document d = null;
             H.Reset();
@@ -166,6 +202,7 @@ static class Scenario
                 }, 600);
             }
             H.Reset();
+            if (d.DocumentType != DocumentTypeEnum.kPresentationDocumentObject)  // .ipn: E_NOTIMPL
             H.Step("rebuild " + name, () =>
             {
                 // drawings/presentations: Rebuild2 is E_NOTIMPL
@@ -175,7 +212,14 @@ static class Scenario
                 return (m != null ? "Rebuild2 " : "Update2 ") + ok + (m == null ? "" : m == was ? ", mass unchanged" : ", " + m);
             }, 900);
             H.Reset();
-            H.Step("save as " + name, () => H.Save(d, System.IO.Path.GetFileName(copy), true), 900);
+            // SaveAs copy of an Inventor .dwg goes through the DWG export translator and
+            // shows its options dialog despite SilentOperation (VM): save it natively.
+            H.Step("save as " + name, () =>
+            {
+                if (System.IO.File.Exists(copy)) System.IO.File.Delete(copy);
+                d.SaveAs(copy, !rel.EndsWith(".dwg"));
+                return System.IO.Path.GetFileName(copy) + " " + new System.IO.FileInfo(copy).Length + " bytes";
+            }, 900);
             H.Reset();
             H.Step("close " + name, () => { d.Close(true); d = null; return "docs open " + app.Documents.Count; }, 600);
             if (d != null) { try { app.Documents.CloseAll(false); } catch (Exception) { } d = null; }
@@ -196,10 +240,8 @@ static class Scenario
         H.Reset();
         H.Step("restore project", () =>
         {
-            // an aborted earlier run leaves samples.ipj active: go back to Default then
-            bool back = prev.EndsWith(@"\samples.ipj", StringComparison.OrdinalIgnoreCase);
             foreach (DesignProject q in dpm.DesignProjects)
-                if (back ? q.Name == "Default" : q.FullFileName == prev) q.Activate(true);
+                if (q.FullFileName == prev) q.Activate(true);
             return dpm.ActiveDesignProject.FullFileName;
         });
     }

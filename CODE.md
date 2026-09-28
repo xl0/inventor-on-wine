@@ -125,6 +125,8 @@ are not present here.
   `subclass_probe.c`: comctl32 v5/v6 SetWindowSubclass props, nested removal, destroy in a
   callback, cross-thread/process calls (046).
   `syslink_attr.c`: SysLink `<a>` parsing with extra attributes (049).
+  `delete_open_dir.c`: delete a tree while handles are open (POSIX delete semantics, 054).
+  `crt_math.c`: ucrtbase math results bit-for-bit (writes crt_math.bin to compare, 055).
   `stub_exception.c [MODE]`: exception raised in a COM server method: cross-apartment IDispatch/IPersist
   calls, the stub called directly, a custom stub; per case in a child (056).
   `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
@@ -256,8 +258,9 @@ are not present here.
   (File, Environment, Attribute): qualify them. Embedded interop types don't
   inherit (PartDocument is not a Document): cast at runtime (`(Document)obj`).
   `samples` / `samples2016` (symlink): Autodesk's official sample sets
-  (inst/samples/, C:\t\samples\{2022,2016} in the prefix and on the VM; open, mass,
-  BOM, rebuild, save-as copy, reopen per top-level doc; no expectations, diff vs VM).
+  (inst/samples/; pristine copies in C:\t\samples\{2022,2016}.orig in the prefix and on
+  the VM, mirrored to the work dir each run since saves migrate dependents in place; open, mass,
+  BOM, rebuild, save-as copy to C:\t\scen\S, reopen per top-level doc; diff vs the VM).
   autodesk_inventor_2022_samples.zip sha256 1eeb4164…09292b,
   autodesk_inventor_2016_samples.zip 9d3096f6…41f501c, both from damassets.autodesk.net
   (links on the "Inventor Sample Files" support article; www.autodesk.com zips 403 curl).

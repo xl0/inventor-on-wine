@@ -71,6 +71,11 @@ commits or screenshots). Read-only mode may remain after expiry.
     2026-09-28 rerun, integ 228616fa47c, cold + warm: all campaign PASSes hold
     except cold asmbig save (crash in ogsdevicedx11, 047, also in campaign dumps);
     one cold start hung on the first doc (048); view images still 037.
+    Real-world data (`samples`/`samples2016`: Autodesk's official 2022 + 2016 sample sets,
+    69 docs each incl. 1313-leaf Buffer Prep Skid; inv3/:100): everything matches the VM
+    (counts, BOM, mass, migration, save/reopen, older DWG) except Arm_Rest.ipt + Fan
+    Connector.ipt (053), last-digit rebuild volumes (055), intermittent crash (056) and
+    047. ~1.9x the VM overall; big-asm open/reopen 2.5-7x, save ~1.2x.
   - UI pass by hand (:98, integ d53133a66a1; worker report has details):
     | area | result |
     |---|---|
