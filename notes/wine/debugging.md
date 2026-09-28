@@ -20,3 +20,13 @@
 - Installers that run throwaway `%TEMP%\*.bat` helpers (InstallBuilder: its
   log `%TEMP%\installbuilder_installer_<pid>.log` only shows exit codes):
   capture them with a host loop `cp $TEMP/*.bat out/; sleep 0.02`.
+- Crash backtraces from apps whose stdout is lost (e.g. Inventor): AeDebug
+  `Debugger` runs `swprintf(value, pid, event)`, so a cmd redirect works:
+  `wine reg add 'HKLM\Software\Microsoft\Windows NT\CurrentVersion\AeDebug' /v Debugger
+  /d 'cmd /c winedbg --auto %ld %ld >>C:\winedbg-crash.log 2>&1' /f` (default value:
+  `winedbg --auto %ld %ld`; 32-bit apps read the Wow6432Node copy). Also set
+  `HKCU\Software\Wine\WineDbg` `ShowCrashDialog`=dword:0. With the dialog on, the
+  `--auto` winedbg waits in the dialog before printing anything, so with no one to click
+  it you get no log and the crashed process never exits.
+  Log: registers, backtrace of the faulting thread, modules, threads. The process
+  then exits.
