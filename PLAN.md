@@ -62,8 +62,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 017 dcomp is stubs → WebView2 GPU process dies → sign-in blank (inv-vm)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
     aspnetcore time-stamp tokens; installer Error 15) — merged
-  - 019 imagehlp certificate offsets > 2 GB (2027.1 update exe) — open, blocks
+  - 019 imagehlp certificate offsets > 2 GB (2027.1 update exe) — merged
   - 020 Genuine Service MSI 1603 in killBeacon (non-blocking, low)
+  - 021 whole-file mappings for large PEs in 32-bit (low)
   - uninvestigated: AceInvAddIn-ca.msi 1603 (Electrical Catalog Browser,
     optional, now unticked); TrueView failed only via .NET Error 15 (013)
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits

@@ -33,3 +33,8 @@
   = any digit count, first 3 scaled to ms (issue 016; Microsoft TSAs emit
   `.7Z`). Unlike Windows, Wine still accepts trailing garbage after the
   zone and rejects fractional minutes/hours.
+- PE SIP (crypt.c WINTRUST_GetSignedMsgFromPEFile) reads the signature via imagehlp
+  ImageGetCertificateHeader/Data; the digest is SOFTPUB_HashPEFile (sequential ReadFile).
+  Certificate tables may sit anywhere below 4 GB (issue 019: seeks were signed 32-bit).
+  imagehlp Add/RemoveCertificate recompute the checksum by mapping the whole file:
+  fails for ~2 GB files in 32-bit processes (Windows copes).

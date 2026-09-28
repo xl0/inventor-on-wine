@@ -46,7 +46,9 @@
   (unprivileged, `--sandbox none`; `VFS_LOG=debug vm/run.sh` for tracing),
   guest RAM is a shared memfd. Guest side: WinFsp + viofs driver + VirtioFsSvc.
   Cached reads of big files fail ~10% ("Error performing inpage operation");
-  use unbuffered copies (`robocopy Z:\ C:\dst FILE /j`) for bulk data, then
+  use unbuffered copies (`robocopy Z:\ C:\dst FILE /j`, from the desktop
+  session via winrun — Z: isn't visible to SSH/session 0; over SSH plain `scp`
+  is fast: 3.4 GB in ~22 s) for bulk data, then
   run things from C: (never from Z:, it isn't NTFS).
 - `iso/` — Windows ISO, Inventor 2027.1 web installer.
 - `inst/` — installer work: `webinstall/` (7z-extracted web installer), logs.
