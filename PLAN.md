@@ -115,6 +115,9 @@ Review again after the next batch of workers. Notes so far:
   guide now says to clean up.
 - 014 ran `pkill -x Xvfb`, killing the regress runner's shard displays mid-run
   (reported it promptly). Guide: kill by PID/display only.
+- Workers basing on integ need an integ regress baseline: the coordinator's
+  post-rebuild regress run caches deps/regress/<integ-commit>/ — point
+  workers at the latest cached one (004 had to build its own).
 - Coordinator mistake: `git add -A` swept a worker's in-progress edit
   (decomp.sh without msbin.py) into a commit. Stage explicit paths only while
   workers are editing the project repo.

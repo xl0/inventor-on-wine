@@ -95,3 +95,9 @@ composites. Then re-run inv-vm to the Autodesk sign-in page.
   --no-sandbox), 027 (black IDM dialog).
 - Result: the Autodesk sign-in form (email field + Next) renders in Edge on :107,
   and the IDM dialog renders behind it.
+
+## Follow-up (coordinator)
+`tools/make_makefiles` on integ rewrites dlls/dcomp/tests/Makefile.in and drops
+dcomp_private_iface.idl — the imported staging patches aren't in sync with the
+generated makefiles. Regenerate and fold a fixup into the series (low; found by
+the 004 worker).
