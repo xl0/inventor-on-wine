@@ -71,6 +71,9 @@ Review again after the next batch of workers. Notes so far:
 - Adversarial review of risky code (parsers in wineserver) paid off: 010 had
   a server crash, memory/CPU exhaustion and privilege-free key deletion.
   Do it for any code parsing app-supplied data in shared processes.
+- Coordinator mistake: `git add -A` swept a worker's in-progress edit
+  (decomp.sh without msbin.py) into a commit. Stage explicit paths only while
+  workers are editing the project repo.
 - 011 also left a gap unfiled (basic constraints; filed by coordinator as 012).
 - 006 noticed two possible bugs (cross-process child swapchain doesn't update
   the owner's clip until SetWindowPos; R/B swap on lavapipe) but didn't file
