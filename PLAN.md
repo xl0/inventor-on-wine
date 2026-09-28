@@ -98,80 +98,33 @@ commits or screenshots). Read-only mode may remain after expiry.
     \Output"); now a real dir. A stray `WindowsUpdate\Auto Update\RebootRequired`
     key (created 00:29:07 during a rollback, writer unknown; ODIS then demands a
     restart) was deleted.
-- [ ] Wine bugs: one file each in `issues/` (index below). Coordinator drives
-  Inventor and finds bugs; workers fix one issue each in a wine-src worktree.
-  - 001 SxS app config privatePath probing — merged
-  - 002 QueryActCtxW USE_ACTIVE fallback to process context — merged
-  - 003 installer "hang" — not a Wine bug (our x/shot.sh was wrong; spin is Autodesk's, same on Windows)
-  - 004 CreateProcess fails on missing manifest dep — fixed but PARKED: needs
-    built-in assembly audit first (else breaks exes Windows starts)
-  - 005 lost GPU window content after expose (win32u) — merged
-  - 006 winex11 empty surface clip = no clip — merged
-  - 007 tasklist no-match output (installer Error 101) — merged
-  - 008 wintrust p7x blob verification (installer Error 4005) — merged
-  - 009 wintrust SHA-256 chain check + RFC 3161 token verification — merged
-    (build/ rebuild pending: 010 worker uses it)
-  - 011 crypt32 partial chains + AUTHENTICODE_TS policy — merged
-  - 012 crypt32 base policy lacks basic constraints check (low)
-  - 010 regf hive loading + RegLoadAppKey (installer Error 4000) — merged
-    after adversarial review (4 bugs found+fixed, folded in)
-  - 013 crypt32 array decoder skip bug (exposed by 009; .NET runtime
-    Error 15) — merged
-  - 014 services in session 0 (Go-based Autodesk licensing service) — merged
-    after review (1 regression found+fixed: cross-session device broadcasts)
-  - 018 session-0 follow-ups (global locks, wineboot SeTcb, WTS sessions,
-    Service-0x0-3e7$ winstation) — merged
-  - 015 ServicesPipeTimeout read as DWORD — fixed with 014 (default kept 10 s)
-  - 017 dcomp: Wine-Staging DirectComposition series (66 patches, CodeWeavers)
-    + our cross-process target fix — merged; WebView2 renders the licensing
-    page in inv-vm. Sign-in window itself still black (017 worker on it)
-  - 023 dxgi Present1 dirty rects on flip swapchains — merged
-  - 024 wofutil WofSetFileDataLocation stub crashed Edge setup — merged
-  - 025 SC_MAXIMIZE on maximized hidden window showed it (Edge) — merged
-  - 026 Edge sandbox: CreateAppContainerToken/NtCreateLowBoxToken — merged;
-    --no-sandbox dropped from tools/edge.sh + prefixes/inv HKCR (inv-vm HKCR still has it).
-  - 027 GPU child content hidden in colour-keyed layered windows — merged
-  - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
-    callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
-    (full merged view, kernelbase) — merged with 030 as one series.
-    HKLM-copy workaround removed from prefixes/inv (merged view resolves it)
-  - 031 oleaut32 typelib typedesc offsets > 32 KB (Inventor parts/assemblies
-    via COM) — merged
-  - 032 typelib load quadratic + PSDispatch loading typelibs (COM 10–500x
-    slower) — merged; COM now ~VM speed (asm 163 s → 4 s)
-  - 034 Inventor crash: RevokeDragDrop from another thread/process released a
-    foreign pointer — merged (build/ rebuild pending). Pending: apply the
-    crash-capture .reg (issue 034) to inv/inv2 when Inventor is stopped
-  - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged
-  - 036 "black" Inventor dialogs — not a Wine bug: `xwd -root` artifact (Wine's
-    per-process colormaps); x/shot.sh now uses a plain XGetImage, dialogs render
-  - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
-    (+ second Inventor env inv2 on :99)
-  - 038 NTFS alternate data stream name syntax unsupported (low)
-  - 039 C0 control chars (CR) drawn as .notdef boxes (App Options combos)
-  - 040 client-area title bar (QAT/InfoCenter) replaced by WM decorations
-  - 041 file dialog breadcrumb names (SHGetNameFromIDList PARENTRELATIVEFORUI) — merged
-  - 042 per-pixel-alpha popup shadows opaque black (low)
-  - 043 file dialog selection (IFolderView2::GetSelection) — merged
-  - 044 DateTimePicker short date gap "9 /28/2026" (low)
-  - 030 COM reads merged per-user classes (not for elevated) — merged
-  - 033 32-bit per-user class redirection relies on deletable marker keys (low)
-  - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
-    PartDocument.ComponentDefinition / ComponentDefinition.Occurrences broken — blocks
-    part + assembly modelling via COM (tools/invscen part/asm) — open
-  - 032 typelib marshaler re-parses Inventor's 4 MB typelib per new dispinterface
-    proxy/stub (~2.2 s each; perf) — open
-  - 029 winex11: hidden managed windows stay mapped without a WM (waits for WM_STATE
-    forever; trial welcome dialog leaves a white box on :98) — infra: run openbox on :98
-  - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
-    retry delay before software fallback (low; clean-room blocks implementing)
-  - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
-    aspnetcore time-stamp tokens; installer Error 15) — merged
-  - 019 imagehlp certificate offsets > 2 GB (2027.1 update exe) — merged
-  - 020 Genuine Service MSI 1603 in killBeacon (non-blocking, low)
-  - 021 whole-file mappings for large PEs in 32-bit (low)
-  - uninvestigated: AceInvAddIn-ca.msi 1603 (Electrical Catalog Browser,
-    optional, now unticked); TrueView failed only via .NET Error 15 (013)
+- [ ] Wine bugs: one file each in `issues/`. M = merged into integ,
+  P = parked, O = open, X = not a Wine bug / wontfix, L = low priority.
+  - M 001 SxS app config privatePath · M 002 QueryActCtx USE_ACTIVE fallback
+  - P 004 CreateProcess 14001 on missing manifest dep (needs built-in assembly audit)
+  - M 005 expose repaint of GPU content · M 006 empty surface clip
+  - M 007 tasklist no-match INFO line · M 008 wintrust p7x blobs
+  - M 009 wintrust SHA-256 chains + RFC 3161 · M 010 regf hives + RegLoadAppKey
+  - M 011 crypt32 partial chains · L 012 crypt32 basic constraints
+  - M 013 crypt32 array decoder skip · M 014 services in session 0 (+ 015)
+  - M 016 GeneralizedTime fractions · M 017 dcomp (Wine-Staging series + fixes)
+  - M 018 session-0 follow-ups · M 019 imagehlp certs past 2 GB
+  - L 020 Genuine Service MSI 1603 (PowerShell 5.1 missing?) · L 021 large PE mappings
+  - L 022 Edge GPU path undocumented dcomp iface (30 s delay; clean-room)
+  - M 023 dxgi Present1 dirty rects · M 024 wofutil · M 025 SC_MAXIMIZE no-op
+  - M 026 AppContainer tokens (Edge sandbox) · M 027 layered colorkey + GPU child
+  - M 028 merged HKCR view · X 029 no WM on :98 (openbox now) · M 030 COM per-user classes
+  - M 031 typelib offsets > 32 KB · M 032 typelib load speed
+  - L 033 Wow6432Node marker keys · M 034 RevokeDragDrop wrong thread
+  - M 035 DOS device names (Win11) · X 036 black dialogs (xwd artifact)
+  - O 037 3D viewport: HLSL fx_5_0 miscompile + swapchain E_INVALIDARG (in progress)
+  - L 038 NTFS stream names · O 039 CR drawn as box (in progress)
+  - M 040 custom title bar vs WM decorations · M 041 file dialog breadcrumb
+  - L 042 popup shadows black · M 043 file dialog selection
+  - L 044 DateTimePicker gap · O 045 maximized undecorated offset (draft)
+  - X 003 installer "hang" (harness artifact)
+  - Pending chores: ntoskrnl test todo_wine after 014 (fixup in progress);
+    crash-capture .reg applied to inv (inv2 when its Inventor stops).
 - [x] Integration branch `integ` in wine-src: linear stack of our fix commits
   on master; `build/` runs it. Tracks upstream master tip: periodically
   `git rebase master integ` (upstreamed patches drop out), rebuild, retest,
