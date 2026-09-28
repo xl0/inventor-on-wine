@@ -105,11 +105,12 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
     callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
     (full merged view, kernelbase) — merged with 030 as one series.
-    Pending: drop the HKLM-copy workaround from prefixes/inv once build/ has it
+    HKLM-copy workaround removed from prefixes/inv (merged view resolves it)
   - 031 oleaut32 typelib typedesc offsets > 32 KB (Inventor parts/assemblies
     via COM) — merged
-  - 032 typelib marshaler re-parses the 4 MB Inventor typelib per proxy
-    (10–500x slower COM than the VM) — in progress
+  - 032 typelib load quadratic + PSDispatch loading typelibs (COM 10–500x
+    slower) — merged; COM now ~VM speed (asm 163 s → 4 s)
+  - 034 intermittent Inventor startup crash in ole32 IDropTarget_Release
   - 030 COM reads merged per-user classes (not for elevated) — merged
   - 033 32-bit per-user class redirection relies on deletable marker keys (low)
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API

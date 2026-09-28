@@ -60,6 +60,8 @@ static class H
             while (App == null)
                 try { App = (Application)Marshal.GetActiveObject("Inventor.Application"); }
                 catch (COMException) { Thread.Sleep(2000); }
+                // Registered in the ROT before it implements Application during startup.
+                catch (InvalidCastException) { Thread.Sleep(2000); }
             App.SilentOperation = true;
             // Deterministic start: discard whatever is open (dedicated test Inventor).
             int n = App.Documents.Count;
