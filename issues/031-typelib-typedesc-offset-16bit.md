@@ -1,5 +1,5 @@
 # 031 oleaut32: MSFT typelib loader truncates typedesc offsets to signed 16 bits
-Status: open (draft) · Owner: – · Branch: – · Found in: prefixes/inv (integ 6c63dc3c499), Inventor COM API scenario (tools/invscen part/asm)
+Status: fixed · Owner: worker 031 · Branch: fix/031-typelib-typedesc-offset (98532bfcad0) · Found in: prefixes/inv (integ 6c63dc3c499), Inventor COM API scenario (tools/invscen part/asm)
 
 ## Symptom
 Inventor's COM API breaks for any member whose type is a pointer to a typedesc entry
@@ -41,3 +41,22 @@ oleaut32 typelib test: ICreateTypeLib2 a function returning a VT_PTR chain > 409
 types, SaveAllChanges, LoadTypeLib, compare GetFuncDesc with what was written. Verify the
 writer output loads correctly on the VM too. App-level check: `tools/invscen/run.sh tlb`
 (needs the running Inventor only for the harness connect step), then `part` and `asm`.
+
+## Outcome
+Format (checked against both Inventor files): typedesc entry = 2 DWORDs; for VT_PTR /
+VT_SAFEARRAY the 2nd DWORD is either inline (bit 31 set, VT in low word) or a plain
+32-bit table offset (high word 0 in the real files, offsets up to 0xbd70). Array
+descriptors: 1st DWORD is a typedesc in the same encoding; VT_CARRAY entries hold a
+32-bit arraydesc offset. Writers (oleaut32 WMSFT_append_typedesc, widl write_msft.c)
+already emit full DWORDs; only the loader was wrong. Fix: MAKELONG the word pairs in
+all three places in ITypeLib2_Constructor_MSFT.
+
+Test `test_large_typedesc_table` (oleaut32 typelib): 50 distinct 100-deep VT_PTR chains
+ending in VT_CARRAY (40 KB table) + a CARRAY whose element is such a chain; save, load,
+walk. VM (Win11) x64/i386: pass; unfixed Wine fails; fixed Wine passes. Note: Windows x64
+ICreateTypeLib2 crashes (writer recursion) on a single 4200-deep chain, hence the shape.
+
+App check (integ 6c63dc3c499 + fix, wt/031-integ-build, prefixes/inv): invscen tlb, part,
+asm, drawing all PASS, same steps as the VM. Remaining gap is speed (steps 2-100 s vs
+0-1 s on the VM): the typelib marshaler re-parses RxInventor.tlb (~2 s) per new proxy,
+33 times in `part` = ~67 s -> issue 032.
