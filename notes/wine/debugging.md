@@ -32,3 +32,11 @@
   it you get no log and the crashed process never exits.
   Log: registers, backtrace of the faulting thread, modules, threads. The process
   then exits.
+- Intermittent crash in third-party code whose app-side crash handler (Autodesk CER) writes
+  minidumps without heap: attach `winedbg --file script.txt` to the running app (script:
+  `attach 0xPID`, `break *ADDR` on a rarely-hit precursor such as the app's own NULL guard,
+  then a few thousand `p $eax` / `x /16x $rdi` / `bt` / `cont` blocks, `detach`). Module
+  base from `/proc/<unix pid>/maps`. Examine syntax: `x /Nx EXPR` with `$reg` (32-bit words).
+  The attached app runs ~2-3x slower (debug events); killing winedbg kills the debuggee.
+  Autodesk OGS prints its errors via OutputDebugString ("OGS ERROR: ..."), visible there
+  or with `+debugstr` (047).
