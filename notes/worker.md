@@ -14,7 +14,10 @@ relevant `notes/wine/*.md` first.
   speculative fallbacks. Tests only for what realistically regresses; they
   must pass on the VM and on Wine (`todo_wine` only for deliberate leftovers).
 - Commit finished work on your `fix/NNN-*` branch, Wine-style subject
-  (`ntdll: Do X.`), no Co-Authored-By / attribution lines. The user approved
+  (`ntdll: Do X.`), no Co-Authored-By / attribution lines.
+  Body: briefly state the motivation where it isn't obvious from the subject —
+  what Windows does / what broke (name the app if an app needs it). Skip it for
+  pure refactors and test-only commits when the subject says it all. The user approved
   this workflow; the git hook wants the approval quoted: prefix the command with
   `GIT_OK='worker commits on fix branches (user-approved workflow)'`. Never
   push, never commit outside your branch.
