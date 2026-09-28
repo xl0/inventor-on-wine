@@ -111,6 +111,12 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 032 typelib load quadratic + PSDispatch loading typelibs (COM 10–500x
     slower) — merged; COM now ~VM speed (asm 163 s → 4 s)
   - 034 intermittent Inventor startup crash in ole32 IDropTarget_Release
+  - 035 DOS device names in full paths (Win11 rules; con.iam save) — merged,
+    build/ rebuild pending (campaign running)
+  - 036 DWG export options wizard renders black — queued (needs an Inventor)
+  - 037 3D viewport: offscreen render edges-only, stale Home page — in progress
+    (+ second Inventor env inv2 on :99)
+  - 038 NTFS alternate data stream name syntax unsupported (low)
   - 030 COM reads merged per-user classes (not for elevated) — merged
   - 033 32-bit per-user class redirection relies on deletable marker keys (low)
   - 031 oleaut32 MSFT typelib typedesc offsets > 0x7fff read as negative: Inventor API
