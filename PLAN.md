@@ -28,6 +28,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   licensing page. Sign-in is OAuth in the system browser (IdentityManager
   LaunchNativeBrowser; code returns via a custom URI protocol) → install Edge
   in the prefix as default browser, keep the round trip inside Wine.
+  Status: Edge renders the Autodesk sign-in; email+password accepted, then an
+  hCaptcha — needs the user (VNC :107 on 127.0.0.1:5903).
   Rendering fixes found: 023 dxgi Present1 dirty rects; layered colorkey
   window hides GPU child content. Then switch the main
   path to prefixes/inv (real install): rebuild build/ with dcomp, launch on
@@ -68,6 +70,11 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 017 dcomp: Wine-Staging DirectComposition series (66 patches, CodeWeavers)
     + our cross-process target fix — merged; WebView2 renders the licensing
     page in inv-vm. Sign-in window itself still black (017 worker on it)
+  - 023 dxgi Present1 dirty rects on flip swapchains — merged
+  - 024 wofutil WofSetFileDataLocation stub crashed Edge setup — merged
+  - 025 SC_MAXIMIZE on maximized hidden window showed it (Edge) — merged
+  - 026 Edge sandboxed renderers never start (workaround --no-sandbox; open)
+  - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
     retry delay before software fallback (low; clean-room blocks implementing)
   - 016 crypt32 GeneralizedTime with 1-2 fraction digits (VC++ redist /
