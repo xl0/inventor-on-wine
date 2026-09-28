@@ -20,3 +20,9 @@ document's view creation and the licensing popup (029/037 area).
 Possibly the shared licensing service effect (one AdskLicensingService on
 127.0.0.1:39683 serves all prefixes; see CODE.md): if another prefix's services
 restarted at that moment, the trial popup could fail like this. Unverified.
+
+## Harness note (2026-09-28)
+Closing the trial welcome via its X button made the first part's ActiveView
+null on 2/2 cold runs; WM_CLOSE doesn't (harness now uses WM_CLOSE). Possibly
+related to this hang. Also: after hello closes its document, the Home page
+stays blank (WebView2 redraw?) — unfiled.
