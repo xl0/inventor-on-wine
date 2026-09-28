@@ -1,5 +1,5 @@
 # 043 Inventor file dialogs: selecting / double-clicking a file does nothing
-Status: fixed · Owner: worker-041/043 · Branch: fix/043-explorerbrowser-selection (b85fb14ce37) · Found in: UI test campaign (Place Component, Open)
+Status: merged, verified · Owner: worker-041/043 · Branch: fix/043-explorerbrowser-selection (b85fb14ce37) · Found in: UI test campaign (Place Component, Open)
 
 ## Symptom (integ d53133a66a1, :98)
 Inventor's Open / Place Component / Save As dialogs host Wine's ExplorerBrowser
@@ -46,3 +46,13 @@ Other differences seen, not needed by Inventor: Windows' view background IDispat
 a DShellFolderViewEvents connection point (Wine: no IConnectionPointContainer), and
 Windows calls ICommDlgBrowser3::OnPreViewCreated.
 Needs Inventor verification (coordinator).
+
+## Verified in Inventor
+2026-09-28, integ 13704a2e74b, Open dialog (QAT Open): clicking box.ipt fills
+File name, shows the thumbnail, "Last Saved" and Model State / Design View
+options; double-clicking the (unselected) file opens it.
+![fixed](attachments/043-file-select-fixed.png)
+Differences, not this bug: File name "box.ipt" (VM: "box", Windows hides the
+extension), black thumbnail (file saved on Wine: 037), no status bar.
+Unverified oddity: once, a double-click on an already-selected item (after focusing
+the Model State combo) started a label edit instead of opening; not re-tested.

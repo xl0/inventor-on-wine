@@ -1,5 +1,5 @@
 # 041 Inventor file dialogs: breadcrumb segments have no names
-Status: fixed · Owner: worker-041/043 · Branch: fix/041-navbar-names (9876ce5403c) · Found in: UI test campaign (Open / Save As)
+Status: merged, verified · Owner: worker-041/043 · Branch: fix/041-navbar-names (9876ce5403c) · Found in: UI test campaign (Open / Save As)
 
 ## Symptom (integ d53133a66a1, :98)
 Inventor's own Open / Save As dialogs (WPF window `HwndWrapper[...]` hosting
@@ -41,3 +41,9 @@ of the parent folder; FORADDRESSBAR gives "C:" for the drive.
 Fix: add the case next to the other SIGDN values that map to
 GetDisplayNameOf(sigdn & 0xffff); shell32 shlfolder test covers it (VM + Wine pass).
 Needs Inventor verification (coordinator).
+
+## Verified in Inventor
+2026-09-28, integ 13704a2e74b: Open dialog breadcrumb shows
+"My Computer > UBUNTU (Z:) > home > xl0 > ... > part" (Documents:
+"My Computer > (C:) > users > xl0 > Documents"). ![fixed](attachments/041-breadcrumb-fixed.png)
+Remaining differences are namespace ones (My Computer vs This PC, no C: volume label).

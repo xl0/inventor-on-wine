@@ -1,5 +1,5 @@
 # 040 Custom title bar (client over caption) replaced by WM decorations
-Status: fixed · Owner: worker-040 · Branch: fix/040-custom-caption-decor (6f82c0dfd0e) · Found in: UI test campaign (main window)
+Status: merged, verified · Owner: worker-040 · Branch: fix/040-custom-caption-decor (6f82c0dfd0e) · Found in: UI test campaign (main window)
 
 ## Symptom (integ d53133a66a1, :98 openbox)
 Inventor's main window (AfxMDIFrame140u, style 0x15cf0000 = WS_CAPTION|
@@ -44,3 +44,11 @@ uxtheme dwmapi imm32 dxgi, both arches): only user32:win i386 flagged, FLAKY
 Leftover: maximized, the WM places the undecorated X window at the work area while
 the surface starts at the off-screen frame -> 4 px Wine frame top/left, 4 px client
 cut right/bottom: issues/045. Inventor check pending (coordinator).
+
+## Verified in Inventor
+2026-09-28, integ 13704a2e74b, :98 openbox, maximized main window: no openbox
+title bar (_NET_FRAME_EXTENTS 0,0,0,0); QAT, title and InfoCenter strip
+(search, account, trial counter) drawn at the top like the VM, and the QAT is
+mouse-reachable (clicking Open opens the Open dialog).
+![fixed](attachments/040-titlebar-fixed.png) (cropped left of the account name;
+the white 4 px line at top/left is 045).

@@ -27,3 +27,10 @@ undone by openbox (Win32 ends restored). Likely WM_NORMAL_HINTS min == max becau
 the window rect covers the monitor (WINE_SWP_RESIZABLE dropped), so openbox refuses
 MAXIMIZED and Wine syncs SC_RESTORE back. Maximizing before the first map leaves
 WS_MAXIMIZE set with the restored X geometry.
+
+## Seen in Inventor (2026-09-28, integ 13704a2e74b, :98)
+Maximized main window: Win32 rect 1928x1088 at -4,-4, X window 1920x1080+0+0
+(_NET_WM_STATE_MAXIMIZED_*, frame extents 0). Screen rows/columns 0-3 at the
+top/left are white (Wine's frame), the app starts at 4,4; the rightmost/bottom
+4 px of the client (edge of the window buttons / status bar) are off-screen.
+Cosmetic, everything stays usable. Visible in attachments/040-titlebar-fixed.png.
