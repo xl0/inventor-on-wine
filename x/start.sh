@@ -8,3 +8,5 @@ cd "$(dirname "$0")"
   -logfile "$PWD/Xorg.98.log" -nolisten tcp -noreset -novtswitch -sharevts >xorg.out 2>&1 &
 until DISPLAY=:98 xset q >/dev/null 2>&1; do sleep 0.2; done
 DISPLAY=:98 xset s off -dpms  # blanking loses GPU-drawn window content (issue 005)
+# A window manager: Wine relies on it (WM_STATE) to unmap hidden managed windows (issue 029).
+DISPLAY=:98 setsid nohup openbox >openbox.log 2>&1 < /dev/null &

@@ -58,6 +58,8 @@
   run things from C: (never from Z:, it isn't NTFS).
 - `iso/` — Windows ISO, Inventor 2027.1 web installer.
 - `inst/` — installer work: `webinstall/` (7z-extracted web installer), logs.
+- :98 runs openbox (started by x/start.sh); without a WM Wine never unmaps
+  hidden windows (issue 029).
 - `x/shot.sh [png]` screenshots :98; `x/vnc.sh` (re)starts x11vnc on
   127.0.0.1:5902 (-noxdamage) and turns off :98 screen blanking.
   Root GetImage there is packed 24 bpp despite a 32 bpp header (NVIDIA
