@@ -1,5 +1,5 @@
 # 010 RegLoadKey can't load binary (regf) hives → Inventor Core install "Error 4000"
-Status: open (draft) · Owner: - · Branch: - · Found in: Inventor web installer, prefix `inv`, integ + fix/008 (wt/008-integ-build)
+Status: wip · Owner: worker · Branch: fix/010-regf-hive (wt/010, from master) · Found in: Inventor web installer, prefix `inv`, integ + fix/008 (wt/008-integ-build)
 
 ## Observed
 - With 008 fixed, the .adix signature checks pass (LP and Anark packages no
@@ -29,3 +29,19 @@ Wine's server `load_registry` only reads Wine's text registry format.
 Support loading binary regf hives in RegLoadKey (server side, read-only is
 probably enough here: MsixCore copies the tree into the real registry, then
 RegUnLoadKey). Conformance test with a tiny regf hive.
+
+## Design (worker)
+- No regf parsing anywhere in Wine (server, regedit, reg.exe: text/.reg only);
+  nothing upstream found. NtLoadKey already hands the server a file handle
+  (`load_registry` request), so the server is the natural place.
+- server/registry.c `load_registry`: if the file starts with "regf", read it
+  into memory and walk it from the root nk cell: root values -> the loaded key,
+  subkeys (li/lf/lh/ri lists) -> `create_key_recursive`, values (vk, inline
+  data <= 4 bytes, db big-data segments) inserted like the text loader does.
+  nk timestamps -> key modif. Every cell offset/size is bounds-checked; visited
+  nk cells are marked so cycles/shared cells can't loop; depth capped at 512.
+  Bad input -> STATUS_REGISTRY_CORRUPT. Text format still accepted.
+- Not done: key classes, security (sk) cells, transaction logs (.LOG1/2),
+  writing back (RegLoadKey keys stay in memory as before), RegSaveKey in regf.
+- adixhandler also imports RegLoadAppKeyW (Wine: stub returning 0xdeadbeef);
+  check if the install path uses it.

@@ -79,6 +79,8 @@ int main(int argc, char **argv)
             printf("steps: %08lx %08lx %08lx %08lx signers %lu\n", pd->padwTrustStepErrors[TRUSTERROR_STEP_FINAL_WVTINIT],
                    pd->padwTrustStepErrors[TRUSTERROR_STEP_FINAL_OBJPROV], pd->padwTrustStepErrors[TRUSTERROR_STEP_FINAL_SIGPROV],
                    pd->padwTrustStepErrors[TRUSTERROR_STEP_FINAL_POLICYPROV], pd->csSigners);
+            for (i = 0; i < pd->cdwTrustStepErrors; i++)
+                if (pd->padwTrustStepErrors[i]) printf("step %lu error %08lx\n", i, pd->padwTrustStepErrors[i]);
             if (pd->pPDSip) printf("sip subject %08lx\n", pd->pPDSip->gSubject.Data1);
             for (i = 0; i < pd->csSigners; i++)
             {

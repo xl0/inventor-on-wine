@@ -35,8 +35,9 @@ the clock) until the harness is ready. Read-only mode may remain after expiry.
   - 006 winex11 empty surface clip = no clip — merged
   - 007 tasklist no-match output (installer Error 101) — merged
   - 008 wintrust p7x blob verification (installer Error 4005) — merged
-  - 009 wintrust accepts SHA-256 signatures without chain check; unverified
-    RFC 3161 tokens (security)
+  - 009 wintrust SHA-256 chain check + RFC 3161 token verification — merged
+    (build/ rebuild pending: 010 worker uses it)
+  - 011 crypt32 chain policy ignores partial chains (security, small)
   - 010 RegLoadKey rejects Registry.dat hive from .adix (installer Error 4000)
 - [x] Integration branch `integ` in wine-src (001, 002, 005 merged); `build/`
   runs it. Tracks upstream master tip: periodically recreate integ on current
