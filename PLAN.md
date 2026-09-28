@@ -86,7 +86,9 @@ commits or screenshots). Read-only mode may remain after expiry.
     --no-sandbox dropped from tools/edge.sh + prefixes/inv HKCR (inv-vm HKCR still has it).
   - 027 GPU child content hidden in colour-keyed layered windows — merged
   - 028 HKCR lacks merged HKCU\Software\Classes (Edge drops adsk.idmgr: OAuth
-    callback; workaround: copy scheme keys to HKLM\Software\Classes) — open
+    callback; workaround: copy scheme keys to HKLM\Software\Classes) — fixed
+    (full merged view, kernelbase), in review before merge
+  - 030 COM activation ignores per-user class registrations (low)
   - 029 winex11: hidden managed windows stay mapped without a WM (waits for WM_STATE
     forever; trial welcome dialog leaves a white box on :98) — infra: run openbox on :98
   - 022 Edge GPU path queries undocumented dcomp interface → 30 s GPU-process
