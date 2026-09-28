@@ -150,9 +150,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 038 NTFS alternate data stream name syntax unsupported (low)
   - 039 C0 control chars (CR) drawn as .notdef boxes (App Options combos)
   - 040 client-area title bar (QAT/InfoCenter) replaced by WM decorations
-  - 041 file dialog breadcrumb segments have no names
+  - 041 file dialog breadcrumb names (SHGetNameFromIDList PARENTRELATIVEFORUI) — merged
   - 042 per-pixel-alpha popup shadows opaque black (low)
-  - 043 ExplorerBrowser: file selection/double-click not reported to host
+  - 043 file dialog selection (IFolderView2::GetSelection) — merged
   - 044 DateTimePicker short date gap "9 /28/2026" (low)
   - 030 COM reads merged per-user classes (not for elevated) — merged
   - 033 32-bit per-user class redirection relies on deletable marker keys (low)
