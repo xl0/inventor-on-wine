@@ -249,12 +249,15 @@ commits or screenshots). Read-only mode may remain after expiry.
 - build/ = integ 3951ce31e31 (+061, 076, 057; protocol 965). inv/inv2 restarted on it
   (inv2 licensing host up, hello PASS on both). Full regress vs master 4e819f054dd:
   no REAL/NEW, 4 FLAKY (dxgi, mfplat x2, user32:win; same on baseline).
-  inv4 (:101) is on wt/084-build for worker 084.
-- Next candidates: 081 (COM call round trips; biggest remaining perf gap), 078, 077;
+- integ 77b5f2b6729 (+084 shell32 My Documents parsing name) pushed, not built. Rebuild build/ +
+  regress + inv-lic handover once the dialog-watcher worker (inv4) is done.
+- Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
+- Queue: 085 trial popup white + invisible cursor (Chromium AdskAccessUIHost); event-handle leak;
+  081 (COM call round trips; biggest remaining perf gap), 078, 077;
   picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
   074 only if soak #2 reproduces it.
-- Environments: inv (:98, GPU ca), inv2 (:99, licensing host), inv3 (:100, GPU 16),
-  inv4 (:101, GPU ac). User WM reference: x/awesome-rc.lua. VM Inventor signed in.
+- Environments: x/prefixes.tsv + tools/prefix.sh status; leases in x/leases.
+  User WM reference: x/awesome-rc.lua. VM Inventor stuck at "Device limit reached".
 
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue
