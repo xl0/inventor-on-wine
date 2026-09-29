@@ -1,5 +1,5 @@
 # 059 HWND generation reaches 0x8000: sign-extension mismatch leaves MFC with a stale HWND (Buffer Prep Skid save-as E_FAIL, then 058 crash)
-Status: open (root cause found, needs fix) · Owner: - · Branch: - · Found in: samples campaign (inv3)
+Status: fixed · Owner: 059 worker · Branch: fix/059-user-handle-generation · Found in: samples campaign (inv3)
 
 ## Symptom
 In 2 of 3 full runs of `tools/invscen/run.sh samples` (2022 set), "save as Buffer Prep Skid.iam" fails with
@@ -64,3 +64,19 @@ generations stay below 0x8000 that is moot. Add a user32 test: create/destroy wi
 check that HIWORD <= 0x7ffe and the hwnd passed to the proc matches the one returned. Then rerun the full
 samples sequence twice in one Inventor session. Expected: Buffer Prep Skid saves, and the Fan Cover crash (058)
 doesn't happen.
+
+## Fix (branch fix/059-user-handle-generation, on master)
+- `server: Wrap user handle generations after 0x7ffe like Windows.` (`alloc_user_entry`) + user32 win.c
+  `test_handle_generation` (0x8000 CreateMenu/DestroyMenu, then a window: HIWORD <= 0x7ffe and the
+  WM_NCDESTROY hwnd equals the CreateWindow result). Unfixed Wine fails it on both arches; also
+  fixes a dozen downstream win.c failures (GetActiveWindow/GetFocus mismatches) the churn causes there.
+- `win32u: Sign-extend user handles built from the handle table.` (`USER_HANDLE_FROM_INDEX` LongToHandle,
+  matching `wine_server_ptr_handle`). Unreachable after the wrap; droppable if upstream objects.
+- Windows ground truth: all USER types share the table and slot and wrap 0x7ffe -> 1 (window, menu, icon,
+  accel, hook, HDWP, HIMC; `tests/user_handle_uniq.c`, 64- and 32-bit). Wine with the fix matches.
+- Tests: VM user32 win both arches: only the pre-existing win.c:13805 failure. regress.sh on
+  user32/win32u/comctl32/imm32/uxtheme/shell32 vs c09f08e4924: 0 REAL (shell32:autocomplete i386 FLAKY).
+- Inventor (inv3 :100, integ 061fa687382 + fix, wt/059-integ-build), one session: Buffer Prep Skid alone
+  7x, all PASS (unfixed failed on the 3rd/4th); then the full `samples` sequence: 464 PASS, only the
+  Speedometer volume checks fail (055, as before). Buffer Prep Skid save/reopen and Fan Cover Mold (058)
+  pass. Logs: inst/invscen/inv3/059/fix-marks.txt, fix-buf-N.txt, fix-samples.txt.
