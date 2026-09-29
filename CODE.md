@@ -145,6 +145,7 @@ are not present here.
   `hwnd_signext.c [N]`: churn child windows, compare every HWND the app sees for one window (059).
   `user_handle_uniq.c [N]`: per USER type (window, menu, icon, accel, hook, HDWP, HIMC) max HIWORD,
   wrap point, bit-31 handles (059; `-limm32`).
+  `recentdocs_leak.c`: handle count around 100 SHAddToRecentDocs per flag (067; `-lntdll`).
   `addprinter.c NAME PPD`: local wineps printer on FILE: + default (print tests; wine-src's
   dlls/winspool.drv/generic.ppd works). `actctx_tmodel.c`: comClass threadingModel spellings
   → actctx model (063). `actctx_comcall/` (probe.dll with a resource-2 manifest + exe; build lines in
@@ -301,6 +302,12 @@ are not present here.
   edit, maximized), wmdrag xmove (Inventor restored), self (tool check, ~0.5 ms). Also /proc
   CPU of Inventor/wineserver/Xorg; --record: X requests per client pid/op/window (RECORD).
   CSV + summary in inst/uilat/. Numbers and A/B vk/gl/DXVK: issue 060.
+- `tools/soak/soak.sh OUT HOURS` — soak loop in one Inventor session (inv/:98): `run.sh all` per
+  iteration, `samples` every 3rd, uilat rubber+orbit every 10th + at the end; per-iteration logs,
+  events (crash/restart/licensing), a 30 s sampler (Inventor/wineserver/Xorg /proc) and
+  `resprobe.c` in the prefix (kernel handles by type, GDI objects, windows; also `dump` = every
+  handle's type + name, `threads` = threads per start module, `mods`; runs on the VM too).
+  `plot.py OUT`: resources.png, timings.png, trends.txt. Run 2026-09-28: 067, 072-074.
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and

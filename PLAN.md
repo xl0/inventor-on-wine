@@ -100,6 +100,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   file associations) → after 037: visual styles/Studio/ray tracing/viewport
   perf/picking → installer repair/modify/uninstall. GPU passthrough to the VM
   (real NVIDIA reference instead of WARP) after the user enables IOMMU.
+  - Soak (inv/:98, integ c036c687c47, tools/soak, inst/soak/2026-09-28): one session 4.2 h, 21 suites +
+    6 samples: all PASS (bar 055); 1 crash at 4 h 10 min (074); no licensing errors; UI latency flat;
+    suite time doubles (130 → 250-300 s) from COM stub build-up (072) + heap free-list scans (073);
+    RSS +2.5 GB/h, handles +2.2k/h (Explorer key leak 067, proxy mutexes 072).
   - Specialised environments (inv3/:100, integ c036c687c47, rechecked 7f6770b075c; API where possible, else UI):
     | area | result |
     |---|---|
@@ -202,6 +206,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 070 in-process cross-apartment calls run in the caller's actctx (+ MTA calls bypass rpcrt4) — Stress Analysis = VM
   - L 071 cross-process calls into an STA: OLE-window creation context
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
+  - O 067 SHAddToRecentDocs leaks an Explorer key handle per unsupported-flag call (draft, VM-confirmed)
+  - O 072 COM stubs of dead clients never run down; stub list walks slow long sessions (draft)
+  - O 073 ntdll heap find_free_block free-list scans after fragmentation (draft, perf)
+  - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
   - O 064 GetWindowsAccountDomainSid ERROR_INVALID_SID for non-account SIDs → Content Center empty
