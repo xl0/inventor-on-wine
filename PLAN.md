@@ -236,7 +236,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
 ## Now (2026-09-29)
-- Soak #2 loop ended 07:37 (31 iters); worker still analysing. build/ FROZEN until it reports.
+- Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
+  Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
+  082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
 - integ 3951ce31e31 (+061, 076, 057) pushed, not built. 057 bumps the server protocol:
   after rebuilding build/, restart EVERY prefix's wineserver (inv2 first — licensing host;
   other Inventors show "Licensing error" meanwhile), then regress run.
