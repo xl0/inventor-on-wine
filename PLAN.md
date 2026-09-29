@@ -199,7 +199,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
   - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
   - M 068 rpcrt4 NdrStubCall3 → NdrStubCall2 (NDR syntax)
-  - O 070 no activation context on incoming COM call thread (manifest-only CLSID; Mesh View)
+  - M 070 in-process cross-apartment calls run in the caller's actctx (+ MTA calls bypass rpcrt4) — Stress Analysis = VM
+  - L 071 cross-process calls into an STA: OLE-window creation context
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
