@@ -244,6 +244,10 @@ commits or screenshots). Read-only mode may remain after expiry.
 - integ 3951ce31e31 (+061, 076, 057) pushed, not built. 057 bumps the server protocol:
   after rebuilding build/, restart EVERY prefix's wineserver (inv2 first — licensing host;
   other Inventors show "Licensing error" meanwhile), then regress run.
+- Harness ergonomics (user OK'd; after rebuild chore + 084 finish): dedicated licensing
+  prefix inv-lic on a frozen build-lic/; prefix table + tools/prefix.sh status|stop|start;
+  leases file for prefixes/displays; invscen dialog watcher + UI-mode opens (084 was
+  invisible to the silent harness). Done: wine-src pushes integ to gh by default.
 - Next candidates: 081 (COM call round trips; biggest remaining perf gap), 078, 077;
   picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
   074 only if soak #2 reproduces it.

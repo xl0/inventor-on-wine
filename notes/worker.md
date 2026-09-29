@@ -54,7 +54,8 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 
 ## Report, don't route around
 - Broken shared tooling or infra (VM, winrun, display, docs): report it to the
-  coordinator right away (SendMessage if you can, else in your final report)
+  coordinator (in your final report; SendMessage to "coordinator" doesn't reach it —
+  if blocked, stop and report)
   instead of silently working around it. A local workaround to keep going is
   fine, but say so.
 - New Wine bugs outside your issue: don't fix them. Write a short draft
