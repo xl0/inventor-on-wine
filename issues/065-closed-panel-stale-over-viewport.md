@@ -55,3 +55,6 @@ picks another DCE and hides the bug. Use a class without it.
   with ViewCube and nav bar, reopening works.
   ![fixed](attachments/065-assistant-closed-fixed.png)
 - Not re-checked on the VM's Inventor (the xproc test covers the Windows behaviour).
+Verified in Inventor (2026-09-29, integ 7f6770b075c = wt/verify-build, inv3/:100): closing the Assistant
+on an open assembly leaves a full-width viewport with ViewCube and nav bar, no stale strip after zoom.
+![verified](attachments/065-verified-integ.png)

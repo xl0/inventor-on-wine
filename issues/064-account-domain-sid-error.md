@@ -55,3 +55,11 @@ Fix (2 commits on master, kernelbase): non-account check → ERROR_NON_ACCOUNT_S
 size checked before the output pointer. FIXME semi-stub → TRACE. Probe output on Wine is now
 byte-identical to the VM; SID table added to advapi32 security tests (fail on unfixed Wine).
 Not retested in Inventor (Content Center / Frame Generator) — needs an Inventor display/prefix.
+Verified in Inventor (2026-09-29, integ 7f6770b075c = wt/verify-build, inv3/:100): fixed.
+invscen `content`: tree has 10 categories (Cable & Harness, Fasteners(5), ..., Structural Shapes(10),
+Tube & Pipe). Place from Content Center: tree + family thumbnails (Hex Head: 161 items), DIN EN ISO 4017
+M10 x 50 generated into Content Center Files and placed in frame.iam. Frame Generator Insert Frame:
+Standard/Family/Size filled (ANSI AISC rectangular tube 2x1x1/8), preview of 4 members on the `frame`
+skeleton, file-naming dialogs — but OK then creates nothing (new draft [069](069-frame-generator-no-members.md)).
+Bolted connection: fastener picker lists CC bolts; Unbrako UNC socket cap 1/4 x 1 1/2 generated and
+placed. ![bolted connection](attachments/064-bolted-connection-fasteners.png)

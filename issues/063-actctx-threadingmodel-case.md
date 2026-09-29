@@ -61,3 +61,10 @@ Test `test_com_class_threadingmodel` in kernel32/tests/actctx.c (both elements, 
 passes on Win11 VM (x86_64 + i386) and Wine; unfixed master fails 18 checks.
 regress (kernel32 ntdll ole32 combase sxs) vs integ c036c687c47: only ntdll:time (flaky in base).
 Still to do: Inventor retest (Stress Analysis → Create Simulation, invscen `beam`) once on integ.
+Verified in Inventor (2026-09-29, integ 7f6770b075c = wt/verify-build, inv3/:100): the hang is gone —
+Environments → Stress Analysis enters at once, Create Study → Static Analysis works, Fixed constraint
++ 100 N edge force on `beam` set up normally. Mesh View then kills Inventor: unimplemented
+`RPCRT4.dll.NdrStubCall3` (new issue [068](068-rpcrt4-ndrstubcall3.md)), so no solve on Wine yet.
+VM reference (same setup, default mesh, Simulate): max displacement 0.05992 in = 1.522 mm, max von Mises
+17.37 ksi = 119.8 MPa vs beam theory 1.52 mm / 120 MPa (agree within ~0.2 %; mesh-dependent, compare
+Wine within a few %). ![VM result](attachments/063-vm-beam-displacement.png)

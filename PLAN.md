@@ -100,19 +100,19 @@ commits or screenshots). Read-only mode may remain after expiry.
   file associations) → after 037: visual styles/Studio/ray tracing/viewport
   perf/picking → installer repair/modify/uninstall. GPU passthrough to the VM
   (real NVIDIA reference instead of WARP) after the user enables IOMMU.
-  - Specialised environments (inv3/:100, integ c036c687c47; API where possible, else UI):
+  - Specialised environments (inv3/:100, integ c036c687c47, rechecked 7f6770b075c; API where possible, else UI):
     | area | result |
     |---|---|
-    | Stress Analysis ("Inventor Nastran" is not a separate add-in here or on the VM; the built-in env uses Bin\NASTRANSolver) | blocked: entering it hangs Inventor (063). Prepared: `beam` 200x10x10 mm steel, F=100 N → expect δ=FL³/3EI=1.52 mm, σ=Mc/I=120 MPa |
-    | Content Center (desktop libraries installed on Wine, none on the VM) | empty tree, "server query failed" (064) → blocks Frame Generator, bolted connection fasteners, CC fittings |
-    | Frame Generator | Insert Frame panel renders; no profiles (064) |
+    | Stress Analysis ("Inventor Nastran" is not a separate add-in here or on the VM; the built-in env uses Bin\NASTRANSolver) | env + study + loads OK since 063 (7f6770b075c); Mesh View kills Inventor: NdrStubCall3 unimplemented (068). VM on `beam`: 1.522 mm / 119.8 MPa (theory 1.52 / 120) |
+    | Content Center (desktop libraries installed on Wine, none on the VM) | OK since 064 (7f6770b075c): 10 categories, Place from CC generates + places DIN EN ISO 4017 |
+    | Frame Generator | profiles + preview + naming dialogs OK; final OK creates no members, silently (069, unconfirmed vs Windows) |
     | Design Accelerator shaft / spur gears | OK: dialogs, calc, 2D preview + graphs; parts generated (gear ODs 6.35/14.98 cm, reactions 78.7+46.0 lbf = load + weight). Previous component dropped when the next generator starts (066, unconfirmed) |
-    | Bolted connection | dialog OK; fasteners need CC (064) |
+    | Bolted connection | OK: CC fastener picker, bolt generated + placed |
     | Tube & Pipe / Cable & Harness | both envs enter, run/route/harness created, route start pick works, C&H library 491 wires; no full route (fittings need CC) |
     | Anark 3D PDF (`publish`) | OK, PRC 3D PDF as on the VM |
     | Printing (`publish` + File › Print) | no printer on Wine by default (DrawingPrintManager.Printer E_FAIL); with tests/addprinter.exe: print dialog, Print-to-File prompt, PostScript output match the VM's PDF content |
     | Inventor Studio | render OK (32 iterations, 4 s; CPU raytracer, Inventor ~190% CPU) |
-    | viewport after closing the Assistant panel | stale panel image, view clipped (065); black areas under closed dialogs (061) |
+    | viewport after closing the Assistant panel | OK since 065 (7f6770b075c); black areas under closed dialogs (061) |
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
