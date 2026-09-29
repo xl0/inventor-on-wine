@@ -45,3 +45,12 @@
 - Apps that present on their own schedule (Inventor/OGS) don't repaint on the fix/005 redraw:
   any Expose over an offscreen client surface stays black until the next present, e.g. a
   screen-fixed popup sliding over the viewport during a window drag (issue 061).
+- DCE visible regions are cached per process and invalidated only by that process' own
+  window changes. NtUserGetDCEx always refreshes DCs of foreign windows and (fix/065) of
+  own windows whose toplevel is foreign (GPU-process children in another app's tree);
+  before that, a GPU process kept presenting through a stale region after the host hid
+  the panel around it (065). `static` has CS_PARENTDC, which masks this in repros.
+- Debug channels of a running process can be flipped with gdb: `nm` the .so for
+  `__wine_dbch_<chan>` (one static per source file), add the mapping base from
+  /proc/PID/maps, `set {unsigned char}ADDR = 8` (TRACE) / 0 (off).
+

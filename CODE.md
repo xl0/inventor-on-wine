@@ -118,6 +118,8 @@ are not present here.
   `ctrlchar_text.c [FONT..|show]`: per-API table of how control chars are drawn/measured
   (GDI, DrawText, GCP, Uniscribe); `show`: "Pan\r" in ExtTextOut/DrawText/combo/listbox (039).
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
+  `xproc_hidden_present.c`: other process presents D3D11 on its child of our container; we hide the
+  container, screen pixel must stop showing its frames (065; Win11 pass, exit 0 = ok).
   `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,
