@@ -28,3 +28,9 @@
   SystemCompatible); Common-Controls 5.82 and 6.0 are provided by comctl32(_v6).
 - `<comClass>`/`<clrClass threadingModel>`: case-insensitive; "Single" = No; empty/unknown
   (even with spaces) fails CreateActCtx with 14001. Absent: comClass No, clrClass Both (063).
+- COM (070): an in-process call into another apartment runs in the caller's active context
+  (or none); cross-process calls get none; nothing is captured at creation/marshal time.
+  Wine: combase rpc.c carries it in dispatch_params (bypass path, STA and MTA). Windows also runs
+  wndproc-dispatched cross-process calls into an STA under the context its OLE window was
+  created in (Wine: not implemented). MFC's AFX_MANAGE_STATE doesn't activate a regular DLL's
+  manifest context (probe: tests/actctx_comcall/mfc_state.c).

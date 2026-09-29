@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+<file name="probe.dll">
+<comClass clsid="{A9485C80-0000-4000-8000-000000000001}" threadingModel="Both"/>
+<comClass clsid="{A9485C80-0000-4000-8000-000000000002}" threadingModel="free"/>
+</file>
+</assembly>

@@ -147,7 +147,9 @@ are not present here.
   wrap point, bit-31 handles (059; `-limm32`).
   `addprinter.c NAME PPD`: local wineps printer on FILE: + default (print tests; wine-src's
   dlls/winspool.drv/generic.ppd works). `actctx_tmodel.c`: comClass threadingModel spellings
-  → actctx model (063). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
+  → actctx model (063). `actctx_comcall/` (probe.dll with a resource-2 manifest + exe; build lines in
+  actctx_comcall.c): active context / manifest CLSID lookup in direct and cross-apartment/-process
+  COM calls; `mfc_state.c`: AFX_MANAGE_STATE of Inventor's FEA DLL (070). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
   per SID (064).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
