@@ -194,7 +194,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
   - O 061 black trail in viewport after window drag
   - O 062 WPF splitter popup black without compositing WM
-  - O 063 DLL manifest threadingModel compared case-sensitively (Stress Analysis hangs)
+  - M 063 manifest threadingModel case-insensitive + defaults (Stress Analysis; Inventor retest pending)
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
   - O 065 closed Assistant panel leaves stale image over the viewport
   - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
