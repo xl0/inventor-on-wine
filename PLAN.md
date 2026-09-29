@@ -198,7 +198,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
   - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
   - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
-  - O 068 rpcrt4 NdrStubCall3 missing (Stress Analysis Mesh View crash)
+  - M 068 rpcrt4 NdrStubCall3 → NdrStubCall2 (NDR syntax)
+  - O 070 no activation context on incoming COM call thread (manifest-only CLSID; Mesh View)
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
