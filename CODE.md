@@ -109,6 +109,8 @@ are not present here.
   `hkcu_proto.c`: per-user URL protocol via HKCR / AssocQueryString. `hkcr_merge.c`: HKCR merged
   view probe (which side backs open/create/query/enum; needs admin).
   `tlb_cache.c`: typelib cache + PSDispatch/PSOAInterface proxy/stub probe and benchmark (032).
+  `heap_stress.c [OPS_M LIVE MAXSIZE KEEP_PERMILLE private]`: random-size/lifetime HeapAlloc/Free stress,
+  ns/op + commit per million ops, HeapCompatibilityInformation (073; fragmenting: `60 20000 262144 2`).
   `com_peruser.c`: COM vs per-user classes (CLSID/ProgID/Interface/OleRegGetUserType,
   RegOpenUserClassesRoot); run elevated and non-elevated, modes as argv[1] for fresh processes.
   `dosdev_name.c`: DOS device names in paths (035). `wintext.c` (`wintext.exe [TITLE]`):
