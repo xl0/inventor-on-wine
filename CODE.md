@@ -367,6 +367,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   handle's type + name, `threads` = threads per start module, `mods`; runs on the VM too).
   Stub managers/proxies per apartment after odd iterations (`stubs.sh PID`, gdb; stubs.txt).
   `plot.py OUT`: resources.png, timings.png, trends.txt. Runs 2026-09-28 (067, 072-074), 2026-09-29 (082).
+  Leak attribution (086): `handle-trace.patch` (debug-only Wine patch: server log of unnamed
+  event/section handles + kernelbase creation backtraces) and `handle-attr.py` (live handles by stack);
+  see notes/wine/debugging.md. RSS/mapping growth in soaks comes from `samples` iterations only.
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and

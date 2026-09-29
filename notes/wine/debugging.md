@@ -55,6 +55,16 @@
   a later dump; module bases from `resprobe mods` (/proc maps misses most PE images). 072.
   GetProcessHandleCount (ProcessHandleCount) is a stub returning 0 in Wine: conformance tests
   count own handles via NtQuerySystemInformation(SystemExtendedHandleInformation) (067).
+- Creation sites of leaked unnamed events/sections without relay (086): `tools/soak/handle-trace.patch`
+  (debug only, don't commit): wineserver logs `LK A/C` per handle of an unnamed event/section
+  (start the server by hand with `WINE_LEAK086=1`, stderr to a file), kernelbase logs a backtrace per
+  CreateEvent/CreateFileMapping in Inventor.exe under `WINEDEBUG=trace+leak`;
+  `tools/soak/handle-attr.py` groups the live ones by stack. Unwinding in every process that
+  inherits WINEDEBUG (licensing agent, WebView2) left Inventor on its splash (both with
+  RtlCaptureStackBackTrace and a static-table unwinder); limited to Inventor.exe it works. The patch
+  unwinds with RtlLookupFunctionTable + RtlVirtualUnwind (static images only; RtlLookupFunctionEntry
+  may call CoreCLR's function-table callback, which takes CLR locks). A raw stack scan is safe but
+  full of stale frames.
 - Perf on PE code: `perf report --sort dso,sym` shows PE addresses as file offsets; for Wine's PE
   dlls offset = RVA (.text at 0x1000 both), so `addr2line -f -i -e build/dlls/X/x86_64-windows/X.dll
   $((ImageBase + off))`. Autodesk CER leaves `Temp\Inventor<ts>.dmp` (+ `.tmp` XML with the last

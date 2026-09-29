@@ -1,0 +1,204 @@
+diff --git a/dlls/combase/marshal.c b/dlls/combase/marshal.c
+index 211aaa0dd44..858ef0bc4b3 100644
+--- a/dlls/combase/marshal.c
++++ b/dlls/combase/marshal.c
+@@ -30,6 +30,22 @@
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(ole);
++WINE_DECLARE_DEBUG_CHANNEL(leak);
++
++/* DEBUG 086: proxy manager refcount history with a raw stack scan */
++static void leak_pm( const char *what, void *pm, LONG refs )
++{
++    ULONG_PTR *sp = __builtin_frame_address(0), *top = NtCurrentTeb()->Tib.StackBase;
++    ULONG_PTR *bottom = NtCurrentTeb()->DeallocationStack;
++    char buf[1024], *p = buf;
++    int i, n = 0;
++
++    if (!TRACE_ON(leak)) return;
++    p += sprintf( p, "%s %p %ld", what, pm, refs );
++    for (i = 0; i < 256 && sp + i < top && n < 40; i++)
++        if (sp[i] >> 32 && sp[i] >> 47 == 0 && (sp[i] < (ULONG_PTR)bottom || sp[i] >= (ULONG_PTR)top)) { p += sprintf( p, " %Ix", sp[i] ); n++; }
++    TRACE_(leak)( "%s\n", buf );
++}
+ 
+ HRESULT WINAPI RPC_CreateClientChannel(const OXID *oxid, const IPID *ipid,
+                                 const OXID_INFO *oxid_info, const IID *iid,
+@@ -973,8 +989,11 @@ static HRESULT WINAPI ClientIdentity_QueryInterface(IMultiQI * iface, REFIID rii
+ static ULONG WINAPI ClientIdentity_AddRef(IMultiQI *iface)
+ {
+     struct proxy_manager *This = impl_from_IMultiQI(iface);
++    LONG refs;
+     TRACE("%p - before %ld\n", iface, This->refs);
+-    return InterlockedIncrement(&This->refs);
++    refs = InterlockedIncrement(&This->refs);
++    leak_pm( "PA", This, refs );
++    return refs;
+ }
+ 
+ static ULONG WINAPI ClientIdentity_Release(IMultiQI *iface)
+@@ -982,6 +1001,7 @@ static ULONG WINAPI ClientIdentity_Release(IMultiQI *iface)
+     struct proxy_manager *This = impl_from_IMultiQI(iface);
+     ULONG refs = InterlockedDecrement(&This->refs);
+     TRACE("%p - after %ld\n", iface, refs);
++    leak_pm( "PR", This, refs );
+     if (!refs)
+         proxy_manager_destroy(This);
+     return refs;
+@@ -1564,6 +1584,7 @@ static HRESULT proxy_manager_construct(
+     This->oid = oid;
+ 
+     This->refs = 1;
++    leak_pm( "PC", This, 1 );
+ 
+     /* the DCOM draft specification states that the SORF_NOPING flag is
+      * proxy manager specific, not ifproxy specific, so this implies that we
+diff --git a/dlls/kernelbase/sync.c b/dlls/kernelbase/sync.c
+index 94036acfad4..cb36712b104 100644
+--- a/dlls/kernelbase/sync.c
++++ b/dlls/kernelbase/sync.c
+@@ -38,6 +38,48 @@
+ #include "wine/debug.h"
+ 
+ WINE_DEFAULT_DEBUG_CHANNEL(sync);
++WINE_DECLARE_DEBUG_CHANNEL(leak);
++
++/* DEBUG 086: creation backtrace of unnamed handles: unwind through static image tables only
++ * (dynamic function table callbacks may take app locks) */
++static void leak_bt( const char *what, HANDLE h, const OBJECT_ATTRIBUTES *attr )
++{
++#ifdef __x86_64__
++    char buf[1024], *p = buf;
++    CONTEXT ctx;
++    int i;
++
++    static int inv = -1;
++
++    if (!TRACE_ON(leak) || !h || (attr->ObjectName && attr->ObjectName->Length)) return;
++    if (inv < 0) inv = !!wcsstr( NtCurrentTeb()->Peb->ProcessParameters->ImagePathName.Buffer, L"Inventor.exe" );
++    if (!inv) return;
++    p += sprintf( p, "%s %04lx", what, HandleToULong(h) );
++    RtlCaptureContext( &ctx );
++    for (i = 0; i < 40; i++)
++    {
++        RUNTIME_FUNCTION *tab, *func = NULL;
++        ULONG_PTR base, frame;
++        ULONG len, lo = 0, hi;
++        void *data;
++
++        if (!(tab = RtlLookupFunctionTable( ctx.Rip, &base, &len ))) break;
++        hi = len / sizeof(*tab);
++        while (lo < hi)
++        {
++            ULONG mid = (lo + hi) / 2;
++            if (ctx.Rip - base < tab[mid].BeginAddress) hi = mid;
++            else if (ctx.Rip - base >= tab[mid].EndAddress) lo = mid + 1;
++            else { func = &tab[mid]; break; }
++        }
++        if (func) RtlVirtualUnwind( UNW_FLAG_NHANDLER, base, ctx.Rip, func, &ctx, &data, &frame, NULL );
++        else { ctx.Rip = *(ULONG64 *)ctx.Rsp; ctx.Rsp += 8; }
++        if (!ctx.Rip) break;
++        p += sprintf( p, " %Ix", (ULONG_PTR)ctx.Rip );
++    }
++    TRACE_(leak)( "%s\n", buf );
++#endif
++}
+ 
+ static const struct _KUSER_SHARED_DATA *user_shared_data = (struct _KUSER_SHARED_DATA *)0x7ffe0000;
+ 
+@@ -621,6 +663,7 @@ HANDLE WINAPI DECLSPEC_HOTPATCH CreateEventExW( SECURITY_ATTRIBUTES *sa, LPCWSTR
+     status = NtCreateEvent( &ret, access, &attr,
+                             (flags & CREATE_EVENT_MANUAL_RESET) ? NotificationEvent : SynchronizationEvent,
+                             (flags & CREATE_EVENT_INITIAL_SET) != 0 );
++    leak_bt( "E", ret, &attr );
+     if (status == STATUS_OBJECT_NAME_EXISTS)
+         SetLastError( ERROR_ALREADY_EXISTS );
+     else
+@@ -1085,6 +1128,7 @@ HANDLE WINAPI DECLSPEC_HOTPATCH CreateFileMappingW( HANDLE file, LPSECURITY_ATTR
+     get_create_object_attributes( &attr, &nameW, sa, name );
+ 
+     status = NtCreateSection( &ret, access, &attr, &size, protect, sec_type, file );
++    leak_bt( "S", ret, &attr );
+     if (status == STATUS_OBJECT_NAME_EXISTS)
+         SetLastError( ERROR_ALREADY_EXISTS );
+     else
+@@ -1114,6 +1158,7 @@ HANDLE WINAPI DECLSPEC_HOTPATCH CreateFileMapping2( HANDLE file, SECURITY_ATTRIB
+     get_create_object_attributes( &attr, &nameW, sa, name );
+ 
+     status = NtCreateSectionEx( &ret, access, &attr, &size, protect, sec_type, file, params, count );
++    leak_bt( "S", ret, &attr );
+     if (status == STATUS_OBJECT_NAME_EXISTS)
+         SetLastError( ERROR_ALREADY_EXISTS );
+     else
+diff --git a/server/handle.c b/server/handle.c
+index 1933b2f6a43..7797c3d520b 100644
+--- a/server/handle.c
++++ b/server/handle.c
+@@ -235,10 +235,19 @@ static obj_handle_t alloc_entry( struct handle_table *table, void *obj, unsigned
+ }
+ 
+ /* allocate a handle for an object, incrementing its refcount */
++/* DEBUG 086: log handles to unnamed events and sections */
++static int leak_on = -1;
++static int leak_obj( struct object *obj )
++{
++    if (leak_on < 0) leak_on = getenv( "WINE_LEAK086" ) != NULL;
++    return leak_on && (obj->ops->type == &event_type || obj->ops->type == &mapping_type) && !obj->name;
++}
++
+ static obj_handle_t alloc_handle_entry( struct process *process, void *ptr,
+                                         unsigned int access, unsigned int attr )
+ {
+     struct object *obj = ptr;
++    obj_handle_t h;
+ 
+     assert( !(access & RESERVED_ALL) );
+     if (attr & OBJ_INHERIT) access |= RESERVED_INHERIT;
+@@ -247,7 +256,12 @@ static obj_handle_t alloc_handle_entry( struct process *process, void *ptr,
+         set_error( STATUS_PROCESS_IS_TERMINATING );
+         return 0;
+     }
+-    return alloc_entry( process->handles, obj, access );
++    h = alloc_entry( process->handles, obj, access );
++    if (h && leak_obj( obj ))
++        fprintf( stderr, "LK A %04x %04x %c %p %s %04x\n", process->id, h,
++                 obj->ops->type == &event_type ? 'E' : 'S', obj,
++                 current ? leak_req_name() : "-", current ? current->process->id : 0 );
++    return h;
+ }
+ 
+ /* allocate a handle for an object, incrementing its refcount */
+@@ -418,6 +432,7 @@ unsigned int close_handle( struct process *process, obj_handle_t handle )
+     obj = entry->ptr;
+     if (obj->ops->close_handle && !obj->ops->close_handle( obj, process, handle ))
+         return STATUS_HANDLE_NOT_CLOSABLE;
++    if (leak_obj( obj )) fprintf( stderr, "LK C %04x %04x\n", process->id, handle );
+ 
+     table = handle_is_global(handle) ? global_table : process->handles;
+     table->entries[index].ptr = NULL;
+diff --git a/server/object.h b/server/object.h
+index 105a1a63134..9759b1262ba 100644
+--- a/server/object.h
++++ b/server/object.h
+@@ -363,6 +363,7 @@ extern const char *server_argv0;
+ extern timeout_t server_start_time;
+ 
+ /* object types */
++extern const char *leak_req_name(void);
+ extern struct type_descr no_type;
+ extern struct type_descr objtype_type;
+ extern struct type_descr directory_type;
+diff --git a/server/trace.c b/server/trace.c
+index b6c2f27ae09..4b5c1988253 100644
+--- a/server/trace.c
++++ b/server/trace.c
+@@ -1722,3 +1722,8 @@ void trace_reply( enum request req, const union generic_reply *reply )
+     else fprintf( stderr, "%04x: %d() = %s\n",
+                   current->id, req, get_status_name(current->error) );
+ }
++
++const char *leak_req_name(void)
++{
++    return req_names[current->req.request_header.req];
++}
