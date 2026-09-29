@@ -177,7 +177,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
   - O 057 multi-file assembly open/reopen 2.5–7x slower (perf)
   - X 058 crash is Autodesk's own RxDispatch __except + CER after an FWSrv throw (follows 059)
-  - O 059 HWND reuse counter passes 0x7fff → bit-31 HWNDs, sign/zero-extension mismatch → MFC dead window → SaveAs E_FAIL (root-caused; fix in progress)
+  - M 059 user handle generation wraps at 0x7ffe like Windows (bit-31 HWNDs broke MFC → SaveAs E_FAIL, 058 crash)
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
   - O 061 black trail in viewport after window drag
   - O 062 WPF splitter popup black without compositing WM
