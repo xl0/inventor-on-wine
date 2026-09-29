@@ -162,6 +162,7 @@ are not present here.
   actctx_comcall.c): active context / manifest CLSID lookup in direct and cross-apartment/-process
   COM calls; `mfc_state.c`: AFX_MANAGE_STATE of Inventor's FEA DLL (070). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
   per SID (064).
+  `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 also carries the host console / gdm greeter; a headless
   Xorg there works (:101) — prefer the other GPUs first.
@@ -306,6 +307,8 @@ are not present here.
   "Wine PostScript File" on FILE: from tests/addprinter.exe), `content` (CC tree, 064),
   `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
+  `openbench`: activates samples.ipj, opens/closes `INVSCEN_OPEN` (;-list) `INVSCEN_N` times and times
+  a file-reference walk (per-COM-call cost, 057).
   UI helpers: `INVSCEN_KEEP=1` keeps open docs at connect; `cmd` runs a command by internal
   name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
   transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
