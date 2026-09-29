@@ -28,3 +28,12 @@
   Wine never negotiates NDR64 (ndr64_client_call picks NDR), so NdrStubCall3 = NdrStubCall2.
 - To check a PS DLL's layout: follow DllGetClassObject's ProxyFileInfo list (the stub vtbl header
   holds pServerInfo and the dispatch table). A small Python PE walk is enough.
+
+# COM references of dead clients (072)
+
+- Windows runs down the refs of a client that dies (or exits without CoUninitialize) by pinging:
+  objects freed ~6 min later, in batches up to ~12 min. CoUninitialize without Release frees at once.
+- Wine has no pinging: such refs (and the objects) live until the server exits. .NET clients exit
+  without releasing their RCWs, so an automation server leaks one stub manager per object handed out.
+- The server can't attribute refs to a client process (OBJREF refs move between processes without
+  the server seeing it), so "release when the client process dies" isn't safe; see issue 072.
