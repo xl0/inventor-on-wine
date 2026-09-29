@@ -102,6 +102,8 @@ start) load ${A[0]:?NAME}; check_lease
 	fi
 	export WINEPREFIX=$WP DISPLAY=$DISP WINEDLLOVERRIDES="mscoree,mshtml="
 	[ "$DRI" = - ] || export DRI_PRIME=$DRI
-	exec "$BUILD/wine" wineboot -u ;;
+	# services started by wineboot inherit our fds and outlive it: keep them off the caller's pipe
+	"$BUILD/wine" wineboot -u >"x/wineboot.$N.log" 2>&1 </dev/null
+	echo "$N started (log x/wineboot.$N.log)" ;;
 *) die "unknown command $cmd" ;;
 esac
