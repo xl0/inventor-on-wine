@@ -19,3 +19,12 @@
   The channel catches it (combase rpc_execute_call), not the stub: CStdStubBuffer_Invoke
   only handles exceptions outside the STUB_CALL_SERVER phase (unmarshal errors → HRESULT).
   NdrStubCall2 / widl stubs report the phase through *pdwStubPhase.
+
+# MIDL /protocol all proxy/stubs, NDR64 (068)
+
+- x64 MIDL `/protocol all` PS DLLs: server/proxy info keep the NDR ProcString/FmtStringOffset at top
+  level + pSyntaxInfo[NDR, NDR64]; stubs dispatch through NdrStubCall3, proxies are stubless.
+- Windows NdrStubCall3 uses the top-level NDR strings unless msg->TransferSyntax is NDR64.
+  Wine never negotiates NDR64 (ndr64_client_call picks NDR), so NdrStubCall3 = NdrStubCall2.
+- To check a PS DLL's layout: follow DllGetClassObject's ProxyFileInfo list (the stub vtbl header
+  holds pServerInfo and the dispatch table). A small Python PE walk is enough.
