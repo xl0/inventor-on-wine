@@ -147,6 +147,8 @@ are not present here.
   `hwnd_signext.c [N]`: churn child windows, compare every HWND the app sees for one window (059).
   `user_handle_uniq.c [N]`: per USER type (window, menu, icon, accel, hook, HDWP, HIMC) max HIWORD,
   wrap point, bit-31 handles (059; `-limm32`).
+  `com_rundown.c run kill|exit|uninit|release [clients] [objs] [secs]`: STA server, client processes
+  take object refs and end without Release; prints the server's live objects over time (072).
   `recentdocs_leak.c`: handle count around 100 SHAddToRecentDocs per flag (067; `-lntdll`).
   `addprinter.c NAME PPD`: local wineps printer on FILE: + default (print tests; wine-src's
   dlls/winspool.drv/generic.ppd works). `actctx_tmodel.c`: comClass threadingModel spellings
