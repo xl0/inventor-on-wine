@@ -196,7 +196,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 062 WPF splitter popup black without compositing WM
   - M 063 manifest threadingModel case-insensitive + defaults (Stress Analysis; Inventor retest pending)
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
-  - O 065 closed Assistant panel leaves stale image over the viewport
+  - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
   - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
