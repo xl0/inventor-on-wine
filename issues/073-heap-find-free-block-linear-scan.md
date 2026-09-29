@@ -58,3 +58,7 @@ Variants measured (bits/limit, 30 M ops of the stress): 2/∞ 3317 ns 3023 MB; 2
 (doesn't fit the header). Tests: kernel32:heap, ntdll:rtl clean both arches; regress on ntdll kernel32
 kernelbase msvcrt ucrtbase msvcp140 oleaut32: 0 worse; full suite: 0 REAL (4 FLAKY).
 Not verified on Inventor (needs a multi-hour session).
+
+## Soak #2 (integ bbc7f82accb, inst/soak/2026-09-29)
+Verified on Inventor: late-session suite (~7 h, RSS 16 GB) ntdll.dll 1.9 % of Inventor samples (soak #1 late 17.4 %,
+fresh 2.7 %). Suite 135 s late vs 122 s at start (soak #1: 130 → 250-300 s).

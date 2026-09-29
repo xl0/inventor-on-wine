@@ -1,5 +1,5 @@
 # 074 Inventor crash after 4 h: unhandled CLR exception during "place 200 occurrences"
-Status: open (draft) · Owner: - · Branch: - · Found in: soak test (inst/soak/2026-09-28, integ c036c687c47)
+Status: open (draft; not seen in soak #2) · Owner: - · Branch: - · Found in: soak test (inst/soak/2026-09-28, integ c036c687c47)
 
 ## Symptom
 Only crash of a 4.2 h single-session soak (21 suite runs + 6 samples runs; none in the first 20
@@ -28,3 +28,7 @@ The dump has no inner-exception text; reproducing needs another multi-hour sessi
   last hour (or attach winedbg to catch the first-chance CLR exception) to get the inner exception.
 - Check the VMA count at the time of death (sample every 5 s in the last hour); mmap failures at
   max_map_count would surface as OutOfMemory inside the CLR.
+
+## Soak #2 (integ bbc7f82accb, inst/soak/2026-09-29)
+Did not recur: 33 suites (incl. asmbig place 200 every time) in one session over ~7 h, RSS up to 16 GB, 24.6k
+mappings, 12.6k handles. Suggests the crash tied to the slowed/bloated state of soak #1 (072/073) or is rare.

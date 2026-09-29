@@ -104,6 +104,10 @@ commits or screenshots). Read-only mode may remain after expiry.
     6 samples: all PASS (bar 055); 1 crash at 4 h 10 min (074); no licensing errors; UI latency flat;
     suite time doubles (130 → 250-300 s) from COM stub build-up (072) + heap free-list scans (073);
     RSS +2.5 GB/h, handles +2.2k/h (Explorer key leak 067, proxy mutexes 072).
+    Soak #2 (integ bbc7f82accb, inst/soak/2026-09-29): 31 suites + 6 samples, no crash (074 not seen); suite time
+    flat (late 135 s vs 122 s), ntdll 1.9 % / combase ~0 % late; stub managers flat (~50), no key/mutex leak.
+    Still: RSS +2.8 GB/h, handles +2.2k/h (unnamed events ~200/suite, sections), mappings +3k/h. New: Activate of
+    Default.ipj E_FAIL after 3.4 h, then asmcon SaveAs E_INVALIDARG every run (082).
   - Specialised environments (inv3/:100, integ c036c687c47, rechecked 7f6770b075c; API where possible, else UI):
     | area | result |
     |---|---|
@@ -210,8 +214,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 067 SHAddToRecentDocs leaked the Explorer key per call
   - O 072 COM: proxy mutex → CS + rb-tree stub lookups merged; ping-based rundown of dead
     clients' objects deferred (design in issue; harness now releases refs)
-  - M 073 ntdll heap: more free-list size classes + bounded walk (no slowdown with fragmentation; soak recheck pending)
-  - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
+  - M 073 ntdll heap: more free-list size classes + bounded walk (verified in soak #2)
+  - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft; not in soak #2)
+  - O 082 soak: DesignProject.Activate E_FAIL after 3.4 h, then SaveAs E_INVALIDARG (draft)
   - M 076 SC_MOVE with any hittest low bits moves the window (caption drag under awesome did nothing)
   - O 077 WM-initiated moves send no WM_ENTERSIZEMOVE/EXITSIZEMOVE (stale splitters after Mod4+drag)
   - O 078 first present of a new offscreen client surface never reaches the screen

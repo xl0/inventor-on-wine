@@ -50,3 +50,7 @@ Files in %TEMP% are ignored (no entry, no .lnk). No handle growth for any flag.
 Wine differs anyway (ANSI MRU data, `name.txt.lnk`), so SHELLITEM/APPIDINFO* support
 (resolve to a pidl, then the SHARD_PIDL path) is left as follow-up: small in code, but a
 conformance test would have to write to the tester's real recent list.
+
+## Soak #2 (integ bbc7f82accb, inst/soak/2026-09-29)
+Confirmed: no `...\CurrentVersion\Explorer` key growth; keys 1118 → 241 at iter 15 (soak #1 → #2), 391 after 32 suites
+(soak #1: 1495 after 20).

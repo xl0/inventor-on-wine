@@ -8,7 +8,9 @@
 # OUT/iters.csv, events (crash, licensing error, Inventor restart) in OUT/events.txt.
 # Background sampler, every 30 s: OUT/mon.csv (Linux side: Inventor, its wineserver,
 # the :98 Xorg) and OUT/probe-PID.txt (tools/soak/resprobe.c inside the prefix:
-# kernel handles, GDI objects, windows). Plots: tools/soak/plot.py OUT.
+# kernel handles, GDI objects, windows). After the suite of every odd iteration: combase stub
+# managers / proxies per apartment (tools/soak/stubs.sh, gdb stalls Inventor ~s) in OUT/stubs.txt.
+# Plots: tools/soak/plot.py OUT.
 set -u
 cd "$(dirname "$0")/../.."
 OUT=${1:?usage: $0 OUT HOURS}; H=${2:?}
@@ -39,6 +41,7 @@ I=0; echo 0 >$OUT/.iter
 	done
 ) &
 
+stubs() { p=$(invpid); [ -n "$p" ] && tools/soak/stubs.sh $p | sed "s/^/$(date +%s) iter=$I pid=$p /" >>$OUT/stubs.txt; }
 uilat() { python3 tools/uilat/uilat.py rubber orbit --setup --out $OUT/uilat --tag iter$I >>$OUT/uilat.log 2>&1 </dev/null || ev "uilat failed rc=$?"; }
 END=$(( $(date +%s) + $(awk -v h=$H 'BEGIN { printf "%d", h * 3600 }') ))
 echo iter,start,end,inv_before,inv_after,suite_s,samples_s,fails,crashlog_bytes,dumps >$OUT/iters.csv
@@ -48,8 +51,9 @@ while [ $(date +%s) -lt $END ]; do
 	tools/invscen/run.sh all >$D/table.txt 2>$D/stderr.txt </dev/null
 	cp inst/invscen/results/*.txt $D/
 	t1=$(date +%s); ts=
+	[ $((I % 2)) = 1 ] && stubs
 	if [ $((I % 3)) = 0 ]; then
-		tools/invscen/run.sh samples >$D/samples.txt 2>&1 </dev/null; ts=$(( $(date +%s) - t1 ))
+		t2=$(date +%s); tools/invscen/run.sh samples >$D/samples.txt 2>&1 </dev/null; ts=$(( $(date +%s) - t2 ))
 	fi
 	[ $((I % 10)) = 1 ] && uilat
 	P1=$(invpid)

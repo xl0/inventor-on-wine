@@ -83,3 +83,9 @@ client's" refs would disconnect live holders. The Windows-shaped fix is ping run
   apartment through IRemUnknown (e.g. RemAddRef with 0 refs, or a Wine-private IRundown use).
 ~150-250 lines, no conformance test practical (6 min timeouts). Faithful alternative:
 IObjectExporter ping sets in rpcss (MS-DCOM), much larger.
+
+## Soak #2 (integ bbc7f82accb + harness releasing its refs, inst/soak/2026-09-29)
+Stub managers in Inventor's main STA 30 after suite 1 → 52 after suite 31 (stubs.txt). Proxies +80/suite (2481 at
+the end), mutants 1257 → 137 at iter 15 (soak #1 → #2), 155 at the end. perf of a late suite: combase ~0.03 % of
+Inventor samples (soak #1 late 4.3 %). Suite time drift gone (late suite 135 s vs 122 s at start; see 073).
+Memory growth unchanged (+2.8 GB/h), so it's not the stubs.
