@@ -26,3 +26,5 @@
   actctx_init still silently falls back to the empty context.
 - Wine's WinSxS lacks some in-box Windows assemblies (IsolationAutomation,
   SystemCompatible); Common-Controls 5.82 and 6.0 are provided by comctl32(_v6).
+- `<comClass>`/`<clrClass threadingModel>`: case-insensitive; "Single" = No; empty/unknown
+  (even with spaces) fails CreateActCtx with 14001. Absent: comClass No, clrClass Both (063).

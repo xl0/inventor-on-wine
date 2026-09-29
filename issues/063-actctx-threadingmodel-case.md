@@ -1,5 +1,5 @@
 # 063 Stress Analysis hangs Inventor: manifest threadingModel="free" parsed case-sensitively
-Status: open (draft) · Owner: - · Branch: - · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
+Status: fixed · Owner: worker 063 · Branch: fix/063-actctx-threadingmodel · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
 
 ## Symptom
 Part open, 3D Model → Stress Analysis (or Environments → Stress Analysis): Inventor's UI
@@ -40,9 +40,24 @@ redirection, model field): 1 Apartment, 2 Free, 3 No, 4 Both, 5 Neutral.
 | Free / free / FREE | 2 / 2 / 2 | 2 / 3 / 3 |
 | Both / both | 4 / 4 | 4 / 3 |
 | Neutral / neutral | 5 / 5 | 5 / 3 |
-| "" / "bogus" | CreateActCtx fails 14001 | 3 / 3 |
+| "" / "bogus" / " Free" / "Free " | CreateActCtx fails 14001 | 3 / 3 |
+| Single / single | 3 | 3 |
+| attribute absent | 3 | 0 |
+
+`<clrClass>`: identical, except absent attribute = 4 (Both) on Windows (Wine: 0 = main-threaded).
+combase's registry `ThreadingModel` path already compares with `wcsicmp`.
 
 ## Task
 Case-insensitive threadingModel values in ntdll actctx (and, per the table, reject empty /
 unknown values). Add the cases to kernel32/tests/actctx.c. Then retest: Stress Analysis
 environment → Create Simulation (specialised-environments pass, beam.cs scenario part).
+
+## Outcome
+`fix/063-actctx-threadingmodel` (on master), 2 commits:
+- `ntdll: Parse comClass threadingModel values case-insensitively.` — xmlstr_cmpi, "Single" → No,
+  anything else (incl. empty) → set_error (14001). Shared by comClass and clrClass.
+- `ntdll: Set default threading models for comClass and clrClass.` — absent attribute: No / Both.
+Test `test_com_class_threadingmodel` in kernel32/tests/actctx.c (both elements, all rows above):
+passes on Win11 VM (x86_64 + i386) and Wine; unfixed master fails 18 checks.
+regress (kernel32 ntdll ole32 combase sxs) vs integ c036c687c47: only ntdll:time (flaky in base).
+Still to do: Inventor retest (Stress Analysis → Create Simulation, invscen `beam`) once on integ.
