@@ -177,7 +177,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
   - O 057 multi-file assembly open/reopen 2.5–7x slower (perf)
   - X 058 crash is Autodesk's own RxDispatch __except + CER after an FWSrv throw (follows 059)
-  - O 059 Buffer Prep Skid save-as E_FAIL only in full samples sequence
+  - O 059 Buffer Prep Skid save-as E_FAIL only in full samples sequence (triage)
+  - O 060 wined3d-vk: fresh 52 MiB allocations per discard map (sketch 53 ms vs DXVK 4 ms)
+  - O 061 black trail in viewport after window drag
+  - O 062 WPF splitter popup black without compositing WM
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
