@@ -143,6 +143,10 @@ are not present here.
   `hwnd_signext.c [N]`: churn child windows, compare every HWND the app sees for one window (059).
   `user_handle_uniq.c [N]`: per USER type (window, menu, icon, accel, hook, HDWP, HIMC) max HIWORD,
   wrap point, bit-31 handles (059; `-limm32`).
+  `addprinter.c NAME PPD`: local wineps printer on FILE: + default (print tests; wine-src's
+  dlls/winspool.drv/generic.ppd works). `actctx_tmodel.c`: comClass threadingModel spellings
+  → actctx model (063). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
+  per SID (064).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
@@ -276,6 +280,16 @@ are not present here.
   autodesk_inventor_2022_samples.zip sha256 1eeb4164…09292b,
   autodesk_inventor_2016_samples.zip 9d3096f6…41f501c, both from damassets.autodesk.net
   (links on the "Inventor Sample Files" support article; www.autodesk.com zips 403 curl).
+  Specialised environments (not in `all`): `publish` (Anark 3D PDF via the add-in's
+  Automation.Publish, late-bound with InvokeMember since C# `dynamic` fails on Windows too;
+  DrawingPrintManager.PrintToFile on the default printer — needs one: inv3 has
+  "Wine PostScript File" on FILE: from tests/addprinter.exe), `content` (CC tree, 064),
+  `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
+  for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
+  UI helpers: `INVSCEN_KEEP=1` keeps open docs at connect; `cmd` runs a command by internal
+  name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
+  transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
+  in-proc (their exceptions: EventPipe trick in notes/wine/debugging.md).
 - `tools/uilat/uilat.py SCEN... [--setup] [--tag T] [--record] [--perf ROLES]` — UI latency:
   XTest input, XDamage on root + XGetImage of a watched rect (window moves make no damage:
   polled). Step latency (isolated moves) and drag fps/lag (tracked rubber-band end / window

@@ -248,9 +248,11 @@ static class H
                 catch (InvalidCastException) { Thread.Sleep(2000); }
             App.SilentOperation = true;
             Welcome();
-            // Deterministic start: discard whatever is open (dedicated test Inventor).
+            // Deterministic start: discard whatever is open (dedicated test Inventor),
+            // unless INVSCEN_KEEP is set (helpers for UI work on open documents).
             int n = App.Documents.Count;
-            App.Documents.CloseAll(false);
+            if (System.Environment.GetEnvironmentVariable("INVSCEN_KEEP") != null) n = 0;
+            else App.Documents.CloseAll(false);
             return App.SoftwareVersion.DisplayName + ", closed " + n + " open docs";
         }, 300);
         Scenario.Run();

@@ -40,3 +40,11 @@
   The attached app runs ~2-3x slower (debug events); killing winedbg kills the debuggee.
   Autodesk OGS prints its errors via OutputDebugString ("OGS ERROR: ..."), visible there
   or with `+debugstr` (047).
+- Managed exceptions in CoreCLR-hosted code (Inventor's .NET 10 add-ins, no debugger): start the
+  app with `DOTNET_EnableEventPipe=1 DOTNET_EventPipeOutputPath='C:\t\x.nettrace'
+  DOTNET_EventPipeConfig=Microsoft-Windows-DotNETRuntime:0x8000:4` (exception keyword), then
+  `strings -el -n 6 x.nettrace | sort | uniq -c`: exception types, messages and the throwing
+  methods' names (064: "Invalid SID." in Connectivity IOUtil::HasWritePermission). .NET Framework
+  4.x ignores these variables.
+- File opens (NtCreateFile) happen in wineserver, not the app: strace the prefix's wineserver
+  for `openat`; strace on the app only shows path lookups (stat) and directory reads.

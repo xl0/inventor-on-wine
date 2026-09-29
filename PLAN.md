@@ -100,6 +100,19 @@ commits or screenshots). Read-only mode may remain after expiry.
   file associations) → after 037: visual styles/Studio/ray tracing/viewport
   perf/picking → installer repair/modify/uninstall. GPU passthrough to the VM
   (real NVIDIA reference instead of WARP) after the user enables IOMMU.
+  - Specialised environments (inv3/:100, integ c036c687c47; API where possible, else UI):
+    | area | result |
+    |---|---|
+    | Stress Analysis ("Inventor Nastran" is not a separate add-in here or on the VM; the built-in env uses Bin\NASTRANSolver) | blocked: entering it hangs Inventor (063). Prepared: `beam` 200x10x10 mm steel, F=100 N → expect δ=FL³/3EI=1.52 mm, σ=Mc/I=120 MPa |
+    | Content Center (desktop libraries installed on Wine, none on the VM) | empty tree, "server query failed" (064) → blocks Frame Generator, bolted connection fasteners, CC fittings |
+    | Frame Generator | Insert Frame panel renders; no profiles (064) |
+    | Design Accelerator shaft / spur gears | OK: dialogs, calc, 2D preview + graphs; parts generated (gear ODs 6.35/14.98 cm, reactions 78.7+46.0 lbf = load + weight). Previous component dropped when the next generator starts (066, unconfirmed) |
+    | Bolted connection | dialog OK; fasteners need CC (064) |
+    | Tube & Pipe / Cable & Harness | both envs enter, run/route/harness created, route start pick works, C&H library 491 wires; no full route (fittings need CC) |
+    | Anark 3D PDF (`publish`) | OK, PRC 3D PDF as on the VM |
+    | Printing (`publish` + File › Print) | no printer on Wine by default (DrawingPrintManager.Printer E_FAIL); with tests/addprinter.exe: print dialog, Print-to-File prompt, PostScript output match the VM's PDF content |
+    | Inventor Studio | render OK (32 iterations, 4 s; CPU raytracer, Inventor ~190% CPU) |
+    | viewport after closing the Assistant panel | stale panel image, view clipped (065); black areas under closed dialogs (061) |
 - [x] Modelling via COM (tools/invscen): part (sketch/extrude/mass props/
   save/reopen), assembly (2 parts + mate), drawing (views) all PASS on Wine,
   matching the VM step for step (integ 6adad910faf). Speed is the gap (032).
@@ -182,6 +195,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 061 black trail in viewport after window drag
   - O 062 WPF splitter popup black without compositing WM
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
+  - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
+  - O 064 GetWindowsAccountDomainSid ERROR_INVALID_SID for non-account SIDs → Content Center empty
+  - O 065 closed Assistant panel stays over the viewport, view clipped (draft)
+  - O 066 Design Accelerator component dropped by the next generator (draft, unconfirmed vs Windows)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
