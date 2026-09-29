@@ -209,7 +209,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
   - M 067 SHAddToRecentDocs leaked the Explorer key per call
   - O 072 COM stubs of dead clients never run down; stub list walks slow long sessions (draft)
-  - O 073 ntdll heap find_free_block free-list scans after fragmentation (draft, perf)
+  - M 073 ntdll heap: more free-list size classes + bounded walk (no slowdown with fragmentation; soak recheck pending)
   - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
