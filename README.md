@@ -18,24 +18,29 @@ Wine patches live in the fork **[xl0/wine, branch `integ`](https://github.com/xl
 a linear stack of commits on upstream master (`git format-patch master..integ`).
 This repo holds the harness, notes, issue write-ups and test programs.
 
-## Status (2026-09-28)
+## Status (2026-09-29)
 
 - **Install:** Autodesk's own web installer installs Inventor 2027 + the
-  2027.1 update under Wine, matching the Windows install.
+  2027.1 update under Wine, matching the Windows install (optional Electrical
+  Catalog needs Windows' inbox `tar.exe` — provided by `tools/tar.sh`).
 - **Launch & licensing:** Autodesk sign-in (OAuth via Edge inside the prefix,
-  custom-URI callback), 30-day trial, licensing services as real session-0
-  services.
+  custom-URI callback through the merged `HKCR` view), 30-day trial, licensing
+  services as real session-0 services.
+- **3D viewport:** renders like Windows (shaded, SSAO, tone mapping); sketch
+  rubber-band latency ~5 ms, orbit ~60 fps on wined3d-vk — on par with DXVK.
 - **Modelling via the COM API:** 13 scripted scenarios (~130 steps) pass —
-  features (fillet, chamfer, holes, patterns, shell, revolve, sweep, loft),
-  parameters, sheet metal + flat pattern, assemblies (constraints, BOM, a
-  200-occurrence assembly), drawings (section/detail views, dimensions, parts
-  list, PDF/DWG/DXF), iLogic, STEP/IGES/SAT/Parasolid/STL export and re-import.
-  COM speed is close to Windows (1.1–2.5× VM time per scenario).
-- **UI:** ribbon, dialogs, sketch/extrude by hand, browser pane, Autodesk
-  Assistant (WebView2) work.
-- **Not yet:** the interactive 3D viewport and rendered view images (Wine's
-  built-in HLSL compiler miscompiles Inventor's `fx_5_0` effects; swapchain
-  creation fails) — in progress. Plus a handful of cosmetic UI issues.
+  features, parameters, sheet metal, assemblies (incl. 200 occurrences), drawings
+  (section/detail views, PDF/DWG/DXF), iLogic, STEP/IGES/SAT/Parasolid/STL
+  export and re-import, view images identical to Windows.
+- **Real-world data:** Autodesk's official 2022 and 2016 sample sets (69
+  documents each, up to 1,313-part assemblies) open, rebuild, migrate, save and
+  reopen with the same counts, BOM and mass properties as Windows; long
+  sessions no longer degrade (HWND generation fix).
+- **UI:** ribbon, dialogs (incl. file dialogs), sketch/extrude by hand, browser
+  pane, Autodesk Assistant (WebView2) work.
+- **Known gaps:** multi-file assembly open/reopen 2.5–7× slower than Windows;
+  a few cosmetic issues (popup shadows, maximized-window offset, splitter bar
+  without a compositing WM); last-digit math differences in some rebuilds.
 
 ## Environment
 
@@ -77,7 +82,7 @@ calls.
 
 ## What we ran into (and fixed)
 
-About 40 issues so far; ~70 of our own commits on `integ` plus Wine-Staging's
+About 60 issues so far; ~95 of our own commits on `integ` plus Wine-Staging's
 DirectComposition series. Highlights, roughly in the order the application hit
 them:
 
@@ -92,6 +97,11 @@ them:
 | Rendering | Lost GPU content after expose; empty surface clip; colour-keyed layered windows; custom title bars covered by WM decorations | win32u / winex11 (005, 006, 027, 040) |
 | COM API | Typelib type offsets beyond 32 KB read as negative; typelib loading quadratic (COM 10–500× slower) | oleaut32 (031, 032) |
 | Stability | Crash in `RevokeDragDrop` releasing another process's pointer | ole32 (034) |
+| Rendering | Wine's HLSL compiler put `static` globals into effect constant buffers; d3d11 never reported displayable formats, so no swapchain | vkd3d-shader, d3d11 (037) |
+| Performance | Fresh 52 MiB GPU allocations per buffer discard (sketch latency 48 → 5 ms) | wined3d-vk (060) |
+| Stability | Deferred-context creation raced with state resets; C++ exceptions escaping COM calls; comctl32 subclass list corruption | d3d11, combase/rpcrt4, comctl32 (047, 056, 046) |
+| Long sessions | Window handle generations past 0x7fff produced two different 64-bit HWND values → MFC lost track of windows → save failures and crashes | wineserver, win32u (059) |
+| Files/installers | POSIX delete semantics (Windows 10+); MSI rollback deleting pre-existing folders; OLE Packager objects | kernelbase/server, msi, packager (054, 051, 053) |
 | Files | `C:\dir\con.iam` treated as the console device (Windows 11 rules changed) | ntdll (035) |
 | File dialogs | No folder names in the path bar; clicking a file did nothing | shell32 (041, 043) |
 
