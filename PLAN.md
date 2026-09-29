@@ -208,7 +208,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - L 075 GetProcessHandleCount stub returns 0
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
   - M 067 SHAddToRecentDocs leaked the Explorer key per call
-  - O 072 COM stubs of dead clients never run down; stub list walks slow long sessions (draft)
+  - O 072 COM: proxy mutex → CS + rb-tree stub lookups merged; ping-based rundown of dead
+    clients' objects deferred (design in issue; harness now releases refs)
   - M 073 ntdll heap: more free-list size classes + bounded walk (no slowdown with fragmentation; soak recheck pending)
   - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
