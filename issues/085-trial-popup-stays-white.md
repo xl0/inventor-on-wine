@@ -122,3 +122,12 @@ Notable sequence:
 
 This excerpt does **not** show an explicit device-limit denial. The rendered
 dialog alone therefore does not establish licensing refusal or its cause.
+
+## Laptop recheck (user, 2026-09-29, integ ed241c72d09) — handed to the local agent
+- The blank white phase still happens on the laptop (server: fixed, ~19 s to content).
+- NEW regression: once rendered, the popup's text sits in a narrow column at the left
+  edge of the window. Suspects: this branch's dcomp changes (SetOffsetY/SetClip now
+  accepted but Wine's compositor ignores visual offsets/clips/transforms), i.e. the
+  hardware-compositing path now taken instead of the software fallback. Compare
+  with commits 55dd37db46b / d5a3a4bf755 reverted, and with the GPU-crash evidence
+  (crash dumps, GPU process restarts) on the laptop's hybrid-GPU setup.
