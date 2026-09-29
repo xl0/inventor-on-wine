@@ -192,7 +192,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 053 packager IViewObject2 + IOleObject + IPersistStorage::Save (Arm_Rest.ipt)
   - M 054 POSIX delete semantics in DeleteFile/RemoveDirectory (+3 server fixes)
   - L 055 ucrtbase math 1–2 ULP vs MS (tiny volume diffs)
-  - O 057 multi-file assembly open/reopen 2.5–7x slower (perf)
+  - M 057 GetWindow Z-order links in shared memory (19.9 µs → 0.1 µs; samples open/save/reopen 1294 → 714 s, VM 498)
   - X 058 crash is Autodesk's own RxDispatch __except + CER after an FWSrv throw (follows 059)
   - M 059 user handle generation wraps at 0x7ffe like Windows (bit-31 HWNDs broke MFC → SaveAs E_FAIL, 058 crash)
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
@@ -217,6 +217,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 078 first present of a new offscreen client surface never reaches the screen
   - L 079 awesome: restoring a maximized window leaves X maximized (seen once)
   - L 080 WindowFromPoint ignores per-pixel alpha of layered windows
+  - O 081 ~500 wineserver requests per COM call (hooks, registry, FreeLibrary, GetProp): 9 ms vs 2 ms
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
@@ -230,17 +231,15 @@ commits or screenshots). Read-only mode may remain after expiry.
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
 ## Now (2026-09-29)
-- Running: soak #2 on :98/prefixes/inv, build/ = integ bbc7f82accb. build/ FROZEN
-  until it reports. Interim iter 7: keys/mutants fixed; events still growing → next leak.
-- Worker: 057 (assembly-open perf) on inv3/:100. inv4/:101 free (GPU AC, VNC 5905).
-- integ 5987b23065c (+061, 076) pushed, not built yet: rebuild build/ + regress after soak.
-- User WM reference: x/awesome-rc.lua (awesome has no _NET_WM_MOVERESIZE → Wine's own move loop).
-- After soak #2: compare with soak #1, file new issues, rebuild build/ only if
-  integ moved, regress run.
-- Later: 066/069 need Windows UI checks (VM clicks); 072 ping-based rundown deferred;
-  074 only if soak #2 reproduces it; low-priority items in the index.
-- Environments: inv (:98, GPU ca), inv2 (:99, licensing host — never restart),
-  inv3 (:100, GPU 16), inv4 (:101, GPU ac). VM Inventor signed in, at Home.
+- Soak #2 loop ended 07:37 (31 iters); worker still analysing. build/ FROZEN until it reports.
+- integ 3951ce31e31 (+061, 076, 057) pushed, not built. 057 bumps the server protocol:
+  after rebuilding build/, restart EVERY prefix's wineserver (inv2 first — licensing host;
+  other Inventors show "Licensing error" meanwhile), then regress run.
+- Next candidates: 081 (COM call round trips; biggest remaining perf gap), 078, 077;
+  picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
+  074 only if soak #2 reproduces it.
+- Environments: inv (:98, GPU ca), inv2 (:99, licensing host), inv3 (:100, GPU 16),
+  inv4 (:101, GPU ac). User WM reference: x/awesome-rc.lua. VM Inventor signed in.
 
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue
