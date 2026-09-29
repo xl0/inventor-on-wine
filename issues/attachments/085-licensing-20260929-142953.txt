@@ -1,0 +1,96 @@
+Licensing service log — laptop launch 2026-09-29 14:29:53 -0300
+Wine: wine-11.18-398-g77b5f2b672; prefix: prefixes/inv
+Source: drive_c/ProgramData/Autodesk/AdskLicensingService/Log/AdskLicensingService.log
+Window: 2026/09/29 14:29:50 through capture at 14:43:08 -0300
+All levels retained, including [I]. All 86 non-ENCODED lines are below;
+910 ENCODED lines removed. No head/tail truncation.
+Account, local user/host, device and opaque session identifiers redacted.
+[opaque-N] labels are consistent within this excerpt; account-1 is a pseudonym.
+Original full section retained privately under inst/local/, not committed.
+
+2026/09/29 14:30:04.453  [I]  OS is Microsoft Windows 11
+2026/09/29 14:30:04.453  [I]  Working Directory : C:\windows\system32
+2026/09/29 14:30:04.453  [I]  Default service executable path: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingService\AdskLicensingService.exe
+2026/09/29 14:30:04.453  [I]  Resolved service executable path: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingService\AdskLicensingService.exe
+2026/09/29 14:30:04.453  [I]  Resolved Service path: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingService
+2026/09/29 14:30:04.453  [I]  Resolved service parent directory path: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341
+2026/09/29 14:30:04.453  [I]  Executable final path: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingService\AdskLicensingService.exe
+2026/09/29 14:30:04.454  [I]  GetHubVersion(): installerVersion: 16.6.0.16341
+2026/09/29 14:30:04.456  [I]  Agent engine start with ping-pong disabled
+2026/09/29 14:30:04.460  [I]
+
+
+
+==============AdskLicensingService started==============
+2026/09/29 14:30:04.460  [I]  AdskLicensingService - Version: 12.13.1.1453
+2026/09/29 14:30:04.460  [I]  Licensing setting file already exists at C:/ProgramData/Autodesk/AdskLicensingService/AdskLicensingSettings.json, leaving untouched
+2026/09/29 14:30:04.486  [I]  SharedAgent timeout 15.0 sec(s)
+2026/09/29 14:30:04.487  [I]  SharedAgent timeout 15.0 sec(s)
+2026/09/29 14:30:04.487  [I]  SDK monitor starting, checking dead SDKs every 60s
+2026/09/29 14:30:04.488  [I]  No files to register delayed feature consumers
+2026/09/29 14:30:04.489  [I]  Service starts in folder: C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingService
+2026/09/29 14:30:04.489  [I]  Non-ThinClient environment mode
+2026/09/29 14:30:04.489  [I]  HTTP server running on 127.0.0.1:40345
+2026/09/29 14:30:04.740  [I]  Launching Agent via SVC with arguments C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingAgent/AdskLicensingAgent.exe -i securesite-[opaque-1] --no-gui -c 2 and env (42 total): map[]
+2026/09/29 14:30:05.219  [I]  Agent(securesite-[opaque-1]) registered: version 6.33.3.1336, [local-user]@[host]
+2026/09/29 14:30:05.219  [I]  Agent(securesite-[opaque-1]) registered, start messaging pump
+2026/09/29 14:30:07.195  [I]  Agent(securesite-[opaque-1]) shutdown
+2026/09/29 14:30:07.196  [I]  OnSvcStartup: user [account-1] last-upload timestamp [2026-09-29 12:28:18.883914 -0300 -03], interval [18h0m0s], next upload period [15h58m11.68734s], payload [262144]
+2026/09/29 14:30:07.296  [I]  Agent(securesite-[opaque-1]) normal disconnection
+2026/09/29 14:30:07.296  [I]  Agent(securesite-[opaque-1]) finished msg pump, quitting controller, UI counters will be reset
+2026/09/29 14:30:07.296  [I]  Agent(securesite-[opaque-1]) close
+2026/09/29 14:30:07.296  [I]  Agent(securesite-[opaque-1]) stop timers
+2026/09/29 14:30:07.296  [I]  Agent(securesite-[opaque-1]) set monitoring status false
+2026/09/29 14:30:08.836  [I]  Launching Agent via SDK with arguments C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\16.6.0.16341\AdskLicensingAgent/AdskLicensingAgent.exe -i [opaque-2] -c 2 and env (121 total): map[]
+2026/09/29 14:30:09.127  [I]  Feature GetFeatures List, all: false
+2026/09/29 14:30:09.127  [I]  Features in service: [{"authorize_succ":true,"background":"/[opaque-4].png","cls_check_succ":true,"def_prod_code":"INVPROSA","def_prod_key":"797S1","def_prod_ver":"2027.0.0.F","feature_id":"INVPROSA","highlight":{"alpha":{"value":1},"blue":{"value":34},"green":{"value":136},"red":{"value":238}},"lic_method":4,"sel_prod_code":"INVPROSA","sel_prod_key":"797S1","sel_prod_ver":"2027.0.0.F","serial_number_nw":"000-00000000","serial_number_sa":"000-00000000","supported_lic_methods":[2,1,4],"trial_enabled":true,"user_lic_enabled":true}]
+2026/09/29 14:30:09.142  [E]  File does not exist:
+2026/09/29 14:30:09.162  [I]  SDK([opaque-5]) request to send LicenseWorkflowData(0)
+2026/09/29 14:30:09.719  [I]  Agent([opaque-2]) registered: version 6.33.3.1336, [local-user]@[host]
+2026/09/29 14:30:09.719  [I]  Agent([opaque-2]) registered, start messaging pump
+2026/09/29 14:30:09.719  [I]  launch Agent([opaque-2]) is successful
+2026/09/29 14:30:09.723  [I]  SDK([opaque-5]) request to launch Analytics-agent
+2026/09/29 14:30:09.723  [I]  Analytics-agent(analytics-[opaque-3]) entity (0) created for SDK([opaque-5])
+2026/09/29 14:30:09.726  [I]  [[opaque-5]] Move to node *workflow.CoFlowClsCheckoutStartNode
+2026/09/29 14:30:09.741  [I]  Launching Analytics-agent(analytics-[opaque-3]) via SDK([opaque-5])
+2026/09/29 14:30:09.887  [I]  device ID [opaque-6]&[opaque-7]&[opaque-8] for logon user [local-user] saved
+2026/09/29 14:30:09.887  [I]  [[opaque-5]] Move to node *workflow.CoFlowSSONode
+2026/09/29 14:30:09.901  [I]  SDK([opaque-5]) request to send LicenseWorkflowData(1)
+2026/09/29 14:30:10.040  [I]  Analytics-agent(analytics-[opaque-3]) connection for SDK([opaque-5]) is ready
+2026/09/29 14:30:12.813  [I]  SDK([opaque-5]) request to send LicenseWorkflowData(2)
+2026/09/29 14:30:12.813  [I]  [[opaque-5]] Move to node *workflow.CoFlowClsCheckoutNode
+2026/09/29 14:30:12.819  [I]  Agent([opaque-2]) stop timers
+2026/09/29 14:30:12.819  [I]  Agent([opaque-2]) get monitoring status false
+2026/09/29 14:30:12.819  [I]  Agent([opaque-2]) set monitoring status false
+2026/09/29 14:30:12.820  [I]  monitor disconnect to pubnub successful
+2026/09/29 14:30:12.820  [I]  cached license with given cachedLicenseKey(797S1&INVPROSA&2027.0.0.F) is valid for auth avoidance.
+2026/09/29 14:30:13.604  [W]  filling common license info cannot find feature FeatureId() ver(2027.0.0.F)
+2026/09/29 14:30:13.619  [I]  sou handle monitoring
+2026/09/29 14:30:13.619  [I]  Populate the SOU local device for WebUI
+2026/09/29 14:30:13.619  [I]  subscription overuse enabled = true for status ALLOW
+2026/09/29 14:30:13.619  [W]  Unable to get Monitor Connection info ([opaque-5]) in persistence key not found
+2026/09/29 14:30:13.619  [I]  Agent([opaque-2]) get monitoring status false
+2026/09/29 14:30:13.619  [I]  StartMonitor with monitoring status = false
+2026/09/29 14:30:13.619  [I]  Agent([opaque-2]) stop timers
+2026/09/29 14:30:13.621  [I]  [[opaque-5]] Move to node *workflow.CoFlowReturnNode
+2026/09/29 14:30:13.621  [I]  SDK([opaque-5]) request to send LicenseWorkflowData(3)
+2026/09/29 14:30:13.631  [I]  Scheduling next upload [account-1] for the next 64800000 ms
+2026/09/29 14:30:13.631  [I]  Upload schedule: usr [account-1] last-upload timestamp [2026-09-29 12:28:18.883914 -0300 -03], interval [18h0m0s], payloadSize [262144]
+2026/09/29 14:30:13.631  [I]  [ACTIVE-CLOCK] Started for session [opaque-9] (tick: 1m0s, persist every 5 ticks, ping every 240 ticks)
+2026/09/29 14:30:13.663  [I]  device ID [opaque-6]&[opaque-7]&[opaque-8] for logon user [local-user] found, generation not needed
+2026/09/29 14:30:13.903  [I]  Feature GetFeatures List, all: false
+2026/09/29 14:30:13.903  [I]  Features in service: [{"authorize_succ":true,"background":"/[opaque-4].png","cls_check_succ":true,"def_prod_code":"INVPROSA","def_prod_key":"797S1","def_prod_ver":"2027.0.0.F","feature_id":"INVPROSA","highlight":{"alpha":{"value":1},"blue":{"value":34},"green":{"value":136},"red":{"value":238}},"lic_method":4,"sel_prod_code":"INVPROSA","sel_prod_key":"797S1","sel_prod_ver":"2027.0.0.F","serial_number_nw":"000-00000000","serial_number_sa":"000-00000000","supported_lic_methods":[2,1,4],"trial_enabled":true,"user_lic_enabled":true}]
+2026/09/29 14:30:15.369  [I]  monitor connect to pubnub successful
+2026/09/29 14:30:15.369  [I]  Agent([opaque-2]) set monitoring status true
+2026/09/29 14:30:15.380  [I]  stopping sou token repeater [opaque-10]
+2026/09/29 14:30:15.380  [I]  begin scheduling of token operations loop with ttl of 1440 minute(s)
+2026/09/29 14:30:20.711  [I]  SDK get sdk [opaque-5]
+2026/09/29 14:30:20.712  [I]  SDK get sdk [opaque-5] done
+2026/09/29 14:30:20.782  [I]  Feature Get Feature by ID INVPROSA 2027.0.0.F
+2026/09/29 14:30:20.783  [I]  Feature Get Feature done for ID INVPROSA 2027.0.0.F
+2026/09/29 14:30:50.780  [I]  HandleAnalyticsUIAction
+2026/09/29 14:30:50.780  [I]  HandleAnalyticsUIAction id 1359509856 with content {"eventTime":"2026-09-29T17:30:50.774Z","type":"click","source":"error","data":{"locale":"en-US","msgId":"1359509856","featureId":"INVPROSA","featureVer":"2027.0.0.F","ipmType":"inproduct","assistantEnabled":"false","page":"main"}}
+2026/09/29 14:30:50.794  [I]  HandleAnalyticsUIAction done for id 1359509856
+2026/09/29 14:31:20.818  [I]  HandleAnalyticsUIAction
+2026/09/29 14:31:20.818  [I]  HandleAnalyticsUIAction id 1359509856 with content {"eventTime":"2026-09-29T17:31:20.810Z","type":"click","source":"error","data":{"locale":"en-US","msgId":"1359509856","featureId":"INVPROSA","featureVer":"2027.0.0.F","ipmType":"inproduct","assistantEnabled":"false","page":"main"}}
+2026/09/29 14:31:20.829  [I]  HandleAnalyticsUIAction done for id 1359509856
