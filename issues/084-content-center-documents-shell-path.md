@@ -1,5 +1,5 @@
 # 084 Content Center Files path retains the My Documents shell identifier
-Status: open (confirmed locally: missing ShellFolder registration) · Owner: worker 084 · Branch: fix/084 (no commits) · Found in: local Inventor 2027.1 file open
+Status: fixed (fix/084 1b6a310b69d; Inventor re-check pending licensing) · Owner: worker 084 · Branch: fix/084 · Found in: local Inventor 2027.1 file open
 
 ## Symptom
 Inventor warns when opening a document:
@@ -216,3 +216,61 @@ and the two compiled probes. No registry repair, directory workaround or
 `wineboot -u` was applied; the broken state remains available for patch testing.
 Proceed with the shell32 fix and conformance test proposed above. Validate
 with these probes first; do not launch Inventor until licensing is cleared.
+
+## Fix (fix/084 `1b6a310b69d`, on integ 3951ce31e31)
+`shell32: Don't require WantsFORPARSING for the My Documents parsing name.`
+- Matches Windows: no WantsFORPARSING for {450D8FBA} (VM registry), yet the
+  desktop's FORPARSING name of the CSIDL_PERSONAL PIDL is the Documents path.
+  On Windows that PIDL is also a one-item desktop regitem (type 0x1f), not a
+  filesystem PIDL, so Wine's PIDL shape stays as it is.
+- shfldr_desktop.c: CLSID_MyDocuments joins the CLSID_MyComputer exception, so the
+  desktop always asks the folder for its path. When the ShellFolder attributes
+  are missing, SHELL32_GetItemAttributes now also gets the real path, so the item
+  becomes SFGAO_FILESYSTEM|SFGAO_FOLDER|SFGAO_FILESYSANCESTOR (0x7080017f, was
+  0x40400177 with no FOLDER).
+- shellpath.c: stop registering WantsFORPARSING for My Documents, as on Windows.
+  Fresh prefixes then exercise the new path in the existing tests. Old prefixes keep
+  the stale value, which does no harm.
+- Test (shlfolder.c `test_SHGetPathFromIDList_personal`): WantsFORPARSING
+  absent; desktop GetAttributesOf has FILESYSTEM|FOLDER; desktop
+  GetDisplayNameOf(FORPARSING) and SHGetPathFromIDListW equal
+  SHGetSpecialFolderPath(CSIDL_PERSONAL).
+  VM x64/i386: those lines pass. The same 8 failures occur elsewhere in shlfolder
+  (windows, property bag, hr 0x80004005 at 6193); they're VM environment issues.
+  Wine fresh prefix: 0 failures on x64/i386. With the desktop hunk reverted:
+  lines 1538/1546 fail with the GUID.
+  regress.sh shell32|shlwapi|comdlg32|explorerframe vs integ baseline: 0 worse / 74.
+
+### Probes in a scratch prefix with ShellFolder deleted (64-bit and Wow6432Node)
+Before (the laptop state is reproduced exactly):
+```text
+SHGetPathFromIDListW 1 ::{450d8fba-ad25-11d0-98a8-0800361b1103}
+parent GetAttributesOf 0 attrs 0x40400177
+SHGetNameFromIDList(SIGDN_FILESYSPATH) ::{450d8fba-...}
+GetMyDocumentsDir 1 ::{450d8fba-ad25-11d0-98a8-0800361b1103}
+```
+After:
+```text
+SHGetPathFromIDListW 1 C:\users\xl0\Documents
+parent GetAttributesOf 0 attrs 0x7080017f
+SHGetNameFromIDList(SIGDN_FILESYSPATH) C:\users\xl0\Documents
+GetMyDocumentsDir 1 C:\users\xl0\Documents
+```
+The same result for SHGetKnownFolderIDList(Documents) and ParseDisplayName(::{MyDocuments}).
+Only INFOLDER / PARENTRELATIVE names stay `::{guid}`, as on Windows.
+shlfolder there: only test_CallForAttributes fails, because it needs the deleted key.
+
+### Why the key may have got lost (unverified)
+The laptop's key content is exactly what `__wine_register_resources` writes
+(idl default "My Documents" + InprocServer32, rgs LocalizedString). ShellFolder
+comes later in `SHELL_RegisterShellFolders`, where `set_folder_attributes` runs
+only if every user/common shell folder was registered and created first
+(`SHGetFolderPath(... | CSIDL_FLAG_CREATE)`). One failure there, e.g. an
+unwritable host-linked user folder in the sandbox during a wineboot, would skip
+all ShellFolder keys and `register_system_knownfolders`. My quick attempt
+to trigger this (a dangling Music link into a read-only dir) did not reproduce it.
+To check on the laptop: if `{645FF040-...}\ShellFolder` (RecycleBin) and
+`{21EC2020-...}\ShellFolder` (ControlPanel) are missing too, this is the cause.
+Once the fix is in, the laptop needs no repair.
+Inventor re-check: once licensing allows, open a document in the unchanged
+laptop prefix with a build that has the fix.

@@ -13,9 +13,10 @@
 - SHAddToRecentDocs (Win11): PIDL, PATHA/W, SHELLITEM, APPIDINFO, APPIDINFOIDLIST add the item (async;
   SHARD_LINK with a path-only IShellLink added nothing, APPIDINFOLINK untested);
   files under %TEMP% are skipped. Wine handles only PIDL/PATHA/PATHW (067).
-- Desktop `GetDisplayNameOf(SHGDN_FORPARSING)` of a regitem (e.g. My Documents, the PIDL
-  of CSIDL_PERSONAL in Wine) asks the folder for its path only if
-  `HKCR\CLSID\{...}\ShellFolder\WantsFORPARSING` exists, else it returns lowercase
-  `::{guid}`, which `SHGetPathFromIDListW` then returns as TRUE (the item is flagged
-  SFGAO_FILESYSTEM when ShellFolder attributes are unreadable). Windows has no
-  WantsFORPARSING for {450D8FBA} and still returns the path (084).
+- Desktop `GetDisplayNameOf(SHGDN_FORPARSING)` of a regitem asks the folder for its path
+  only if `HKCR\CLSID\{...}\ShellFolder\WantsFORPARSING` exists (exceptions: MyComputer,
+  MyDocuments since fix/084), else it returns lowercase `::{guid}`, which
+  `SHGetPathFromIDListW` returns as TRUE when the ShellFolder attributes are unreadable
+  (the item is then flagged SFGAO_FILESYSTEM). Windows has no WantsFORPARSING for {450D8FBA}.
+  ShellFolder keys are written last in `SHELL_RegisterShellFolders`, only if all user
+  folders registered (084).
