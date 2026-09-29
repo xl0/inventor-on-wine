@@ -122,6 +122,12 @@ are not present here.
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
   `xproc_hidden_present.c`: other process presents D3D11 on its child of our container; we hide the
   container, screen pixel must stop showing its frames (065; Win11 pass, exit 0 = ok).
+  `expose_present.c`: D3D11 child presents once, another window covers/uncovers it, screen pixel
+  must keep the frame (061; exit 0 = ok). `layered_alpha.c`: ULW_ALPHA popup with alpha bands
+  0..255: screen colour, WindowFromPoint, SendInput click per band (062). `layered_popup_probe.c
+  [TITLE] [drag X|mdrag X Y DX|hit|alpha|max]`: another app's layered popups: rects, owner, screen
+  grab, composited alpha (over own white/black windows), window drag with SendInput (062).
+  `sc_move_hittest.c`: SC_MOVE|n from WM_LBUTTONDOWN + SendInput drag, does it move (076).
   `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,
@@ -165,7 +171,9 @@ are not present here.
   Third: `x/start.sh 100 PCI:22:0:0` (GPU 16:00.0, `DRI_PRIME=pci-0000_16_00_0`),
   `x/vnc.sh 100` → VNC 5904, `prefixes/inv3` (copy of inv minus the installer Temp cache).
   Fourth: `x/start.sh 101 PCI:172:0:0` (GPU ac:00.0, `DRI_PRIME=pci-0000_ac_00_0`),
-  VNC 5905, `prefixes/inv4` (rsync -aX copy of inv3).
+  VNC 5905, `prefixes/inv4` (rsync -aX copy of inv3). The user's WM (awesome 4.3, no compositor):
+  kill that display's openbox by PID, `DISPLAY=:N awesome -c x/awesome-rc.lua`; `awesome-client`
+  (DBus) can script it (e.g. `c.maximized = false`). awesome lacks _NET_WM_MOVERESIZE (061, 076).
   Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
@@ -306,9 +314,10 @@ are not present here.
   XTest input, XDamage on root + XGetImage of a watched rect (window moves make no damage:
   polled). Step latency (isolated moves) and drag fps/lag (tracked rubber-band end / window
   shift). Scenarios rubber hover orbit pan (need `--setup` = invscen `uilat`: part in sketch
-  edit, maximized), wmdrag xmove (Inventor restored), self (tool check, ~0.5 ms). Also /proc
-  CPU of Inventor/wineserver/Xorg; --record: X requests per client pid/op/window (RECORD).
-  CSV + summary in inst/uilat/. Numbers and A/B vk/gl/DXVK: issue 060.
+  edit, maximized), wmdrag superdrag (Super held: WM's own move) xmove (Inventor restored),
+  self (tool check, ~0.5 ms). Also /proc CPU of Inventor/wineserver/Xorg (`--prefix`, default
+  prefixes/inv); --record: X requests per client pid/op/window (RECORD).
+  CSV + summary in inst/uilat/. Numbers and A/B vk/gl/DXVK: issue 060; WM drags: 061.
 - `tools/soak/soak.sh OUT HOURS` — soak loop in one Inventor session (inv/:98): `run.sh all` per
   iteration, `samples` every 3rd, uilat rubber+orbit every 10th + at the end; per-iteration logs,
   events (crash/restart/licensing), a 30 s sampler (Inventor/wineserver/Xorg /proc) and

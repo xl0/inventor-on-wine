@@ -12,7 +12,7 @@ Two measurements per scenario:
   drag  continuous moves at --hz: frames = distinct watched-rect images, fps,
         and for tracked scenarios (rubber, wmdrag, xmove) the lag of each frame:
         displayed position -> time since the move that put the cursor there.
-Also samples per-process CPU (/proc) of Inventor (prefixes/inv), its wineserver,
+Also samples per-process CPU (/proc) of Inventor (--prefix, default prefixes/inv), its wineserver,
 explorer and the display's Xorg, and with --record counts X requests per client
 PID and opcode (RECORD + X-Resource).
 
@@ -23,7 +23,9 @@ Scenarios assume tools/invscen/run.sh uilat (part in sketch edit, front view) on
   hover   alternate on/off the vertical sketch line (preselect highlight)
   orbit   Shift+middle drag in the viewport (3D control case)
   pan     middle drag in the viewport
-  wmdrag  drag Inventor's caption strip (Wine SC_MOVE -> WM move)
+  wmdrag  drag Inventor's caption strip (Wine SC_MOVE -> _NET_WM_MOVERESIZE, or Wine's own
+          move loop when the WM lacks it, e.g. awesome 4.3)
+  superdrag  same drag with Super held (WM's own move binding, e.g. awesome Mod4+drag)
   xmove   XMoveWindow the WM frame of Inventor's main window (openbox then reasserts
           its own geometry and sends synthetic ConfigureNotify per step: WM-dependent)
 --setup reruns tools/invscen/run.sh uilat before each scenario (fresh part/sketch state).
@@ -153,9 +155,9 @@ def differs(a, b, thr=24, n=3):
 
 # ---------------------------------------------------------------- process CPU / X requests
 
-def proc_pids(disp):
-    """Inventor (prefixes/inv on this display), its wineserver + explorer, Xorg of the display."""
-    wp = os.path.realpath(os.path.join(os.path.dirname(__file__), '../../prefixes/inv'))
+def proc_pids(disp, prefix):
+    """Inventor (prefix on this display), its wineserver + explorer, Xorg of the display."""
+    wp = os.path.realpath(prefix)
     res = {}
     for p in os.listdir('/proc'):
         if not p.isdigit(): continue
@@ -445,7 +447,7 @@ def run(S, a, pids):
         S.button(2, 0)
         if mod: S.key('Shift_L', 0)
 
-    elif sc in ('wmdrag', 'xmove'):
+    elif sc in ('wmdrag', 'superdrag', 'xmove'):
         # Inventor restored (not maximized); its caption strip at y = caption_y of the frame.
         fr, geo = frame_of(a.display)
         fx, fy, fw = geo
@@ -455,9 +457,12 @@ def run(S, a, pids):
         seg = (fx + fw // 2 - 150, 300)
         tr = track_shift(ref, 0, seg)
         n = int(a.hz * a.secs); dist = 400
-        if sc == 'wmdrag':
+        if sc in ('wmdrag', 'superdrag'):
             gx = fx + int(fw * 0.62)  # empty caption area right of the title text
-            S.move(gx, y); time.sleep(0.2); S.button(1, 1); time.sleep(0.3)
+            mod = sc == 'superdrag'
+            S.move(gx, y); time.sleep(0.2)
+            if mod: S.key('Super_L', 1)
+            S.button(1, 1); time.sleep(0.3)
             S.move(gx + 3, y); time.sleep(0.3)
             path = [(gx + 3 + round(i * dist / n), y) for i in range(n)]
             moves, frames = drag(S, path, a.hz, strip, tr, poll=0.001)
@@ -466,6 +471,7 @@ def run(S, a, pids):
             S.move(gx + dist, y); S.button(1, 1); time.sleep(0.2)
             for i in range(20): S.move(gx + dist - (i + 1) * dist // 20, y); time.sleep(0.02)
             S.button(1, 0)
+            if mod: S.key('Super_L', 0)
             # track() returns the screen x of the tracked segment start; path coord = cursor x
             frames = [(t, None if p is None else p + gx) for t, p in frames]  # p = window shift
             res['drag'] = (moves, frames, 0)
@@ -524,6 +530,8 @@ def main():
     p.add_argument('scenarios', nargs='+')
     p.add_argument('--setup', action='store_true', help='run tools/invscen/run.sh uilat before each scenario')
     p.add_argument('--display', default=':98')
+    p.add_argument('--prefix', default=os.path.join(os.path.dirname(__file__), '../../prefixes/inv'),
+                   help='Wine prefix of the Inventor to sample (CPU)')
     p.add_argument('--hz', type=float, default=120)
     p.add_argument('--secs', type=float, default=4)
     p.add_argument('--out', default=os.path.join(os.path.dirname(__file__), '../../inst/uilat'))
@@ -548,7 +556,7 @@ def main():
 
 def one(S, a):
     name = a.scenario + (('-' + a.tag) if a.tag else '')
-    pids = proc_pids(a.display)
+    pids = proc_pids(a.display, a.prefix)
     if S.rec: S.rec.counts.clear(); S.rec.win.clear()
     perfs = []
     for role in (a.perf.split(',') if a.perf else []):

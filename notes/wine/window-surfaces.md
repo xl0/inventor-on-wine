@@ -42,9 +42,19 @@
   asks for MWM title/border only when window != visible. window == visible when
   window == client, shaped, Decorated=N, or (fix/040) the client rect sticks out of
   the would-be visible rect (custom caption via WM_NCCALCSIZE).
-- Apps that present on their own schedule (Inventor/OGS) don't repaint on the fix/005 redraw:
-  any Expose over an offscreen client surface stays black until the next present, e.g. a
-  screen-fixed popup sliding over the viewport during a window drag (issue 061).
+- Apps that present on their own schedule (Inventor/OGS) don't always repaint on the fix/005
+  redraw (not inside Wine's move loops). fix/061: expose_window_surface() also re-runs the driver
+  present of the toplevel's offscreen client surfaces (same process only): the redirected
+  offscreen X window keeps the last presented image. The first present of a new offscreen
+  surface doesn't reach the screen (078).
+- Per-pixel-alpha layered windows get an ARGB visual; alpha-0 pixels are cut from the X shape,
+  every other pixel is drawn opaque (premultiplied colour) unless a compositing manager blends.
+  The shape is also the input region, so hiding low-alpha pixels would make them click-through
+  (Windows hit-tests every alpha > 0 pixel): 062, 042.
+- Moves: with _NET_WM_MOVERESIZE (openbox) the WM moves the frame, Wine waits in
+  move_resize_window() (sends WM_ENTER/EXITSIZEMOVE). Without it (awesome 4.3) win32u's
+  sys_command_size_move() loop does SetWindowPos per mouse move. WM-initiated moves (Mod4+drag)
+  get neither ENTER nor EXITSIZEMOVE (077).
 - DCE visible regions are cached per process and invalidated only by that process' own
   window changes. NtUserGetDCEx always refreshes DCs of foreign windows and (fix/065) of
   own windows whose toplevel is foreign (GPU-process children in another app's tree);

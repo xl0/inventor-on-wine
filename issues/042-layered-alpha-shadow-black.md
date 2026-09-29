@@ -17,3 +17,6 @@ partially transparent pixels can only be blended against black / cut by the
 window shape. Check whether a compositor on the display plus an ARGB visual for
 per-pixel-alpha layered windows fixes it, and whether upstream has work on
 this; likely a long-standing Wine limitation rather than a quick fix.
+062 (worker-061): winex11 does give these windows an ARGB visual (depth 32, xwininfo); only
+alpha-0 pixels are cut from the shape, the rest is drawn opaque because nothing blends without
+a compositing manager. See 062 "Why no fix" for the X11 shape/input trade-off.
