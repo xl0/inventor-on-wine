@@ -315,6 +315,18 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
   command: wine children inherit the pipe and the reader never sees EOF.
+  Dialog watcher (Harness.cs): a thread polls visible top-level windows of Inventor.exe and
+  its child processes; anything not in `Benign` (class list; untitled `HwndWrapper[` hosts too)
+  that stays >= 1 s is printed as `DIALOG [step] 'title' class WxH text [...] shot PATH`,
+  cropped-screenshotted (`dshot.sh` via INVSCEN_SHOT, `Out\dialog-N.png`; WPF box texts are
+  unreadable, the shot is the evidence) and dismissed (WM_CLOSE, Esc, first button).
+  `INVSCEN_DIALOGS=fail` (default) fails the running step and RESULT; `log` only reports; `off`.
+  `INVSCEN_UI=1`: SilentOperation off, so Inventor shows its real prompts (084: a silent
+  open never showed the "locations unavailable" warning). Scenario `uiopen` (INVSCEN_OPEN,
+  INVSCEN_PROBE=<command> to provoke a dialog, INVSCEN_PROJECT=0) opens a sample part + assembly
+  that way. Silent samples/part/asm: 0 dialogs in ~470 steps. Under UI mode samples legitimately
+  prompt: Resolve Link (Engine MKII, Buffer Prep Skid; the VM has the same missing refs),
+  "out of date" update prompts, "Moldflow server not available" (Mold Design); so use `log`.
   Other setup: `INV_PREFIX=prefixes/inv2 DISPLAY=:99 DRI_PRIME=pci-0000_34_00_0`
   (artifacts in inst/invscen/inv2/). `view`: reopens part/box.ipt visible, SaveAsBitmap,
   leaves it open for a viewport screenshot (037). csc wants backslash paths; `using Inventor` clashes with System names

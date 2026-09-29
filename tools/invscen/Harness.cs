@@ -23,6 +23,8 @@ static class H
     {
         if (fails > 0) { Console.WriteLine("SKIP " + name); return; }
         string detail = null; Exception err = null;
+        curStep = name;
+        int ndlg = dlgs.Count;
         var sw = Stopwatch.StartNew();
         var t = new Thread(() => { try { detail = body(); } catch (Exception e) { err = e; } });
         t.IsBackground = true;
@@ -51,6 +53,12 @@ static class H
                 ReleaseCom();
                 System.Environment.Exit(2);
             }
+        }
+        else if (dlgs.Count > ndlg && DlgMode == "fail")
+        {
+            fails++; failed++;
+            Console.WriteLine("FAIL {0} ({1:F1}s): unexpected dialog(s): {2}", name, sw.Elapsed.TotalSeconds,
+                string.Join("; ", dlgs.Skip(ndlg).Select(d => "'" + d.Title + "'")));
         }
         else
             Console.WriteLine("PASS {0} ({1:F1}s){2}", name, sw.Elapsed.TotalSeconds,
@@ -132,6 +140,104 @@ static class H
             return true;
         }, IntPtr.Zero);
         return string.Join("; ", r);
+    }
+
+
+    // --- Unexpected-dialog watcher ---
+    // INVSCEN_DIALOGS=off|log|fail (default fail): a thread polls the visible top-level windows of
+    // Inventor.exe and its descendants; one that persists >= 2 polls and isn't Benign is recorded
+    // (title, class, size, child texts, cropped screenshot dialog-N.png in Out via INVSCEN_SHOT =
+    // tools/invscen/dshot.sh), printed as "DIALOG ...", and dismissed (WM_CLOSE, Esc, first button)
+    // so the run goes on. "fail" makes the step that was running fail (and RESULT FAIL).
+    // INVSCEN_UI=1 opens documents with SilentOperation off so Inventor shows its real prompts.
+    static readonly string DlgMode = System.Environment.GetEnvironmentVariable("INVSCEN_DIALOGS") ?? "fail";
+    // Window classes (substring match) that are part of a healthy Inventor session.
+    static readonly string[] Benign = {
+        "AfxMDIFrame140u",       // main window (untitled HwndWrapper[ WPF hosts, e.g. the Assistant pane, too)
+        "FWxWindowButtons",      // frame-window caption buttons
+        "tooltips_class32", "ToolSaveBits" /* Qt popups: tb_SelectOtherMTB */, "IME", "MSCTFIME UI", "GDI+ Hook Window Class" };
+    class Dlg { public string Title, Cls, Text, Step, Shot, Dismissed; public int W, H; }
+    static readonly System.Collections.Generic.List<Dlg> dlgs = new System.Collections.Generic.List<Dlg>();
+    static volatile string curStep = "connect";
+
+    [DllImport("ntdll.dll")] static extern int NtQueryInformationProcess(IntPtr h, int cls, IntPtr[] pbi, int len, out int ret);
+    static readonly System.Collections.Generic.Dictionary<int, int> parents = new System.Collections.Generic.Dictionary<int, int>();
+    static int Parent(Process p)
+    {
+        int pp;
+        if (parents.TryGetValue(p.Id, out pp)) return pp;
+        var pbi = new IntPtr[6]; int n;  // PROCESS_BASIC_INFORMATION: [5] = InheritedFromUniqueProcessId
+        pp = NtQueryInformationProcess(p.Handle, 0, pbi, pbi.Length * IntPtr.Size, out n) == 0 ? (int)pbi[5] : 0;
+        return parents[p.Id] = pp;
+    }
+    // pids of Inventor.exe and everything below it
+    static System.Collections.Generic.HashSet<uint> InventorPids()
+    {
+        var all = Process.GetProcesses().ToDictionary(p => p.Id);
+        var r = new System.Collections.Generic.HashSet<uint>();
+        foreach (var p in all.Values)
+        {
+            int id = p.Id, depth = 0;
+            for (Process q = p; q != null && depth++ < 8; all.TryGetValue(Parent(q), out q))
+                if (q.ProcessName == "Inventor") { r.Add((uint)id); break; }
+        }
+        return r;
+    }
+
+    static void Watch()
+    {
+        var seen = new System.Collections.Generic.Dictionary<IntPtr, int>();  // window -> consecutive polls
+        for (;; Thread.Sleep(500))
+        {
+            var pids = InventorPids();
+            var now = new System.Collections.Generic.List<IntPtr>();
+            EnumWindows((w, _) =>
+            {
+                uint pid; GetWindowThreadProcessId(w, out pid);
+                if (!pids.Contains(pid) || !IsWindowVisible(w)) return true;
+                string cls = Text(w, true);
+                if (!Benign.Any(b => cls.Contains(b)) && !(cls.StartsWith("HwndWrapper[") && Text(w) == "")) now.Add(w);
+                return true;
+            }, IntPtr.Zero);
+            foreach (var w in seen.Keys.Where(k => !now.Contains(k)).ToList()) seen.Remove(w);
+            foreach (var w in now)
+            {
+                int n; seen.TryGetValue(w, out n);
+                seen[w] = ++n;
+                if (n == 2) Report(w);
+            }
+        }
+    }
+
+    static void Report(IntPtr w)
+    {
+        RECT r; GetWindowRect(w, out r);
+        var kids = new System.Collections.Generic.List<string>();
+        EnumChildWindows(w, (c, __) => { string x = Text(c); if (x != "") kids.Add(x.Replace("\n", " ")); return true; }, IntPtr.Zero);
+        var d = new Dlg { Title = Text(w), Cls = Text(w, true), W = r.R - r.L, H = r.B - r.T, Step = curStep,
+            Text = string.Join(" | ", kids.Take(12)) };
+        string shot = System.Environment.GetEnvironmentVariable("INVSCEN_SHOT");
+        if (shot != null)
+        {
+            d.Shot = Out + "\\dialog-" + (dlgs.Count + 1) + ".png";
+            System.IO.File.Delete(d.Shot);
+            // Wine returns null for a non-PE (unix script) child: wait for the file instead
+            Process.Start(new ProcessStartInfo("Z:" + shot.Replace('/', '\\'), string.Format("\"{0}\" {1} {2} {3} {4}", d.Shot, r.L - 8, r.T - 8, r.R + 8, r.B + 8)) { UseShellExecute = false });
+            for (int i = 0; i < 300 && !System.IO.File.Exists(d.Shot); i++) Thread.Sleep(100);
+            Thread.Sleep(500);
+        }
+        // dismiss: WM_CLOSE, then Escape, then a click on the first button
+        for (int how = 0; how < 3 && IsWindowVisible(w); how++)
+        {
+            if (how == 0) PostMessage(w, 0x10, IntPtr.Zero, IntPtr.Zero);
+            else if (how == 1) { PostMessage(w, 0x100, (IntPtr)0x1B, IntPtr.Zero); PostMessage(w, 0x101, (IntPtr)0x1B, IntPtr.Zero); }
+            else EnumChildWindows(w, (c, __) => { if (Text(c, true) != "Button") return true; PostMessage(c, 0xF5, IntPtr.Zero, IntPtr.Zero); return false; }, IntPtr.Zero);
+            for (int i = 0; i < 20 && IsWindowVisible(w); i++) Thread.Sleep(100);
+        }
+        d.Dismissed = IsWindowVisible(w) ? "no" : "yes";
+        lock (dlgs) dlgs.Add(d);
+        Console.WriteLine("DIALOG [{0}] '{1}' class {2} {3}x{4} text [{5}] shot {6} dismissed {7}",
+            d.Step, d.Title, d.Cls, d.W, d.H, d.Text, d.Shot ?? "-", d.Dismissed);
     }
 
     // Throws unless |actual - expected| <= tol * |expected|.
@@ -256,6 +362,7 @@ static class H
     {
         Out = args[0];
         System.IO.Directory.CreateDirectory(Out);
+        if (DlgMode != "off") { var wt = new Thread(Watch); wt.IsBackground = true; wt.Start(); }
         Step("connect", () =>
         {
             // Attach only (run.sh starts Inventor): never spawn a second instance.
@@ -264,7 +371,7 @@ static class H
                 catch (COMException) { Thread.Sleep(2000); }
                 // Registered in the ROT before it implements Application during startup.
                 catch (InvalidCastException) { Thread.Sleep(2000); }
-            App.SilentOperation = true;
+            App.SilentOperation = System.Environment.GetEnvironmentVariable("INVSCEN_UI") == null;
             Welcome();
             // Deterministic start: discard whatever is open (dedicated test Inventor),
             // unless INVSCEN_KEEP is set (helpers for UI work on open documents).
@@ -276,6 +383,10 @@ static class H
         Scenario.Run();
         if (App != null) try { App.SilentOperation = false; } catch (Exception) { }
         ReleaseCom();
+        Thread.Sleep(1500);  // let the watcher see what the last step left
+        curStep = "end";
+        if (dlgs.Count > 0) Console.WriteLine("{0} unexpected dialog(s)", dlgs.Count);
+        if (DlgMode == "fail" && dlgs.Count > 0) failed++;
         Console.WriteLine(failed == 0 ? "RESULT PASS" : "RESULT FAIL");
         return failed == 0 ? 0 : 1;
     }

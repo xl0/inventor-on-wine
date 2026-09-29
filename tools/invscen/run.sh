@@ -94,4 +94,5 @@ if ! (for p in $(pgrep -x Inventor.exe); do
 	echo "starting Inventor" >&2
 	setsid nohup $W/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe' >>$L 2>&1 </dev/null &
 fi
+export INVSCEN_SHOT=$PWD/tools/invscen/dshot.sh  # dialog watcher screenshots (Harness.cs)
 exec timeout ${INVSCEN_TIMEOUT:-1800} $W/wine $B/$S.exe "$($W/wine winepath -w $O)"
