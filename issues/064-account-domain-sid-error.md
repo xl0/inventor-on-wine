@@ -1,5 +1,5 @@
 # 064 Content Center empty: GetWindowsAccountDomainSid returns ERROR_INVALID_SID for non-account SIDs
-Status: open (draft) · Owner: - · Branch: - · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
+Status: fixed · Owner: worker-064 · Branch: fix/064-account-domain-sid · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
 
 ## Symptom
 Content Center shows no libraries although the desktop libraries are installed
@@ -45,3 +45,13 @@ kernelbase `GetWindowsAccountDomainSid` (semi-stub): only S-1-5-21-x-y-z[-...] a
 SIDs; everything else (valid) fails with ERROR_NON_ACCOUNT_SID. Add the table to
 advapi32/tests/security.c. Then retest Content Center (ccprobe-like tree query, Place from CC)
 and Frame Generator (tools/invscen/frame.cs + Insert Frame UI).
+
+## Outcome
+Extended `tests/account_domain_sid.c` (more SIDs + argument-order matrix). Windows rules:
+NULL/invalid sid → 1337 (before anything else); NULL size → 87; non-account → 1257, size and
+buffer untouched; account = authority 5, >= 4 subauths, first = 21; size < 24 → 122 (even with
+NULL output), size set to 24; NULL output with enough size → 87, size set to 24.
+Fix (2 commits on master, kernelbase): non-account check → ERROR_NON_ACCOUNT_SID (the app bug);
+size checked before the output pointer. FIXME semi-stub → TRACE. Probe output on Wine is now
+byte-identical to the VM; SID table added to advapi32 security tests (fail on unfixed Wine).
+Not retested in Inventor (Content Center / Frame Generator) — needs an Inventor display/prefix.
