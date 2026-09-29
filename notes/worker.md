@@ -85,7 +85,7 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   `... release NAME you` (or set `PREFIX_HOLDER`). Never use or stop a prefix leased
   to someone else. `INV=NAME tools/invscen/run.sh S` runs a scenario on it.
 - Inventor prefixes (inv, inv2, inv3, inv4) share one AdskLicensingService on
-  127.0.0.1:39683, the one that started first (inv2, until inv-lic takes over). Never `wineserver -k` an Inventor
+  127.0.0.1:39683, held by prefixes/inv-lic (frozen build). Never `wineserver -k` an Inventor
   prefix while other Inventor sessions run (they lose licensing and quit). Kill
   Inventor.exe by PID instead. If a -k is unavoidable, restart the other Inventors.
 - X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh

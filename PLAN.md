@@ -246,11 +246,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 3951ce31e31 (+061, 076, 057; protocol 965). inv/inv2 restarted on it
-  (inv2 licensing host up, hello PASS on both). Full regress vs master 4e819f054dd:
-  no REAL/NEW, 4 FLAKY (dxgi, mfplat x2, user32:win; same on baseline).
-- integ 77b5f2b6729 (+084 shell32 My Documents parsing name) pushed, not built. Rebuild build/ +
-  regress + inv-lic handover once the dialog-watcher worker (inv4) is done.
+- build/ = integ 77b5f2b6729 (+084 shell32 My Documents parsing name; protocol 965). Full regress vs
+  master 4e819f054dd: no REAL/NEW, 4 FLAKY (mfplat x2, user32:win, user32:input; same on baseline).
+  inv/inv2 restarted on it, hello PASS on both (with INVSCEN_DIALOGS=log, see below).
+- Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
+- invscen dialog watcher (dd01170) flags the Inventor splash (#32770 860x525) and the trial popup
+  (webview) at connect as unexpected, so `hello` FAILs by default; needs those two whitelisted.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Queue: 085 trial popup white + invisible cursor (Chromium AdskAccessUIHost); event-handle leak;
   081 (COM call round trips; biggest remaining perf gap), 078, 077;

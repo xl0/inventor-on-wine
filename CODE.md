@@ -194,16 +194,14 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
   restart the other Inventors afterwards (they show "Licensing error" and quit).
-  Licensing host = prefixes/inv2; never restart inv2 while Inventors run.
-  Other prefixes' services coexist harmlessly (they take a random HTTP port, e.g. inv's
-  127.0.0.1:45691, while inv2 holds 39683). Because inv2 is also a test prefix on the
-  often-rebuilt build/, `prefixes/inv-lic` is being prepared to take over: an rsync -aX copy
-  of inv2 (copied live: registry/.sds may be torn, so re-rsync after stopping inv2), run
-  only for the licensing service on the frozen `wt/lic-build` (worktree wt/lic @ 3951ce31e31,
-  rebuilt only deliberately). No Inventor there; display :200 is a plain Xvfb (wineboot needs
-  a DISPLAY or explorer records DriverError; the service itself is session 0). NOT in service:
-  handover = stop inv2, re-rsync, `prefix.sh start inv-lic`, check 39683, restart inv2 as a
-  normal test prefix (role in x/prefixes.tsv then changes).
+  Licensing host = prefixes/inv-lic (role in x/prefixes.tsv, lease `licensing-host`): an rsync -aX copy
+  of inv2 run only for the service on the frozen `wt/lic-build` (worktree wt/lic @ 3951ce31e31, rebuilt
+  only deliberately), display :200 = plain Xvfb (wineboot needs a DISPLAY or explorer records
+  DriverError; the service itself is session 0). `prefix.sh start inv-lic --holder licensing-host` is enough:
+  the service comes up with the prefix and binds 39683 (it launches its Agent, which exits again).
+  Never restart it while Inventors run. Other prefixes' services coexist harmlessly (random HTTP port,
+  e.g. inv's 127.0.0.1:45691). inv2 is an ordinary test prefix on build/. To refresh inv-lic from inv2:
+  stop inv-lic (`--force`), `rsync -aX --delete prefixes/inv2/ prefixes/inv-lic/`, start it.
   "Device limit reached" on start: another device (the user's laptop, "mafa") holds the trial
   seat. Fix: the user closes Inventor there, then Check again; don't click Pause product.
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the
