@@ -271,6 +271,13 @@ are not present here.
   autodesk_inventor_2022_samples.zip sha256 1eeb4164…09292b,
   autodesk_inventor_2016_samples.zip 9d3096f6…41f501c, both from damassets.autodesk.net
   (links on the "Inventor Sample Files" support article; www.autodesk.com zips 403 curl).
+- `tools/uilat/uilat.py SCEN... [--setup] [--tag T] [--record] [--perf ROLES]` — UI latency:
+  XTest input, XDamage on root + XGetImage of a watched rect (window moves make no damage:
+  polled). Step latency (isolated moves) and drag fps/lag (tracked rubber-band end / window
+  shift). Scenarios rubber hover orbit pan (need `--setup` = invscen `uilat`: part in sketch
+  edit, maximized), wmdrag xmove (Inventor restored), self (tool check, ~0.5 ms). Also /proc
+  CPU of Inventor/wineserver/Xorg; --record: X requests per client pid/op/window (RECORD).
+  CSV + summary in inst/uilat/. Numbers and A/B vk/gl/DXVK: issue 060.
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and

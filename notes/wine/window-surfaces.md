@@ -42,3 +42,6 @@
   asks for MWM title/border only when window != visible. window == visible when
   window == client, shaped, Decorated=N, or (fix/040) the client rect sticks out of
   the would-be visible rect (custom caption via WM_NCCALCSIZE).
+- Apps that present on their own schedule (Inventor/OGS) don't repaint on the fix/005 redraw:
+  any Expose over an offscreen client surface stays black until the next present, e.g. a
+  screen-fixed popup sliding over the viewport during a window drag (issue 061).

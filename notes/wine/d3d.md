@@ -22,3 +22,7 @@
   (flip models: DXGI_ERROR_INVALID_CALL on Windows, E_INVALIDARG on Wine).
 - The d3d11 conformance suite has no unit selection (argv) and is unstable on the
   NVIDIA headless display; run it via tools/regress.sh (lavapipe).
+- wined3d-vk memory: allocations > WINED3D_ALLOCATOR_CHUNK_SIZE/2 (32 MiB) bypass the chunk
+  allocator (own vkAllocateMemory, freed when retired, never reused). A DISCARD map allocates
+  a new bo on the app thread (`adapter_vk_alloc_bo`), so per-frame discards of big resources
+  cost a fresh allocation each (~15-30 ms for 52 MiB host-visible on NVIDIA; issue 060).
