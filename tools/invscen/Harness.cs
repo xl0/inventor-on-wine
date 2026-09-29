@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using Inventor;
 
@@ -36,6 +37,7 @@ static class H
             if (!lic && sw.ElapsedMilliseconds < timeoutSec * 1000L) continue;
             Console.WriteLine("FAIL {0} ({1:F1}s): {2}; Inventor dialogs: {3}", name, sw.Elapsed.TotalSeconds,
                 lic ? "LICENSING ERROR" : "TIMEOUT after " + timeoutSec + "s", dlg == "" ? "none" : dlg);
+            ReleaseCom();
             System.Environment.Exit(2);
         }
         if (err != null)
@@ -46,12 +48,28 @@ static class H
             if ((uint)err.HResult == 0x800706BA || (uint)err.HResult == 0x80010108)
             {
                 Console.WriteLine("ABORT: Inventor exited (crash, or quit after a licensing error)");
+                ReleaseCom();
                 System.Environment.Exit(2);
             }
         }
         else
             Console.WriteLine("PASS {0} ({1:F1}s){2}", name, sw.Elapsed.TotalSeconds,
                 string.IsNullOrEmpty(detail) ? "" : ": " + detail);
+    }
+
+    // Releases this process' Inventor references before exit: Wine has no DCOM rundown, so refs of
+    // an exited client pin their Inventor objects until Inventor exits (072). RCWs release on
+    // finalization once unreachable: drop App and the scenario's static fields, collect.
+    // Bounded wait: Release calls block while Inventor hangs.
+    static void ReleaseCom()
+    {
+        App = null;
+        foreach (var f in typeof(Scenario).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+            if (!f.IsLiteral && !f.IsInitOnly && !f.FieldType.IsValueType) f.SetValue(null, null);
+        var t = new Thread(() => { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); GC.WaitForPendingFinalizers(); });
+        t.IsBackground = true;
+        t.Start();
+        t.Join(30000);
     }
 
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr p);
@@ -257,6 +275,7 @@ static class H
         }, 300);
         Scenario.Run();
         if (App != null) try { App.SilentOperation = false; } catch (Exception) { }
+        ReleaseCom();
         Console.WriteLine(failed == 0 ? "RESULT PASS" : "RESULT FAIL");
         return failed == 0 ? 0 : 1;
     }

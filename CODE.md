@@ -262,6 +262,8 @@ are not present here.
   section, `H.Reset()` starts an independent one). Harness helpers: NewPart, Box,
   Vol/Mass (analytic volume checks), EdgeAt/FaceAt, Save, Translate (export via a
   translator add-in).
+  At exit (also on timeout/abort) it drops App + scenario statics and GCs so the RCWs release
+  Inventor's objects: Wine has no DCOM rundown for dead clients (072; was ~1350 stubs/suite).
   Artifacts: inst/invscen/SCENARIO/; `--vm`: C:\t\scen\SCENARIO copied to
   inst/invscen/ref/ (the VM reference). `all` runs the suite (hello tlb part asm
   drawing feat params sheetmetal asmcon asmbig drawing2 script export; asm/drawing
