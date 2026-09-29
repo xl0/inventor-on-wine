@@ -98,7 +98,7 @@ static class H
     }
 
     // AdskLicensingAgent's "Welcome to your trial" popup at Inventor start (WebView2 in an
-    // untitled 860x500 'webview' WS_POPUP; not shown while a killed Inventor's agent lingers):
+    // untitled 'webview' WS_POPUP, 860x500 or blank 640x480 (085); not shown while a killed Inventor's agent lingers):
     // WM_CLOSE it. Clicking its X (cursor + mouse_event) instead made the next
     // Documents.Add's ActiveView null on Wine; WM_CLOSE doesn't, and Inventor keeps running.
     static bool welcomed;
@@ -108,12 +108,12 @@ static class H
         {
             if (welcomed) return;
             var pids = new System.Collections.Generic.HashSet<uint>();
-            foreach (var p in Process.GetProcessesByName("AdskLicensingAgent")) pids.Add((uint)p.Id);
+            foreach (var n in new[] { "AdskLicensingAgent", "AdskAccessUIHost" })
+                foreach (var p in Process.GetProcessesByName(n)) pids.Add((uint)p.Id);
             EnumWindows((w, _) =>
             {
-                uint pid; GetWindowThreadProcessId(w, out pid); RECT r;
-                if (!pids.Contains(pid) || !IsWindowVisible(w) || Text(w, true) != "webview"
-                    || !GetWindowRect(w, out r) || r.R - r.L != 860 || r.B - r.T != 500) return true;
+                uint pid; GetWindowThreadProcessId(w, out pid);
+                if (!pids.Contains(pid) || !IsWindowVisible(w) || Text(w, true) != "webview") return true;
                 PostMessage(w, 0x10, IntPtr.Zero, IntPtr.Zero);  // WM_CLOSE
                 for (int i = 0; i < 50 && IsWindowVisible(w); i++) Thread.Sleep(100);
                 if (IsWindowVisible(w)) return true;  // retried on the next poll
@@ -196,6 +196,10 @@ static class H
                 uint pid; GetWindowThreadProcessId(w, out pid);
                 if (!pids.Contains(pid) || !IsWindowVisible(w)) return true;
                 string cls = Text(w, true);
+                // Inventor's splash (860x525 dialog) and the trial welcome popup (class 'webview', any size, closed by Welcome())
+                RECT rc; GetWindowRect(w, out rc);
+                int ww = rc.R - rc.L, hh = rc.B - rc.T;
+                if ((cls == "#32770" && ww == 860 && hh == 525) || cls == "webview") return true;
                 if (!Benign.Any(b => cls.Contains(b)) && !(cls.StartsWith("HwndWrapper[") && Text(w) == "")) now.Add(w);
                 return true;
             }, IntPtr.Zero);
