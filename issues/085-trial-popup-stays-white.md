@@ -10,6 +10,12 @@ over the Home area at 530,290 (same geometry as the popup) well after load:
 ![white popup](attachments/085-trial-popup-white.png)
 It eventually renders (on inv2 after "Check again" it showed its content).
 
+Also (user, laptop): the mouse pointer is invisible over the popup, yet clicks
+work (the X closes it). Possibly separate from the blank rendering: Chromium sets
+the cursor from the browser process (SetCursor / cursor created from the
+renderer's bitmap). Check what cursor the window gets (+cursor, XDefineCursor)
+vs Windows.
+
 ## To check
 - Windows: how long the popup stays blank there (VM; needs a free licence seat,
   see CODE.md licensing notes).
