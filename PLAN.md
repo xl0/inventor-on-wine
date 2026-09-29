@@ -241,13 +241,10 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- integ 3951ce31e31 (+061, 076, 057) pushed, not built. 057 bumps the server protocol:
-  after rebuilding build/, restart EVERY prefix's wineserver (inv2 first — licensing host;
-  other Inventors show "Licensing error" meanwhile), then regress run.
-- Harness ergonomics (user OK'd; after rebuild chore + 084 finish): dedicated licensing
-  prefix inv-lic on a frozen build-lic/; prefix table + tools/prefix.sh status|stop|start;
-  leases file for prefixes/displays; invscen dialog watcher + UI-mode opens (084 was
-  invisible to the silent harness). Done: wine-src pushes integ to gh by default.
+- build/ = integ 3951ce31e31 (+061, 076, 057; protocol 965). inv/inv2 restarted on it
+  (inv2 licensing host up, hello PASS on both). Full regress vs master 4e819f054dd:
+  no REAL/NEW, 4 FLAKY (dxgi, mfplat x2, user32:win; same on baseline).
+  inv4 (:101) is on wt/084-build for worker 084.
 - Next candidates: 081 (COM call round trips; biggest remaining perf gap), 078, 077;
   picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
   074 only if soak #2 reproduces it.

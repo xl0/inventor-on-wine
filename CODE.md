@@ -189,6 +189,8 @@ are not present here.
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
   restart the other Inventors afterwards (they show "Licensing error" and quit).
   Licensing host = prefixes/inv2; never restart inv2 while Inventors run.
+  "Device limit reached" on start: another device (the user's laptop, "mafa") holds the trial
+  seat. Fix: the user closes Inventor there, then Check again; don't click Pause product.
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the
   user.WINEREPARSE xattr of `name?` dirs (052); plain copies break them.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).

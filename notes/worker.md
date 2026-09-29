@@ -72,6 +72,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Switching the Wine build used on an existing prefix triggers a prefix update;
   run `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u` first, or a
   rundll32 error dialog hangs the next app launch.
+  Run it with DISPLAY (and DRI_PRIME) set for GUI prefixes: without DISPLAY the
+  prefix's explorer records DriverError permanently ("graphics driver is
+  missing" in every app) until the next `wineserver -k`.
 - Prefixes with auto-start Autodesk services: on builds with 014 (services in
   session 0) wineserver idles once user processes exit; older builds hang on
   `wineserver -w` — use `wineserver -k` to be safe.
