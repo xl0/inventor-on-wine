@@ -17,6 +17,8 @@ The server results below are reference material, not local completion status.
   failed in `AceUnzipZipFiles` (MSI 1603);
   [issue 050](issues/050-electrical-catalog-unzip-msi.md), low priority.
 - [ ] Verify local Inventor launch/sign-in.
+- [ ] Investigate Content Center Files' Documents shell path and missing
+  directory ([084](issues/084-content-center-documents-shell-path.md)).
 
 # Server plan: Autodesk Inventor on Wine, agent-driven
 

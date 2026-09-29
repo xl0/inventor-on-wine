@@ -33,6 +33,10 @@ are not present here.
   INSTALLED. Electrical Catalog Browser failed: its CA MSI's
   `AceUnzipZipFiles` action returns 1603; optional add-on rolled back
   ([050](issues/050-electrical-catalog-unzip-msi.md)).
+  Opening documents warns that the Content Center Files path is unavailable:
+  `::{CLSID_MyDocuments}\Inventor\Content Center Files\R2027`.
+  [084](issues/084-content-center-documents-shell-path.md) tracks path origin
+  and directory creation; Wine cause and explicit-path workaround unverified.
   Main Inventor launch/sign-in not yet verified. Installer was launched on `:0`
   with `setsid nohup`, nice 10, idle I/O, 14 GiB cap/no swap in
   `inventor-install.scope`. Uses `WINE_D3D_CONFIG=renderer=vulkan`.
