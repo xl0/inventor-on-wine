@@ -1,0 +1,8 @@
+# Prefix table: single source of truth for tools/prefix.sh, tools/invscen/run.sh.
+# TAB-separated. bus "-" = no GPU Xorg: prefix.sh start uses Xvfb on DISPLAY.
+# name	display	bus	dri_prime	vnc	build	role
+inv	:98	PCI:202:0:0	pci-0000_ca_00_0	5902	build	default Inventor/invscen/soak setup
+inv2	:99	PCI:52:0:0	pci-0000_34_00_0	5903	build	licensing host (holds 127.0.0.1:39683) until inv-lic takes over
+inv3	:100	PCI:22:0:0	pci-0000_16_00_0	5904	build	test
+inv4	:101	PCI:172:0:0	pci-0000_ac_00_0	5905	build	test; ac:00.0 also carries the host console
+inv-lic	:200	-	-	-	wt/lic-build	licensing service only, frozen build; prepared, NOT yet in service (CODE.md)

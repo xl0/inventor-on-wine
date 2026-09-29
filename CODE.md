@@ -178,23 +178,32 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
-- `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
-  ca:00.0 (card4). ac:00.0 also carries the host console / gdm greeter; a headless
-  Xorg there works (:101) — prefer the other GPUs first.
-  `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
-  `x/vnc.sh 99` → VNC 5903, `x/shot.sh out.png 99`. :99 + `prefixes/inv2` (copy of inv,
-  signed in) is a second Inventor setup, independent of :98/inv.
-  Third: `x/start.sh 100 PCI:22:0:0` (GPU 16:00.0, `DRI_PRIME=pci-0000_16_00_0`),
-  `x/vnc.sh 100` → VNC 5904, `prefixes/inv3` (copy of inv minus the installer Temp cache).
-  Fourth: `x/start.sh 101 PCI:172:0:0` (GPU ac:00.0, `DRI_PRIME=pci-0000_ac_00_0`),
-  VNC 5905, `prefixes/inv4` (rsync -aX copy of inv3). The user's WM (awesome 4.3, no compositor):
-  kill that display's openbox by PID, `DISPLAY=:N awesome -c x/awesome-rc.lua`; `awesome-client`
+- `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
+  display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
+  inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|lease|release`
+  works from it (status: wineserver/build/procs/port holder/lease; servers are mapped to
+  prefixes by the server socket dir inode). `x/leases` (git-ignored, flock'd) records who
+  uses a prefix; start/stop refuse on someone else's lease. `INV=inv3 tools/invscen/run.sh S`
+  uses the table. `x/start.sh N BUS` = headless NVIDIA Xorg (needs DRI_PRIME=pci-0000_<bus>_00_0
+  so Vulkan picks the GPU that owns the screen), `x/vnc.sh N`, `x/shot.sh out.png N`.
+  ac:00.0 also carries the host console/gdm greeter (headless Xorg there works, :101);
+  prefer the other GPUs. The user's WM (awesome 4.3, no compositor): kill that display's
+  openbox by PID, `DISPLAY=:N awesome -c x/awesome-rc.lua`; `awesome-client`
   (DBus) can script it (e.g. `c.maximized = false`). awesome lacks _NET_WM_MOVERESIZE (061, 076).
   Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
   restart the other Inventors afterwards (they show "Licensing error" and quit).
   Licensing host = prefixes/inv2; never restart inv2 while Inventors run.
+  Other prefixes' services coexist harmlessly (they take a random HTTP port, e.g. inv's
+  127.0.0.1:45691, while inv2 holds 39683). Because inv2 is also a test prefix on the
+  often-rebuilt build/, `prefixes/inv-lic` is being prepared to take over: an rsync -aX copy
+  of inv2 (copied live: registry/.sds may be torn, so re-rsync after stopping inv2), run
+  only for the licensing service on the frozen `wt/lic-build` (worktree wt/lic @ 3951ce31e31,
+  rebuilt only deliberately). No Inventor there; display :200 is a plain Xvfb (wineboot needs
+  a DISPLAY or explorer records DriverError; the service itself is session 0). NOT in service:
+  handover = stop inv2, re-rsync, `prefix.sh start inv-lic`, check 39683, restart inv2 as a
+  normal test prefix (role in x/prefixes.tsv then changes).
   "Device limit reached" on start: another device (the user's laptop, "mafa") holds the trial
   seat. Fix: the user closes Inventor there, then Check again; don't click Pause product.
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the

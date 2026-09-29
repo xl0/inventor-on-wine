@@ -1,9 +1,10 @@
 #!/bin/sh
 # Usage: tools/invscen/run.sh [--vm] SCENARIO | all
-#   WINE_BUILD=dir picks the Wine build (default build/).
-#   INV_PREFIX, DISPLAY, DRI_PRIME pick another Inventor setup (default
-#   prefixes/inv, :98, pci-0000_ca_00_0); artifacts of another prefix P go to
-#   inst/invscen/P/SCENARIO/.
+#   INV=NAME picks a prefix from x/prefixes.tsv (prefix, display, GPU, build; e.g.
+#   INV=inv3 run.sh hello); an explicit WINE_BUILD still overrides its build.
+#   Without INV: WINE_BUILD (default build/), INV_PREFIX, DISPLAY, DRI_PRIME pick the
+#   setup (default prefixes/inv, :98, pci-0000_ca_00_0).
+#   Artifacts of another prefix P go to inst/invscen/P/SCENARIO/.
 # Builds tools/invscen/{Harness,SCENARIO}.cs with the prefix's .NET 4.8 csc
 # (Inventor interop types embedded, /link) and runs it against the Inventor
 # running in prefixes/inv on :98 (starts it if needed). Artifacts go to
@@ -16,8 +17,9 @@
 # than the VM reference log (only steps >= 1 s on Wine; connect includes the
 # Inventor start).
 set -e
-W=${WINE_BUILD:-build}  # Wine build dir to run under
 cd "$(dirname "$0")/../.."
+if [ -n "${INV:-}" ]; then B0=${WINE_BUILD:-}; eval "$(tools/prefix.sh env "$INV")"; WINE_BUILD=${B0:-$WINE_BUILD}; fi
+W=${WINE_BUILD:-build}  # Wine build dir to run under
 VM=; [ "$1" = --vm ] && VM=1 && shift
 S=${1:?usage: $0 [--vm] SCENARIO|all}
 # export last: its STEP import makes Wine mshtml ask to install Gecko (prefix has none),

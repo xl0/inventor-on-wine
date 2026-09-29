@@ -30,3 +30,5 @@
 /x/xorg*.out
 /x/xorg-[0-9]*.conf
 /tests/sxs_probe/cases/
+/x/leases
+/x/leases.lock

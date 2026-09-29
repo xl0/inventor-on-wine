@@ -70,7 +70,8 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   Rebuild only what changed: `make -j40 dlls/ntdll/all dlls/kernel32/tests/all`
   (the `/all` matters; plain `dlls/ntdll` is a no-op directory target).
 - Switching the Wine build used on an existing prefix triggers a prefix update;
-  run `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u` first, or a
+  run `tools/prefix.sh start NAME` (= `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u`
+  with the right DISPLAY/DRI_PRIME) first, or a
   rundll32 error dialog hangs the next app launch.
   Run it with DISPLAY (and DRI_PRIME) set for GUI prefixes: without DISPLAY the
   prefix's explorer records DriverError permanently ("graphics driver is
@@ -78,11 +79,16 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Prefixes with auto-start Autodesk services: on builds with 014 (services in
   session 0) wineserver idles once user processes exit; older builds hang on
   `wineserver -w` — use `wineserver -k` to be safe.
-- Inventor prefixes (inv, inv2, inv3) share one AdskLicensingService on
-  127.0.0.1:39683, the one that started first. Never `wineserver -k` an Inventor
+- Prefixes: `x/prefixes.tsv` (prefix, display, GPU, build) and `tools/prefix.sh`
+  (`status`, `env NAME` to eval, `start`/`stop`) replace ad-hoc setups. Lease your prefix
+  before using it, release it when done: `tools/prefix.sh lease NAME you`,
+  `... release NAME you` (or set `PREFIX_HOLDER`). Never use or stop a prefix leased
+  to someone else. `INV=NAME tools/invscen/run.sh S` runs a scenario on it.
+- Inventor prefixes (inv, inv2, inv3, inv4) share one AdskLicensingService on
+  127.0.0.1:39683, the one that started first (inv2, until inv-lic takes over). Never `wineserver -k` an Inventor
   prefix while other Inventor sessions run (they lose licensing and quit). Kill
   Inventor.exe by PID instead. If a -k is unavoidable, restart the other Inventors.
-- X display numbers: :98/:99 are the Inventor GPU displays, tools/regress.sh
+- X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh
   uses :120–:151 for its shards (and cleans them up) — pick your own Xvfb
   display from :200 up.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
