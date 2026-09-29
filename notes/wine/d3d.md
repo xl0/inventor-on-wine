@@ -23,6 +23,11 @@
 - The d3d11 conformance suite has no unit selection (argv) and is unstable on the
   NVIDIA headless display; run it via tools/regress.sh (lavapipe).
 - wined3d-vk memory: allocations > WINED3D_ALLOCATOR_CHUNK_SIZE/2 (32 MiB) bypass the chunk
-  allocator (own vkAllocateMemory, freed when retired, never reused). A DISCARD map allocates
-  a new bo on the app thread (`adapter_vk_alloc_bo`), so per-frame discards of big resources
-  cost a fresh allocation each (~15-30 ms for 52 MiB host-visible on NVIDIA; issue 060).
+  allocator (own vkAllocateMemory); chunks themselves are never freed. A DISCARD map (immediate
+  or deferred context) allocates a new bo on the app thread (`adapter_vk_alloc_bo`); upstream
+  frees dedicated bos when retired, so per-frame discards of big buffers cost ~15-30 ms each on
+  NVIDIA. Fix 060 keeps up to 8 destroyed dedicated bos (256 MiB, still mapped) in context_vk
+  for reuse. Repro: tests/d3d11_discard_perf.c.
+- Finding which resource a d3d11 call hits: +d3d11 traces lack buffer descs; a temporary ERR in
+  wined3d (resource type/size/bind/usage + `__builtin_return_address(0)`) and addr2line on the PE
+  (`addr - module base from /proc/PID/maps + ImageBase 0x180000000`) is quicker than +d3d.

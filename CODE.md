@@ -136,8 +136,13 @@ are not present here.
   calls, the stub called directly, a custom stub; per case in a child (056).
   `cxx_catch_throw.c` + `cxx_catch_throw_eh.cpp` (clang MSVC-target C++ EH, build line in the file):
   throw/rethrow from a catch block under C++ catch, __except, cross-apartment COM (058).
+  `d3d11_discard_perf.c [MiB] [iters] [deferred] [touch=B] [latency=N]`: Map(WRITE_DISCARD) of a
+  big dynamic buffer per iteration, ms/iter (060; vk vs gl vs DXVK: app-local DXVK dlls + d3d11,dxgi=n).
   `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
   then paths/CreateProcess through it (052).
+  `hwnd_signext.c [N]`: churn child windows, compare every HWND the app sees for one window (059).
+  `user_handle_uniq.c [N]`: per USER type (window, menu, icon, accel, hook, HDWP, HIMC) max HIWORD,
+  wrap point, bit-31 handles (059; `-limm32`).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
   ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
