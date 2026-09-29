@@ -48,6 +48,9 @@ are not present here.
   `xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp -extension GLX'`
   works for 2D smoke tests; verify with `xdpyinfo` before running Wine.
   The host desktop `DISPLAY=:0` is accessible.
+- Hybrid GPU: with `prime-select on-demand` the X server runs on the iGPU and
+  every NVIDIA frame is copied across, so sketching and window drags lag.
+  `prime-select nvidia` fixes it (user-verified 2026-09-29).
 - Missing dependencies were installed by the user outside the sandbox:
 
   ```sh
