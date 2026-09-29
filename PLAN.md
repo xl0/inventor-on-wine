@@ -252,10 +252,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   (dialog watcher on). 085 smoke, Inventor started directly: trial popup white ~7 s, content at ~9 s after
   the first frame (~19 s after launch), stays; mouse pointer visible over it (left_ptr 24x24); popup X closes it.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
-- invscen dialog watcher (dd01170) flags the Inventor splash (#32770 860x525) and the trial popup
-  (webview) at connect as unexpected, so `hello` FAILs by default; needs those two whitelisted.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
-- Queue: 085 trial popup white + invisible cursor (Chromium AdskAccessUIHost); event-handle leak;
+- Queue: event-handle leak; 082 (project Activate E_FAIL);
+  laptop recheck of 084/085 + "having trouble" popup (seat contention?);
   081 (COM call round trips; biggest remaining perf gap), 078, 077;
   picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
   074 only if soak #2 reproduces it.
