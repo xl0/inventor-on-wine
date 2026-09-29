@@ -194,6 +194,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
   - O 061 black trail in viewport after window drag
   - O 062 WPF splitter popup black without compositing WM
+  - O 063 DLL manifest threadingModel compared case-sensitively (Stress Analysis hangs)
+  - O 064 GetWindowsAccountDomainSid wrong error for non-account SIDs (Content Center empty)
+  - O 065 closed Assistant panel leaves stale image over the viewport
+  - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
   - O 064 GetWindowsAccountDomainSid ERROR_INVALID_SID for non-account SIDs → Content Center empty
