@@ -246,11 +246,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ ed241c72d09 (+085: winex11/win32u cross-process cursor, dcomp, d3d11 VideoContext1 stubs,
-  dxgi EnqueueSetEvent; protocol unchanged). Full regress vs master 4e819f054dd: no REAL/NEW, 4 FLAKY
-  (mfplat x2, user32:win, webservices:proxy; same on baseline). inv restarted on it: hello and part PASS
-  (dialog watcher on). 085 smoke, Inventor started directly: trial popup white ~7 s, content at ~9 s after
-  the first frame (~19 s after launch), stays; mouse pointer visible over it (left_ptr 24x24); popup X closes it.
+- build/ = integ af3c6679391 (+086: combase per-thread call-completion event cache; win32u
+  NtUserWaitForInputIdle closes its idle event; protocol unchanged). Full regress vs master 4e819f054dd:
+  no REAL/NEW, 2 FLAKY (x86_64 dxgi, mfplat; same on baseline). inv restarted on it: hello, asm,
+  drawing2 PASS (dialog watcher on). 085 smoke (older build): trial popup white ~7 s, content ~9 s after
+  the first frame, stays; pointer visible over it; popup X closes it.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
