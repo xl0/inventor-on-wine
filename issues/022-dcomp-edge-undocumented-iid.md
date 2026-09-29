@@ -1,5 +1,5 @@
 # 022 dcomp: Edge WebView2 GPU hardware path needs undocumented desktop-device interface
-Status: open (draft, low) · Owner: - · Branch: - · Found in: inv-vm, wt/017-build (integ 77645e2b221 + fix/017)
+Status: fixed by 085 (awaiting review) · Owner: 085 worker · Branch: fix/085 · Found in: inv-vm, wt/017-build (integ 77645e2b221 + fix/017)
 
 ## Symptom
 With the staging dcomp series (017), msedgewebview2's GPU process (hardware mode)
@@ -18,3 +18,9 @@ Its methods can't be learned clean-room without blind black-box probing, and
 Edge presumably calls them next. Only cost today is the ~30 s delay before the
 licensing page shows. Not upstream-worthy to fake a failure from
 DCompositionCreateDevice3 (Windows succeeds).
+
+## Outcome (085)
+Edge calls no methods on it; Win11 returns the IDCompositionDevice3 pointer (only for
+DCompositionCreateDevice3 devices). fix/085 returns the device for it, then fixes the next
+hardware-path CHECKs (ID3D11VideoContext1, visual SetOffsetY/SetClip/NULL clip+transform)
+and EnqueueSetEvent. No GPU crashes left; see 085.

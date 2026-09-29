@@ -1,9 +1,9 @@
 # 085 Trial welcome popup stays white long after Inventor has loaded
-Status: open (draft, Windows unchecked) · Owner: - · Branch: - · Found in: user's laptop + inv4 (integ 3951ce31e31)
+Status: fixed (awaiting review) · Owner: 085 worker · Branch: fix/085 (wt/085, on integ 77b5f2b6729) · Found in: user's laptop + inv4 (integ 3951ce31e31)
 
 ## Symptom
-On start, the licensing/trial popup ("Dig into your trial", Autodesk Access UI:
-AdskAccessUIHost.exe, Chromium-based) appears as a plain white window next to the
+On start, the licensing/trial popup ("Dig into your trial"; it is AdskLicensingAgent's
+WebView2 window, class `webview`, not AdskAccessUIHost) appears as a plain white window next to the
 Inventor splash plaque and stays white for a while after Inventor's main window
 is up (user report, laptop). The same white 860x500 rectangle is on inv4/:101
 over the Home area at 530,290 (same geometry as the popup) well after load:
@@ -16,12 +16,68 @@ the cursor from the browser process (SetCursor / cursor created from the
 renderer's bitmap). Check what cursor the window gets (+cursor, XDefineCursor)
 vs Windows.
 
-## To check
-- Windows: how long the popup stays blank there (VM; needs a free licence seat,
-  see CODE.md licensing notes).
-- Wine: what AdskAccessUIHost's GPU process does while blank (GPU vs software
-  compositing, DirectComposition path, 017/023–027), and whether the first
-  frame is lost (compare 078: first present of a new offscreen surface lost).
+## Findings (085 worker, inv3/:100 openbox, NVIDIA)
+The popup is AdskLicensingAgent's WebView2 (untitled `webview` 860x500 WS_POPUP, child
+`webview_widget` from msedgewebview2). AdskAccessUIHost (Electron "Autodesk Access",
+`--appName ada --minimized`) is unrelated and stays hidden.
+
+### 1. White phase = WebView2 GPU process crash loop (rendering, not loading)
+Base build (integ 77b5f2b6729): popup white from <15 s to ~45 s after launch
+(inst/085/r1-*.png, Inventor main window up at ~15 s). Crashpad dumps at +22/+27/+33/+39 s
+(4 GPU crashes), then `--type=gpu-process --gpu-recent-crash-count=3` (software) at +38 s,
+content right after. Same in Edge (`inst/085/edge.sh`, cheap repro: 6 int3 in 30 s).
+Chain of hardware-path failures (WINEDEBUG=+dcomp,+d3d11,+dxgi,+seh; each fixed, then the next):
+- dcomp desktop device QI {4ca97a18-...} E_NOINTERFACE -> CHECK (issue 022).
+- immediate context QI ID3D11VideoContext1 E_NOINTERFACE -> CHECK.
+- visual SetClipObject(NULL), SetTransformObject(NULL), SetOffsetY(0) E_NOTIMPL -> CHECK.
+- visual SetClip(rect) E_NOTIMPL -> CHECK (only WebView2 in the agent, not plain Edge).
+- IDXGIDevice2::EnqueueSetEvent E_NOTIMPL -> Chromium DumpWithoutCrashing
+  (dxgi_swap_chain_image_backing.cc:287, first present): a 110-125 MB full dump per
+  WebView2 instance (3 per Inventor start), no crash.
+Fixed (below): 0 GPU crashes/dumps; white 10.5 -> 15.8 s (~5 s: WebView2 start), then the
+page's own spinner, content at 16.6 s (inst/085/fix4, 0.8 s screenshots).
+Before (+36 s) / after (+16 s):
+![before](attachments/085-before-36s-white.png) ![after](attachments/085-after-16s-rendered.png)
+Windows: not checkable (VM Inventor stuck at device limit). tests/dcomp_qi.c on Win11:
+4ca97a18 S_OK only on DCompositionCreateDevice3 devices, pointer == IDCompositionDevice3;
+ID3D11VideoContext1 S_OK.
+
+### 2. Invisible pointer = cursor of another process
+The pointer is over the agent's toplevel (agent owns the X window) but WM_SETCURSOR goes to
+msedgewebview2's child window (implicitly attached input), which SetCursor()s its own
+IDC_ARROW. The server sends WM_WINE_SETCURSOR to the agent; win32u there can't read
+another process' cursor ("icon handle from other process"), so the X cursor stays the
+empty one set for the agent's own NULL cursor. XFixes (xcur) over the popup: 1x1 empty.
+tests/xproc_cursor.c (host toplevel + child process's child window + its cursor): Win11
+GetCursorInfo = child's cursor; Wine same, but the screen shows the host's arrow (bitmap
+cursor) or nothing (IDC_HAND). Fix: the toplevel's process posts WM_WINE_SETCURSOR to the
+thread that owns the cursor handle; winex11 there XDefineCursor()s the foreign whole window
+(X ids are server-wide). After: arrow over the popup, hand over its X / links, repro shows
+the child's bitmap/hand cursor. Not WM-specific (seen on openbox).
+
+### "We're having trouble" (laptop, and once here)
+Seen once on the server (run2, base build, inst/085/r2-popup.png); 8 other runs showed
+the trial content. That run had no GPU crash dumps, so it isn't the white phase. The
+service log (inv3) shows a PubNub `monitor:{pause:{}}` push ("Pause request from agent",
+"show monitor blocking dialog", `sou url .../ui/v2/sou`: subscription overuse = another
+device using the seat) right before the popup's `source:"error"` analytics events (every
+30 s, as on the laptop). Pause pushes also hit later runs without the error, so the link is
+suspected, not shown. Page loading itself is fast here (<1 s spinner).
+
+## Fix (fix/085)
+- winex11: Set the cursor on windows of other processes.
+- win32u: Let the owner of a cursor from another process set it.
+- dcomp: Return the device for {4ca97a18-cbfd-4b0d-89e1-f7fa86d8d63e}. (test)
+- dcomp: Implement visual_SetOffsetY() and accept removing clips and transforms. (test)
+- d3d11: Add ID3D11VideoContext1 stubs. (test)
+- dxgi: Implement dxgi_device_EnqueueSetEvent(). (test; waits for the GPU synchronously)
+- dcomp: Store the clip rectangle in visual_SetClip(). (test)
+Tests: dcomp Wine 753/0 fail, VM 1099/0; d3d11 VM 505081/0 (Wine suite hangs later
+in vkCreateDevice, known; no failure before); dxgi new test passes on both (other failures
+pre-existing mode-change ones). regress user32 win32u dcomp d3d11 dxgi imm32 vs integ: 0 worse.
+Caveat: WebView2/Edge now take the hardware DComp path. Staging's compositor ignores
+visual offsets/clips/transforms, so multi-visual layouts (video overlays, etc.) could be
+misplaced; Edge UI, the popup and Inventor's WebView2 panels render fine.
 
 ## Laptop: rendered "having trouble" dialog and full licensing log
 

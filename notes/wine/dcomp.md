@@ -19,9 +19,14 @@
   frame; fix/017 drops it.
 - WebView2/Edge (msedgewebview2 154) GPU process:
   - hardware path: DCompositionCreateDevice3(dxgi dev, IDCompositionDesktopDevice),
-    QI IDCompositionDevice3, then QI undocumented {4ca97a18-cbfd-4b0d-89e1-f7fa86d8d63e}
-    (Win11 S_OK, tests/dcomp_qi.c); E_NOINTERFACE -> CHECK. 6 crashes (~30 s), then
-    software compositing.
+    QI IDCompositionDevice3, QI undocumented {4ca97a18-cbfd-4b0d-89e1-f7fa86d8d63e}
+    (Win11: == the Device3 pointer, tests/dcomp_qi.c), context QI ID3D11VideoContext1,
+    visual SetClipObject/SetTransformObject(NULL), SetOffsetY, SetClip(rect): any failure
+    is a CHECK (int3); 6 GPU crashes (~30 s) then software compositing. All succeed since
+    fix/085. IDXGIDevice2::EnqueueSetEvent failing at the first present only makes a
+    >100 MB DumpWithoutCrashing. The compositor still ignores offsets/clips/transforms.
+  - Crashpad dumps (EBWebView/Crashpad/reports) name the site: `strings -a` shows
+    `ptype`, `DumpWithoutCrashing-file/-line`; Chromium source (github.com/chromium mirror).
   - software path (see also 023: it presents with a dirty rect): DCompositionCreateDevice(NULL), CreateTargetForHwnd(its own child
     window, reparented into the browser window), CreateVisual, composition swapchain
     (B8G8R8A8, 2 buffers, FLIP_SEQUENTIAL, premultiplied), SetContent, SetRoot, one

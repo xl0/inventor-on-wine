@@ -113,7 +113,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `p7x_winverifytrust.c` (+`p7x_gen.py`): msix-SDK-style signature checks on an
   AppxSignature.p7x. `regloadkey_hive.c`: RegLoadKey of a binary hive + tree dump.
   `dcomp_create.c`: DCompositionCreateDevice/2/3(NULL) (Win11: S_OK).
-  `dcomp_qi.c`: desktop device QI for Edge's undocumented {4ca97a18-...} (Win11: S_OK).
+  `dcomp_qi.c`: QIs and pointer identity of dcomp devices (v1, v3, v3 NULL) incl. Edge's undocumented
+  {4ca97a18-...} (Win11: == IDCompositionDevice3, v3 only) and ID3D11VideoContext1 (085).
+  `xproc_cursor.c [bitmap|arrow|none]`: child process's cursor on its child window in our toplevel;
+  look at the screen cursor with `x/xcur.c` (XFixes) (085).
   `dxgi_comp_swapchain.c`: GetDC-painted composition swapchain, buffer order after Present1
   and dirty-rect Present1. `layered_child_gpu.c`: cross-process D3D child in a colour-keyed
   layered window. `syscommand_hidden.c`: SC_MAXIMIZE/MINIMIZE on hidden windows.

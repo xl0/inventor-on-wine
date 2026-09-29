@@ -63,4 +63,9 @@
 - Debug channels of a running process can be flipped with gdb: `nm` the .so for
   `__wine_dbch_<chan>` (one static per source file), add the mapping base from
   /proc/PID/maps, `set {unsigned char}ADDR = 8` (TRACE) / 0 (off).
-
+- Cursors: WM_WINE_SETCURSOR goes to the thread of the toplevel under the pointer (it owns
+  the X window), with the cursor of the (possibly attached, cross-process child) input.
+  Cursor bits live in the creating process only (get_icon_ptr: "icon handle from other
+  process"), so a foreign cursor couldn't be created there: the pointer stayed empty over
+  WebView2/Chromium children (085). fix/085 posts it to the cursor's owner thread, whose
+  winex11 XDefineCursor()s the foreign whole window. Check the screen cursor with x/xcur.c.
