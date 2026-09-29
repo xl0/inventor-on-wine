@@ -10,3 +10,6 @@
   DShellFolderViewEvents connection point (SelectionChanged = 200); Wine's has none.
 - Hosts typically read the selection with IFolderView2::GetSelection (Inventor does).
 - `tests/ebrowser_events.c` (project repo) logs all host callbacks on Windows vs Wine.
+- SHAddToRecentDocs (Win11): PIDL, PATHA/W, SHELLITEM, APPIDINFO, APPIDINFOIDLIST add the item (async;
+  SHARD_LINK with a path-only IShellLink added nothing, APPIDINFOLINK untested);
+  files under %TEMP% are skipped. Wine handles only PIDL/PATHA/PATHW (067).

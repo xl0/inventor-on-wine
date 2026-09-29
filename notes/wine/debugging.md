@@ -53,6 +53,8 @@
   creator (`RelayInclude` = e.g. `kernelbase.CreateMutexW;...`, uppercase `KERNEL32.X` lines carry
   the real `ret=`), keep the creation `retval` per handle value, match against the live handles of
   a later dump; module bases from `resprobe mods` (/proc maps misses most PE images). 072.
+  GetProcessHandleCount (ProcessHandleCount) is a stub returning 0 in Wine: conformance tests
+  count own handles via NtQuerySystemInformation(SystemExtendedHandleInformation) (067).
 - Perf on PE code: `perf report --sort dso,sym` shows PE addresses as file offsets; for Wine's PE
   dlls offset = RVA (.text at 0x1000 both), so `addr2line -f -i -e build/dlls/X/x86_64-windows/X.dll
   $((ImageBase + off))`. Autodesk CER leaves `Temp\Inventor<ts>.dmp` (+ `.tmp` XML with the last

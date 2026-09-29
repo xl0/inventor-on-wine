@@ -1,5 +1,5 @@
 # 067 SHAddToRecentDocs leaks an HKCU\...\CurrentVersion\Explorer key handle per unsupported call
-Status: open (draft) · Owner: - · Branch: - · Found in: soak test (inst/soak/2026-09-28, integ c036c687c47)
+Status: fixed · Owner: worker 067 · Branch: fix/067-shaddtorecentdocs-leak (a3b264cb498) · Found in: soak test (inst/soak/2026-09-28, integ c036c687c47)
 
 ## Symptom
 In a 4 h soak of one Inventor session (tools/soak/soak.sh), Inventor's kernel handle count grows
@@ -34,3 +34,19 @@ Close the key on every path (smallest fix: move the open after the flag switch, 
 early returns). Implementing SHARD_SHELLITEM / SHARD_APPIDINFO* (resolve the item to a path/pidl and
 add it like SHARD_PIDL) is optional follow-up. A handle-count test in shell32/tests/shellole.c or
 shelllink.c is reasonable (the leak is 1 handle per call).
+
+## Outcome
+Fix: RegCloseKey before the two early returns (default flags, PIDL without a path).
+Test: shell32 shelllink.c `test_SHAddToRecentDocs` — own handles counted via
+SystemExtendedHandleInformation (GetProcessHandleCount / ProcessHandleCount is a stub
+returning 0 in Wine) around 100x SHARD_SHELLITEM + SHARD_APPIDINFO + bogus flag on a
+%TEMP% file; unfixed Wine 36 -> 336, fixed/VM (x64 + i386) no growth.
+regress shell32|shlwapi|comdlg32 vs master 4e819f054dd: 0 worse.
+
+Windows 11 ground truth (VM probe, file outside %TEMP%): SHARD_PIDL, PATHA, PATHW,
+SHELLITEM, APPIDINFO, APPIDINFOIDLIST all add a RecentDocs entry (UTF-16 name) and a
+Recent\<name without extension>.lnk (plus a .lnk for the parent folder), asynchronously.
+Files in %TEMP% are ignored (no entry, no .lnk). No handle growth for any flag.
+Wine differs anyway (ANSI MRU data, `name.txt.lnk`), so SHELLITEM/APPIDINFO* support
+(resolve to a pidl, then the SHARD_PIDL path) is left as follow-up: small in code, but a
+conformance test would have to write to the tester's real recent list.
