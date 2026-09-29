@@ -196,8 +196,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   - X 058 crash is Autodesk's own RxDispatch __except + CER after an FWSrv throw (follows 059)
   - M 059 user handle generation wraps at 0x7ffe like Windows (bit-31 HWNDs broke MFC → SaveAs E_FAIL, 058 crash)
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
-  - O 061 black trail in viewport after window drag
-  - O 062 WPF splitter popup black without compositing WM
+  - M 061 re-present offscreen client surfaces on expose (black drag trail 67% → 0%)
+  - X 062 WPF splitter popup black without a compositor: alpha 3-6, X can't blend (wontfix)
   - M 063 manifest threadingModel case-insensitive + defaults (Stress Analysis; Inventor retest pending)
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
   - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
@@ -212,11 +212,12 @@ commits or screenshots). Read-only mode may remain after expiry.
     clients' objects deferred (design in issue; harness now releases refs)
   - M 073 ntdll heap: more free-list size classes + bounded walk (no slowdown with fragmentation; soak recheck pending)
   - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
+  - M 076 SC_MOVE with any hittest low bits moves the window (caption drag under awesome did nothing)
+  - O 077 WM-initiated moves send no WM_ENTERSIZEMOVE/EXITSIZEMOVE (stale splitters after Mod4+drag)
+  - O 078 first present of a new offscreen client surface never reaches the screen
+  - L 079 awesome: restoring a maximized window leaves X maximized (seen once)
+  - L 080 WindowFromPoint ignores per-pixel alpha of layered windows
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
-  - O 063 actctx threadingModel parsed case-sensitively ("free") → Stress Analysis deadlock
-  - O 064 GetWindowsAccountDomainSid ERROR_INVALID_SID for non-account SIDs → Content Center empty
-  - O 065 closed Assistant panel stays over the viewport, view clipped (draft)
-  - O 066 Design Accelerator component dropped by the next generator (draft, unconfirmed vs Windows)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
     crash-capture .reg applied to inv (inv2 when its Inventor stops).
@@ -231,8 +232,9 @@ commits or screenshots). Read-only mode may remain after expiry.
 ## Now (2026-09-29)
 - Running: soak #2 on :98/prefixes/inv, build/ = integ bbc7f82accb. build/ FROZEN
   until it reports. Interim iter 7: keys/mutants fixed; events still growing → next leak.
-- Workers: 057 (assembly-open perf) on inv3/:100; 061+062 (drag black trail,
-  layered splitter) on inv4/:101 (GPU AC, VNC 5905; inv4 = rsync -aX copy of inv3).
+- Worker: 057 (assembly-open perf) on inv3/:100. inv4/:101 free (GPU AC, VNC 5905).
+- integ 5987b23065c (+061, 076) pushed, not built yet: rebuild build/ + regress after soak.
+- User WM reference: x/awesome-rc.lua (awesome has no _NET_WM_MOVERESIZE → Wine's own move loop).
 - After soak #2: compare with soak #1, file new issues, rebuild build/ only if
   integ moved, regress run.
 - Later: 066/069 need Windows UI checks (VM clicks); 072 ping-based rundown deferred;
