@@ -1,5 +1,5 @@
 # 084 Content Center Files path retains the My Documents shell identifier
-Status: open (not reproducible on the server; needs local prefix data) · Owner: worker 084 · Branch: fix/084 (no commits) · Found in: local Inventor 2027.1 file open
+Status: open (confirmed locally: missing ShellFolder registration) · Owner: worker 084 · Branch: fix/084 (no commits) · Found in: local Inventor 2027.1 file open
 
 ## Symptom
 Inventor warns when opening a document:
@@ -160,3 +160,59 @@ process-specific: trace a launch with `WINEDEBUG=+shell,+reg` around
 
 Side note (not fixed): with the Documents dir missing, Wine's
 `SHGetPathFromIDListW` returns TRUE with an empty string.
+
+## Laptop confirmation (2026-09-29, local build 3951ce31e3)
+Pulled the probes at project commit `da26843` and ran both against the unchanged
+`prefixes/inv`, using `build/wine` (`wine-11.18-397-g3951ce31e3`).
+**Inventor.exe was not launched**: the license server is at its device limit.
+The second probe only loads WinSupport.dll and calls its folder-path export.
+An environment-only `WINEDLLOVERRIDES=Inventor.exe=d` guarded against accidental
+application launch.
+
+### Registry
+The 64-bit HKLM class exists, with these values:
+
+```text
+HKLM\Software\Classes\CLSID\{450D8FBA-AD25-11D0-98A8-0800361B1103}
+    (Default)       REG_SZ My Documents
+    LocalizedString REG_SZ @C:\windows\system32\shell32.dll,-46
+    InprocServer32
+        (Default)    REG_SZ C:\windows\system32\shell32.dll
+        ThreadingModel REG_SZ Apartment
+```
+
+The **entire `ShellFolder` subkey is missing**, hence no `WantsFORPARSING`
+or `Attributes` there. HKCU's corresponding CLSID key does not exist
+(`reg query` exit 1). The on-disk hive was inspected before running any Wine
+command; it already lacked ShellFolder in both the normal and Wow6432Node
+class registrations. Live 64-bit queries agree.
+
+### Probe results
+`tests/mydocs_path.c`, both with and without COM initialization:
+
+```text
+SHGetSpecialFolderLocation(PERSONAL): 1 items, 22 bytes, first cb 20 type 1f
+  SHGetPathFromIDListW 1 ::{450d8fba-ad25-11d0-98a8-0800361b1103}
+  parent GetAttributesOf 0 attrs 0x40400177
+  SHGetNameFromIDList(0x80058000) ::{450d8fba-ad25-11d0-98a8-0800361b1103}
+```
+
+The same GUID result occurs with `SHGetKnownFolderIDList(Documents)` and
+`ParseDisplayName(::{MyDocuments})`. `0x80058000` is `SIGDN_FILESYSPATH`.
+
+`tests/inv_mydocs.c`:
+
+```text
+GetMyDocumentsDir 1 ::{450d8fba-ad25-11d0-98a8-0800361b1103}
+```
+
+Thus this is reproducible outside the Inventor process and matches the
+worker's missing-registration reproduction. The cause of the lost registry
+subkey is still unknown.
+
+Local evidence is retained under `inst/local/084/`:
+`registry-before.txt`, `registry-live.log`, `mydocs_path.log`, `inv_mydocs.log`,
+and the two compiled probes. No registry repair, directory workaround or
+`wineboot -u` was applied; the broken state remains available for patch testing.
+Proceed with the shell32 fix and conformance test proposed above. Validate
+with these probes first; do not launch Inventor until licensing is cleared.

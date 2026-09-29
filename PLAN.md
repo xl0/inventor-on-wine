@@ -4,6 +4,9 @@ Reproduce the patched Wine + native Autodesk installer setup on this workstation
 Keep system Wine untouched; run from `build/` with a separate prefix.
 The server results below are reference material, not local completion status.
 
+**Licensing hold:** do not launch Inventor on this laptop until the Autodesk
+device limit is cleared. Use standalone probes for verification.
+
 - [x] Clone `xl0/wine` into `wine-src/`, tracking `gh/integ` (`47e296ffde4d`).
 - [x] Build dependencies installed; new-WoW64 configure passes (only legacy OSS
   audio unavailable).
@@ -17,8 +20,10 @@ The server results below are reference material, not local completion status.
   failed in `AceUnzipZipFiles` (MSI 1603);
   [issue 050](issues/050-electrical-catalog-unzip-msi.md), low priority.
 - [ ] Verify local Inventor launch/sign-in.
-- [ ] Investigate Content Center Files' Documents shell path and missing
-  directory ([084](issues/084-content-center-documents-shell-path.md)).
+- [x] Confirmed 084 locally: missing HKLM My Documents `ShellFolder` key;
+  both shell and WinSupport.dll probes return the GUID. No repair applied.
+- [ ] Verify the worker's 084 fix using the standalone probes, preserving
+  the broken registry state; Inventor launch remains prohibited.
 
 # Server plan: Autodesk Inventor on Wine, agent-driven
 

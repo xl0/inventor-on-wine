@@ -4,6 +4,9 @@ Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
 no reference VM. The server environment and populated prefixes described below
 are not present here.
 
+**Do not launch Inventor:** Autodesk licensing has hit its device limit.
+Standalone diagnostic probes are allowed; keep the live application stopped.
+
 - `wine-src/`: partial clone of `xl0/wine`, `integ` at `47e296ffde4d`.
   Tracks `gh/integ`; `origin` points to WineHQ. No rebase onto newer upstream.
 - `build/`: `../wine-src/configure --enable-archs=i386,x86_64` succeeds with
@@ -35,8 +38,11 @@ are not present here.
   ([050](issues/050-electrical-catalog-unzip-msi.md)).
   Opening documents warns that the Content Center Files path is unavailable:
   `::{CLSID_MyDocuments}\Inventor\Content Center Files\R2027`.
-  [084](issues/084-content-center-documents-shell-path.md) tracks path origin
-  and directory creation; Wine cause and explicit-path workaround unverified.
+  [084](issues/084-content-center-documents-shell-path.md) is confirmed locally:
+  HKLM My Documents CLSID lacks its entire `ShellFolder` key. Both the shell
+  PIDL probe and WinSupport.dll's `GetMyDocumentsDir` return TRUE with the GUID.
+  Evidence: `inst/local/084/`. Registry left unchanged for patch verification;
+  do not run `wineboot -u` before preserving/retesting this reproduction.
   Main Inventor launch/sign-in not yet verified. Installer was launched on `:0`
   with `setsid nohup`, nice 10, idle I/O, 14 GiB cap/no swap in
   `inventor-install.scope`. Uses `WINE_D3D_CONFIG=renderer=vulkan`.
