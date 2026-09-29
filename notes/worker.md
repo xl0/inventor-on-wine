@@ -38,6 +38,12 @@ relevant `notes/wine/*.md` first.
   showing email, license or machine identity.
 - Brief statements are observations or suspicions; verify before building on them.
 
+## Tracing
+perf works for your user (perf_event_paranoid=1) and ptrace is unrestricted
+(ptrace_scope=0; strace -p / gdb -p on running processes). Attach only to
+Wine/Inventor/Xorg processes of this project — never to anything else the user
+runs (ssh-agent, browsers, editors, other agents).
+
 ## Check the harness first
 (Screenshots: use x/shot.sh [display] — never `xwd -root`, which draws Wine
 windows black under openbox with multiple colormaps. Input: prefer xdotool
