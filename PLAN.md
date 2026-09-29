@@ -228,18 +228,17 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Now (2026-09-29, before context compaction)
-- Running: soak #2 on :98/prefixes/inv, build/ = integ bbc7f82accb (067/072
-  partial/073 + harness releases COM refs). build/ FROZEN until it reports.
-  Interim at iter 7: keys 159, mutants 129 (fixed); events still growing
-  (2668 vs 5192) → next leak to chase.
+## Now (2026-09-29)
+- Running: soak #2 on :98/prefixes/inv, build/ = integ bbc7f82accb. build/ FROZEN
+  until it reports. Interim iter 7: keys/mutants fixed; events still growing → next leak.
+- Workers: 057 (assembly-open perf) on inv3/:100; 061+062 (drag black trail,
+  layered splitter) on inv4/:101 (GPU AC, VNC 5905; inv4 = rsync -aX copy of inv3).
 - After soak #2: compare with soak #1, file new issues, rebuild build/ only if
   integ moved, regress run.
-- Proposed next (awaiting user): 057 assembly-open perf worker on inv3/:100;
-  061/062 cosmetic; 066/069 need Windows UI checks (VM clicks); 072 ping-based
-  rundown deferred; low-priority items in the index.
+- Later: 066/069 need Windows UI checks (VM clicks); 072 ping-based rundown deferred;
+  074 only if soak #2 reproduces it; low-priority items in the index.
 - Environments: inv (:98, GPU ca), inv2 (:99, licensing host — never restart),
-  inv3 (:100, GPU 16). VM Inventor signed in, at Home.
+  inv3 (:100, GPU 16), inv4 (:101, GPU ac). VM Inventor signed in, at Home.
 
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue

@@ -157,14 +157,15 @@ are not present here.
   COM calls; `mfc_state.c`: AFX_MANAGE_STATE of Inventor's FEA DLL (070). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
   per SID (064).
 - `x/` — headless display. `x/start.sh` runs Xorg :98 on the NVIDIA GPU at
-  ca:00.0 (card4). ac:00.0 carries the host console / gdm, avoid it.
+  ca:00.0 (card4). ac:00.0 also carries the host console / gdm greeter; a headless
+  Xorg there works (:101) — prefer the other GPUs first.
   `x/start.sh 99 PCI:52:0:0` = second display :99 on 34:00.0 (`DRI_PRIME=pci-0000_34_00_0`),
   `x/vnc.sh 99` → VNC 5903, `x/shot.sh out.png 99`. :99 + `prefixes/inv2` (copy of inv,
   signed in) is a second Inventor setup, independent of :98/inv.
   Third: `x/start.sh 100 PCI:22:0:0` (GPU 16:00.0, `DRI_PRIME=pci-0000_16_00_0`),
   `x/vnc.sh 100` → VNC 5904, `prefixes/inv3` (copy of inv minus the installer Temp cache).
-  inv2/inv3 were copied without xattrs: their 3 Autodesk junctions are plain `X?`
-  dirs until repaired (052, notes/wine/reparse.md). Copy prefixes with `cp -a`.
+  Fourth: `x/start.sh 101 PCI:172:0:0` (GPU ac:00.0, `DRI_PRIME=pci-0000_ac_00_0`),
+  VNC 5905, `prefixes/inv4` (rsync -aX copy of inv3).
   Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
   the Inventors of all prefixes, whichever prefix's service bound it first. Never
   wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
