@@ -205,8 +205,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 068 rpcrt4 NdrStubCall3 → NdrStubCall2 (NDR syntax)
   - M 070 in-process cross-apartment calls run in the caller's actctx (+ MTA calls bypass rpcrt4) — Stress Analysis = VM
   - L 071 cross-process calls into an STA: OLE-window creation context
+  - L 075 GetProcessHandleCount stub returns 0
   - O 069 Frame Generator OK creates no members (Windows unchecked: VM lacks CC libraries)
-  - O 067 SHAddToRecentDocs leaks an Explorer key handle per unsupported-flag call (draft, VM-confirmed)
+  - M 067 SHAddToRecentDocs leaked the Explorer key per call
   - O 072 COM stubs of dead clients never run down; stub list walks slow long sessions (draft)
   - O 073 ntdll heap find_free_block free-list scans after fragmentation (draft, perf)
   - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft)
