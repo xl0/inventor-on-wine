@@ -1,0 +1,3 @@
+LIBRARY sfwd
+EXPORTS
+    fwd = s1.dm_func

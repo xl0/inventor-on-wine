@@ -186,8 +186,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   with 300 extra modules (081).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
-  `loader_dllmain/` (`loader_dllmain.exe MODE [IL_DLL]` + dm_block/dm_plain.dll): which loader calls
-  of thread B wait while thread A sits in a DllMain (048, 092).
+  `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
+  of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
+  and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
   inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`

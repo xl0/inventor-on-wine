@@ -1,0 +1,4 @@
+LIBRARY dm_fwd
+EXPORTS
+    fwd_loaded = dm_plain.dm_func
+    fwd_new = dm_new.dm_func
