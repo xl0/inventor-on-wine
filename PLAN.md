@@ -246,12 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 1a3728c8a6e (wine-11.18-442; 090 AppContainer profile exports in userenv/kernelbase,
-  094 advapi32 LABEL_SECURITY_INFORMATION in SetNamedSecurityInfoW/SetSecurityInfo; no protocol change).
-  inv, inv2, inv4 restarted on it. Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY only known ones
-  (i386 mf, mfplat, user32:input, user32:win; x86_64 mfplat); timeouts unchanged (same 4).
-  inv full invscen suite: all 13 PASS; cold step sum 178.1 s and 187.5 s in two runs (hello 34; asmbig 40,
-  "place 200 occurrences" 29.9 s), slower than 132.3 s at 981cd1037b8 (host load 3-13 from other agents; unverified).
+- build/ = integ 2cfee5f132e (wine-11.18-444; adds 078: win32u waits for the Vulkan queue after presents to
+  offscreen client surfaces, winex11 glFinish after EGL swaps to offscreen surfaces; no protocol change).
+  inv, inv2 restarted on it (inv4 still runs the 1a3728c8a6e build). Full regress vs master 4e819f054dd:
+  no REAL/NEW; FLAKY only user32:win i386 and mfplat x86_64 (known); timeouts unchanged (same 4).
+  inv full invscen suite: all 13 PASS, cold step sum 186.7 s (hello 34, asmbig 40; "place 200 occurrences" 30.2 s).
+  uilat on inv (a different GPU than the 078 numbers on inv3): rubber 119.5 fps, lag p50 3.3 / p95 4.9 ms;
+  orbit 60.1 fps; pan 60.1 fps (no regression vs inv3: ~100 fps, 2.3-2.7 ms; 48.8; 59.6).
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
