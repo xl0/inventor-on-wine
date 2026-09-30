@@ -186,6 +186,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `hook_chain.c [ITERS]`: hooks added/removed while a chain runs (same/other thread) + cost of a
   3-hook CallMsgFilter/PeekMessage (081). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
   with 300 extra modules (081).
+  `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
+  `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
+  `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls

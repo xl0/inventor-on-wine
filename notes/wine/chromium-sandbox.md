@@ -15,3 +15,11 @@
 - Harmless noise: NtFilterToken "restricting sids not yet implemented",
   TokenIntegrityLevel set stub, UpdateProcThreadAttribute attribute 26 unhandled,
   TokenSecurityAttributes query unhandled.
+- AppContainer profiles (Chromium app_container_base.cc CreateProfile; Edge 154's on-device-model
+  service `cr.sb.odm<hash>`, ~3 min after start): userenv DeriveAppContainerSidFromAppContainerName
+  (delay-imported by msedge.exe: missing = 0xc06d007f crash) + kernelbase AppContainerRegisterSid /
+  UnregisterSid / LookupMoniker / FreeMemory (GetProcAddress + CHECK: missing = int3 crash). Mapping in
+  HKCU\Software\Classes\Local Settings\...\AppContainer\Mappings\<SID>. Implemented in fix/090.
+  Then %LOCALAPPDATA%\Packages\<name>\AC gets a low label via SetNamedSecurityInfo (094).
+- Crashpad dumps: the delay-load DelayLoadInfo (exception param 0) lies on the captured stack; the
+  DLL/function name pointers are RVAs into the exe's .rdata (read the strings from the file).
