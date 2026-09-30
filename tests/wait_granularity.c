@@ -36,19 +36,23 @@ static void res(const char *when)
 }
 
 /* one timed wait of ms milliseconds of the given kind; the objects are never signaled */
-static HANDLE ev, ev2;
+static HANDLE ev, ev2, port;
 static CONDITION_VARIABLE cv = CONDITION_VARIABLE_INIT;
 static SRWLOCK lock = SRWLOCK_INIT;
 static LONG addr;
 static const char *kinds[] = { "Sleep", "SleepEx alertable", "WaitForSingleObject", "WaitForMultipleObjects",
     "MsgWaitForMultipleObjects", "SleepConditionVariableSRW", "WaitOnAddress", "NtWaitForSingleObject abs",
-    "NtDelayExecution abs", "waitable timer", "waitable timer abs", "waitable timer HIGH_RES", NULL };
+    "NtDelayExecution abs", "waitable timer", "waitable timer abs", "waitable timer HIGH_RES",
+    "GetQueuedCompletionStatus", NULL };
 
 static void wait_kind(int k, DWORD ms)
 {
     HANDLE h[2] = { ev, ev2 }, t;
     LARGE_INTEGER due;
     LONG cmp = 0;
+    OVERLAPPED *ov;
+    ULONG_PTR key;
+    DWORD size;
 
     switch (k)
     {
@@ -69,6 +73,7 @@ static void wait_kind(int k, DWORD ms)
         WaitForSingleObject(t, INFINITE);
         CloseHandle(t);
         break;
+    case 12: GetQueuedCompletionStatus(port, &size, &key, &ov, ms); break;
     }
 }
 
@@ -384,6 +389,7 @@ int main(int argc, char **argv)
     QueryPerformanceFrequency(&freq);
     ev = CreateEventW(NULL, FALSE, FALSE, NULL);
     ev2 = CreateEventW(NULL, FALSE, FALSE, NULL);
+    port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
     srand(GetTickCount());
     setvbuf(stdout, NULL, _IONBF, 0);
     if (!strcmp(m, "phase")) { phase(argc > 2 ? atoi(argv[2]) : 1); return 0; }

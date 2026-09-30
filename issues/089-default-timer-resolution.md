@@ -28,9 +28,11 @@ CreateWaitableTimer + SetWaitableTimerEx(-1 ms) + WaitForMultipleObjects + Close
   SetWaitableTimer call (`running`).
 - Periodic timers (`periodic`): 1 and 5 ms periods fire once per tick (33/500 ms), 20 ms keeps its
   average (25/500 ms, intervals 15.6/15.6/31.25); HIGH_RES and period 1 exact.
+- GetQueuedCompletionStatus(Ex) 1 ms: 15.6 (rounded like other waits).
 - Not bound to the process resolution (`pool`, `mmtimer`, qclock probe): timeSetEvent callbacks
-  (precise; timeSetEvent also raises the process resolution for (1,1), (5,0), (10,10) but not
-  (1,10) -- not modelled), quartz system clock AdvisePeriodic. Always tick-rounded even with
+  (precise), quartz system clock AdvisePeriodic. A timeSetEvent event raises the process resolution
+  while it exists (until killed, or a one-shot has fired; counted like timeBeginPeriod) iff
+  resolution <= delay (13 combinations; res 0 counts; res >= 16 no effect). Always tick-rounded even with
   timeBeginPeriod(1): threadpool timers, timer queue timers, RegisterWaitForSingleObject timeouts,
   WM_TIMER (10 ms -> 15.6, 20 -> 31.25).
 - NtCreateTimer2(handle, NULL, attr, attributes, access): EX_TIMER_HIGH_RESOLUTION 0x4,
@@ -40,45 +42,55 @@ CreateWaitableTimer + SetWaitableTimerEx(-1 ms) + WaitForMultipleObjects + Close
 
 ## Design (fix/089-timer-resolution)
 - ntdll: `get_timer_resolution()` = 156250 unless the process holds an NtSetTimerResolution
-  request or the thread is exempt; `round_timeout()` turns a timeout into a relative one ending on
-  the next multiple of the tick on the monotonic clock (CLOCK_BOOTTIME, same as the server), 0 if
-  already due. Applied at the Nt entry points only (not idempotent): NtWaitForSingleObject,
+  request or the thread is exempt; `round_timeout()` extends a timeout to the next multiple of the
+  tick on the monotonic clock (CLOCK_BOOTTIME, same as the server); absolute timeouts stay absolute
+  (follow wall-clock steps as before), due-before-last-tick and overflowing ones are left alone. Applied at the Nt entry points only (not idempotent): NtWaitForSingleObject,
   NtWaitForMultipleObjects, NtSignalAndWaitForSingleObject, NtDelayExecution, NtWait/ReleaseKeyedEvent,
   NtWaitForAlertByThreadId (futex/kqueue paths). Covers win32u MsgWait (re-waits round to the same
-  tick), SRW/CS/condvars/WaitOnAddress, IOCP (NtRemoveIoCompletion waits via NtWaitForSingleObject),
-  ntsync and server waits.
+  tick), SRW/CS/condvars/WaitOnAddress, ntsync and server waits; NtRemoveIoCompletion(Ex) round
+  explicitly (they call server_wait_for_object directly).
 - Timers: server rounds each expiration to the tick passed with set_timer (ntdll sends its current
   resolution), unless the timer was created high resolution; periodic timers that fell behind fire
   once per tick, `when` stays unrounded so the average period is kept. NtCreateTimer2 added
   (kernelbase uses it for CREATE_WAITABLE_TIMER_HIGH_RESOLUTION).
 - Protocol change: create_timer.high_res, set_timer.resolution (version 967 -> 968).
 - kernel32 timeBeginPeriod/timeEndPeriod: per-period counts (1..15), NtSetTimerResolution on the
-  first/last request.
+  first/last request. winmm timeSetEvent holds timeBeginPeriod(max(res, 1)) while the event lives if
+  res <= delay.
 - Exempt threads (keep Wine's precise waits): system threads (PsCreateSystemThread: the unix audio
   timer loops of winealsa/winepulse/wineoss/winecoreaudio), and via the Wine-private
   `ThreadWineHighResolutionTimers` class: winmm timer thread, dsound mixer + capture, quartz clock,
   evr presenter, dcomp composition thread, wined3d CS thread, DwmFlush (on the caller's thread,
-  set/cleared around the delay). ntoskrnl (winedevice) holds a process request (kernel timers, e.g.
+  set around the delay, previous value restored; the class is also queryable). ntoskrnl (winedevice) holds a process request (kernel timers, e.g.
   hidclass polling). winex11 selection polling uses usleep (was 500 x NtDelayExecution(1 ms)).
-- Knob: env var `WINE_TIMER_RESOLUTION` = tick in 100 ns units (default 156250); 0 = off (old behaviour).
+- Knob: env var `WINE_TIMER_RESOLUTION` = tick in 100 ns units (default 156250, max 10000000); 0 = off
+  (old behaviour); garbage keeps the default (ERR).
 - Known differences left: threadpool/timer-queue timers and RegisterWait timeouts follow the process
-  resolution (Windows: always tick); WM_TIMER not rounded (Windows: tick); timeSetEvent doesn't raise
-  the process resolution; NtQueryTimerResolution still reports cur 1 ms.
+  resolution (Windows: always tick); WM_TIMER not rounded (Windows: tick); NtQueryTimerResolution
+  still reports cur 1 ms.
 - Pre-existing, not fixed: NtWaitForSingleObject with an absolute timeout 1 ms ahead returns at once
   under period 1 (client computes it from CLOCK_REALTIME_COARSE, server compares with gettimeofday).
 
 ## Tests
 - ntdll:time test_timer_rounding (NtDelayExecution, NtCreateTimer, NtCreateTimer2 attributes /
   high res / manual, NtSetTimerResolution raise); kernel32:sync test_timer_resolution (Sleep,
-  HIGH_RES timer, timeBeginPeriod counting and link to NtSetTimerResolution). Bounds: >= 10 ms mean of
-  8 waits without a request (broken() before Win10 2004), <= 8 ms with one.
-- VM: both pass x86_64 + i386 (ntdll:time lines 304/309/334 fail intermittently on the VM on base too:
-  global resolution state). Wine: both pass.
+  HIGH_RES timer, GetQueuedCompletionStatus, timeBeginPeriod counting and link to NtSetTimerResolution);
+  winmm:timer test_timer_resolution (timeSetEvent raise rule, one-shot release). ntdll also: relative
+  0x8000000000000000/..01 timeouts still wait, NtDelayExecution(absolute past) = 0, NtCreateTimer2(2).
+  Bounds: >= 10 ms mean of 8 waits without a request (broken() before Win10 2004), < 10 ms with one.
+- VM: all three pass x86_64 + i386 (ntdll:time lines 304/309/334 fail intermittently on the VM on base
+  too: global resolution state). Wine: all pass (ntdll:time "USD SystemTime / NtQuerySystemTime are out
+  of order" fails intermittently on base too, 5 of 6 runs).
 
-## Commits (fix/089-timer-resolution, 14 on integ 481a8f5f6ab)
-NtCreateTimer2; kernelbase HIGH_RES via NtCreateTimer2; ThreadWineHighResolutionTimers class (+system
-threads); exemptions winmm, dsound, quartz, evr, dcomp, wined3d, dwmapi, ntoskrnl.exe, winex11.drv;
-kernel32 timeBeginPeriod; ntdll+server rounding (protocol 967 -> 968) with the tests and the man page.
+## Commits (fix/089-timer-resolution, 15 on integ 481a8f5f6ab, tip 1a48445fed0)
+NtCreateTimer2 (+arm64ec); kernelbase HIGH_RES via NtCreateTimer2; ThreadWineHighResolutionTimers class
+(+system threads); exemptions winmm, dsound, quartz, evr, dcomp, wined3d, dwmapi, ntoskrnl.exe,
+winex11.drv; kernel32 timeBeginPeriod; ntdll+server rounding (protocol 967 -> 968) with the tests and the
+man page; winmm timeSetEvent raises the resolution.
+Review round 1 (fixed): overflow of huge relative timeouts, arm64ec syscall, IOCP not rounded, DwmFlush
+clobbering the winmm thread's exemption, NtCreateTimer2(0x2) status, NtDelayExecution(abs past)
+returning NO_YIELD_PERFORMED, absolute deadlines turned monotonic (introduced by the first version),
+absolute timer due "now" firing at once (Windows: next tick), strict env parsing.
 
 ## Results (inv4, Inventor idle at Home, trial popup + Assistant open, % of one core)
 | | integ 481a8f5f6ab (2 samples, quiet host 2nd) | fix/089 (2 samples) | VM |
@@ -95,3 +107,4 @@ Assistant WebView2 GPU+renderer unchanged (~33 %, 091).
 - regress (52 modules, 624 units) vs deps/regress/481a8f5f6ab: 0 REAL, 2 FLAKY (i386 quartz:filtergraph,
   user32:win; same on base re-runs). Slower units: kernel32:sync +16 s (8 -> 24), ws2_32:sock +28 s
   (42 -> 70), user32:win +8, quartz:filtergraph +8 (tests' timed waits now tick-rounded, as on Windows).
+  After review fixes: 0 REAL, 5 FLAKY (shell32:shelldispatch, user32:input x2, user32:win, kernel32:debugger).
