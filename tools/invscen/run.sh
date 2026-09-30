@@ -4,7 +4,7 @@
 #   INV=inv3 run.sh hello); an explicit WINE_BUILD still overrides its build.
 #   Without INV: WINE_BUILD (default build/), INV_PREFIX, DISPLAY, DRI_PRIME pick the
 #   setup (default prefixes/inv, :98, pci-0000_ca_00_0).
-#   Artifacts of another prefix P go to inst/invscen/P/SCENARIO/.
+#   Everything of another prefix P (SCENARIO/, bin/, results/, inventor.log) goes to inst/invscen/P/.
 # Builds tools/invscen/{Harness,SCENARIO}.cs with the prefix's .NET 4.8 csc
 # (Inventor interop types embedded, /link) and runs it against the Inventor
 # running in prefixes/inv on :98 (starts it if needed). Artifacts go to
@@ -12,7 +12,7 @@
 # --vm: run the same exe on the Windows VM instead (vm/winrun.sh, attaches to
 # the Inventor already running there; never starts it), artifacts in
 # C:\t\scen\SCENARIO, copied back to inst/invscen/ref/SCENARIO/ (reference).
-# all: run $SUITE in order, logs in inst/invscen/results/S.txt (--vm:
+# all: run $SUITE in order, logs in $D/results/S.txt (--vm:
 # inst/invscen/ref/S.txt), then print a PASS/FAIL table and steps > 3x slower
 # than the VM reference log (only steps >= 1 s on Wine; connect includes the
 # Inventor start).
@@ -22,11 +22,14 @@ if [ -n "${INV:-}" ]; then B0=${WINE_BUILD:-}; eval "$(tools/prefix.sh env "$INV
 W=${WINE_BUILD:-build}  # Wine build dir to run under
 VM=; [ "$1" = --vm ] && VM=1 && shift
 S=${1:?usage: $0 [--vm] SCENARIO|all}
+# D: per-prefix output root (bin/, results/, inventor.log, SCENARIO/); prefixes/inv keeps inst/invscen itself
+P=${INV_PREFIX:-prefixes/inv}
+D=inst/invscen; [ "$(realpath $P)" = $PWD/prefixes/inv ] || D=inst/invscen/${P##*/}
 # export last: its STEP import makes Wine mshtml ask to install Gecko (prefix has none),
 # a modal prompt that blocks Inventor until dismissed.
 SUITE=${SUITE:-"hello tlb part asm drawing feat params sheetmetal asmcon asmbig drawing2 script export"}
 if [ "$S" = all ]; then
-	L=inst/invscen/results; [ -n "$VM" ] && L=inst/invscen/ref
+	L=$D/results; [ -n "$VM" ] && L=inst/invscen/ref
 	mkdir -p $L
 	WP=$(realpath ${INV_PREFIX:-prefixes/inv})
 	for s in $SUITE; do
@@ -66,24 +69,23 @@ if [ "$S" = all ]; then
 			FNR == NR { ref[key($0)] = sec($0); next }
 			{ k = key($0); w = sec($0) + 0; v = ref[k] + 0
 			  if (k != "connect" && k in ref && w >= 1 && w > 3 * (v < 0.1 ? 0.1 : v)) printf "  %-11s %-34s wine %6.1fs  vm %5.1fs\n", s, k, w, v }' \
-			inst/invscen/ref/$s.txt inst/invscen/results/$s.txt
+			inst/invscen/ref/$s.txt $L/$s.txt
 	done
 	exit 0
 fi
-P=${INV_PREFIX:-prefixes/inv}
 export WINEPREFIX=$(realpath $P) DISPLAY=${DISPLAY:-:98} \
 	DRI_PRIME=${DRI_PRIME:-pci-0000_ca_00_0} WINE_D3D_CONFIG=${WINE_D3D_CONFIG:-renderer=vulkan} WINEDEBUG=${WINEDEBUG:--all}
-B=inst/invscen/bin O=inst/invscen/$S L=inst/invscen/inventor.log
-[ "$WINEPREFIX" = $PWD/prefixes/inv ] || O=inst/invscen/${P##*/}/$S L=inst/invscen/${P##*/}/inventor.log
+# Exe named scen-S.exe: a bare cmd.exe/... next to the harness would shadow system tools (AeDebug runs `cmd /c winedbg`)
+B=$D/bin O=$D/$S L=$D/inventor.log X=$B/scen-$S.exe
 mkdir -p $B $O
-if [ ! -e $B/$S.exe ] || [ tools/invscen/$S.cs -nt $B/$S.exe ] || [ tools/invscen/Harness.cs -nt $B/$S.exe ]; then
+if [ ! -e $X ] || [ tools/invscen/$S.cs -nt $X ] || [ tools/invscen/Harness.cs -nt $X ]; then
 	$W/wine 'C:\windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe' /nologo /debug- \
-		/out:"inst\\invscen\\bin\\$S.exe" /link:'C:\Program Files\Autodesk\Inventor 2027\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll' \
+		/out:"$(echo $X | tr / '\\')" /link:'C:\Program Files\Autodesk\Inventor 2027\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll' \
 		"tools\\invscen\\Harness.cs" "tools\\invscen\\$S.cs" </dev/null
 fi
 if [ -n "$VM" ]; then
 	d='C:\t\scen\'$S
-	rc=0; WINRUN_ID=scen WINRUN_TIMEOUT=${INVSCEN_TIMEOUT:-1800} vm/winrun.sh $B/$S.exe "$d" || rc=$?
+	rc=0; WINRUN_ID=scen WINRUN_TIMEOUT=${INVSCEN_TIMEOUT:-1800} vm/winrun.sh $X "$d" || rc=$?
 	mkdir -p inst/invscen/ref && rm -rf inst/invscen/ref/$S
 	scp -rq -i vm/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes \
 		-o LogLevel=ERROR -P 2222 "dev@127.0.0.1:C:/t/scen/$S" inst/invscen/ref/ || true
@@ -95,4 +97,4 @@ if ! (for p in $(pgrep -x Inventor.exe); do
 	setsid nohup $W/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe' >>$L 2>&1 </dev/null &
 fi
 export INVSCEN_SHOT=$PWD/tools/invscen/dshot.sh  # dialog watcher screenshots (Harness.cs)
-exec timeout ${INVSCEN_TIMEOUT:-1800} $W/wine $B/$S.exe "$($W/wine winepath -w $O)"
+exec timeout ${INVSCEN_TIMEOUT:-1800} $W/wine $X "$($W/wine winepath -w $O)"

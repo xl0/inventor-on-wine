@@ -161,24 +161,36 @@ static class H
     static volatile string curStep = "connect";
 
     [DllImport("ntdll.dll")] static extern int NtQueryInformationProcess(IntPtr h, int cls, IntPtr[] pbi, int len, out int ret);
-    static readonly System.Collections.Generic.Dictionary<int, int> parents = new System.Collections.Generic.Dictionary<int, int>();
-    static int Parent(Process p)
+    // Wine reuses PIDs quickly: cache parents by (pid, start time), and only accept a parent that
+    // started no later than its child (a recycled parent PID would otherwise attribute e.g. explorer's
+    // Shell_TrayWnd to Inventor).
+    static readonly System.Collections.Generic.Dictionary<string, int> parents = new System.Collections.Generic.Dictionary<string, int>();
+    static int Parent(Process p, System.Collections.Generic.Dictionary<int, Process> byId)
     {
-        int pp;
-        if (parents.TryGetValue(p.Id, out pp)) return pp;
-        var pbi = new IntPtr[6]; int n;  // PROCESS_BASIC_INFORMATION: [5] = InheritedFromUniqueProcessId
-        pp = NtQueryInformationProcess(p.Handle, 0, pbi, pbi.Length * IntPtr.Size, out n) == 0 ? (int)pbi[5] : 0;
-        return parents[p.Id] = pp;
+        try
+        {
+            string key = p.Id + "@" + p.StartTime.Ticks;
+            int pp;
+            if (!parents.TryGetValue(key, out pp))
+            {
+                var pbi = new IntPtr[6]; int n;  // PROCESS_BASIC_INFORMATION: [5] = InheritedFromUniqueProcessId
+                pp = NtQueryInformationProcess(p.Handle, 0, pbi, pbi.Length * IntPtr.Size, out n) == 0 ? (int)pbi[5] : 0;
+                parents[key] = pp;
+            }
+            Process par;
+            return byId.TryGetValue(pp, out par) && par.StartTime <= p.StartTime ? pp : 0;
+        }
+        catch (Exception) { return 0; }  // process exited while enumerating
     }
     // pids of Inventor.exe and everything below it
     static System.Collections.Generic.HashSet<uint> InventorPids()
     {
-        var all = Process.GetProcesses().ToDictionary(p => p.Id);
+        var byId = Process.GetProcesses().ToDictionary(p => p.Id);
         var r = new System.Collections.Generic.HashSet<uint>();
-        foreach (var p in all.Values)
+        foreach (var p in byId.Values)
         {
             int id = p.Id, depth = 0;
-            for (Process q = p; q != null && depth++ < 8; all.TryGetValue(Parent(q), out q))
+            for (Process q = p; q != null && depth++ < 8; byId.TryGetValue(Parent(q, byId), out q))
                 if (q.ProcessName == "Inventor") { r.Add((uint)id); break; }
         }
         return r;

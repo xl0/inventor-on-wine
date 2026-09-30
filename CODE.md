@@ -304,10 +304,11 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   translator add-in).
   At exit (also on timeout/abort) it drops App + scenario statics and GCs so the RCWs release
   Inventor's objects: Wine has no DCOM rundown for dead clients (072; was ~1350 stubs/suite).
-  Artifacts: inst/invscen/SCENARIO/; `--vm`: C:\t\scen\SCENARIO copied to
+  Artifacts: inst/invscen/SCENARIO/ (prefix P other than prefixes/inv: everything under inst/invscen/P/:
+  SCENARIO/, bin/scen-SCENARIO.exe (prefixed so `cmd` can't shadow system cmd.exe), results/, inventor.log); `--vm`: C:\t\scen\SCENARIO copied to
   inst/invscen/ref/ (the VM reference). `all` runs the suite (hello tlb part asm
   drawing feat params sheetmetal asmcon asmbig drawing2 script export; asm/drawing
-  use part/box.ipt, the rest are self-contained), logs to inst/invscen/results/S.txt
+  use part/box.ipt, the rest are self-contained), logs to results/S.txt of that root
   (`--vm all`: ref/S.txt), prints a PASS/FAIL table and steps >3x slower than
   ref/S.txt; when a crashed Inventor sits in winedbg (034) it kills that prefix's
   Inventor/winedbg/CER dialog by PID (never wineserver -k, see licensing below).
