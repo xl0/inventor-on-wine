@@ -257,11 +257,14 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
   134.0 vs 132.7 s — no slowdown; the inv-vs-inv4 gap is prefix/GPU/host load.
+- 048 closed as an Inventor lock-order race (DllMain → .NET, same on Windows with same timing);
+  harness now waits out the trial popup before the first document (0/40 hangs). Follow-up 092
+  (Wine loader lookups wait for other threads' DllMain; Windows doesn't) — worker on inv3.
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
-- Decisions (user delegated 2026-09-30): 089 implement Windows per-process timer resolution
-  (default on, one override knob) — worker on inv4; 048 first-view hang fixed in Wine rather than
-  harness workaround — worker on inv3; prefix.sh kill-inventor helper — Sonnet chore on inv.
+- Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
+  WINE_TIMER_RESOLUTION override (merged, f720de9f520); 048 investigated in Wine first (turned out
+  app-side); every fix gets an adversarial review before merge.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
   laptop recheck of 084/085 + "having trouble" popup (seat contention?);
   081 (COM call round trips; biggest remaining perf gap), 078, 077;
