@@ -12,6 +12,8 @@
   LdrGetProcedureAddress on "ready" modules (LDR_PROCESS_ATTACHED set, LoadCount != 0).
   Pre-092 Wine took the loader lock for all of these (GetProcAddress, GetModuleHandle,
   every C++ throw via RtlPcToFileHeader waited behind any DllMain).
+- On process exit (process_detaching) ldr_data_lock is skipped (lock_ldr_data): the killed threads
+  may have held it, or the futex bucket spinlock its wakeups take.
 - LoadCount is a SHORT changed from both sides: `update_load_count()` (CAS). Lock-free callers
   never revive a count-0 module nor drop the last reference. `build_module` resets LoadCount
   to 1 after snapping imports (drops cyclic-import refs), so lock-free addrefs are only done on
@@ -26,4 +28,5 @@
 - Test DLLs whose DllMain runs test code: kernel32/tests/loader.c `create_entry_point_dll`
   (entry point = jump thunk into the test exe).
 - After rebuilding ntdll, kernel32:loader's `test_dll_file("ntdll.dll")` compares the loaded
-  ntdll with the prefix's system32 copy: `echo 0 > $WINEPREFIX/.update-timestamp; wine wineboot -u`.
+  ntdll with the prefix's system32 copy: `wineserver -k; echo 0 > $WINEPREFIX/.update-timestamp; wine wineboot -u` (without the -k it
+  sometimes doesn't copy).

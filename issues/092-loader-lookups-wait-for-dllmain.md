@@ -74,12 +74,23 @@ Wine (integ f720de9f520): every row blocks, including GetModuleHandle of the run
 - Stress: tests/loader_dllmain/stress.c (threads load/free/lookup/call; refcount bugs = crashes or
   modules left loaded).
 
-## Commits (wt/092, fix/092-loader-lookup-lock on integ f720de9f520)
+## Commits (wt/092, fix/092-loader-lookup-lock on integ f720de9f520; after review)
 73d9c7b63fb ntdll: Update module load counts atomically.
 83d0ff015c2 kernel32/tests: Test which loader calls wait for another thread's DllMain.
-96c3dcb9395 ntdll: Protect the module lists with an SRW lock.
-94cc2078a1d ntdll: Look up and reference initialized modules without the loader lock.
-f04fdb83126 ntdll: Look up exports of initialized modules without the loader lock.
+0297f605ef0 ntdll: Protect the module lists with an SRW lock.
+6af1656cc0f ntdll: Look up and reference initialized modules without the loader lock.
+9027d7d86ce ntdll: Look up exports of initialized modules without the loader lock. (held: 048)
+Review fixes folded in: ldr_data_lock goes through lock_ldr_data()/unlock_ldr_data(), no-ops once
+process_detaching is set (RtlExitUserProcess kills the other threads, which may die holding the
+SRW or the futex bucket spinlock of its wakeups: ExitProcess with detach handlers doing lookups/loads
+hung 30/30; child-process test "lookups_exit" in the loader test, 2/2 hang before, 0 after);
+LdrGetDllFullName copies to the caller's buffer after releasing the lock; lookups return the local
+instead of re-reading cached_modref. Not done: LdrGetDllHandleEx name-only fast path with file I/O
+under the loader lock: a full-path LoadLibraryEx(AS_DATAFILE) of an unloaded DLL then waits for
+DllMain (test row fails; Windows returns), and hits already skip I/O (open_dll_file checks the full
+name first), so only misses do I/O under the shared lock, as before.
+Reviewer repro (scratchpad ex/): 0/15 hangs each (8 threads, detach doing a new load / lookups),
+0/10 with 1 thread; same at 6af1656cc0f.
 Test `test_lookups_during_dllmain` (kernel32/tests/loader.c): 18 rows, DLLs generated with an
 entry thunk into the test; todo_wine rows flip in the commit that fixes them.
 
