@@ -181,6 +181,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057, 081).
   `wait_granularity.c [phase|loops|periods|nt|running|periodic|pool|mmtimer]`: timer resolution semantics of
   timed waits/timers, timeBeginPeriod/NtSetTimerResolution (089; Win11 ground truth in the issue).
+  `abs_timeout.c [rel|bench|clock]`: absolute wait/timer deadlines (system vs precise base, past,
+  early-return counts), relative condvar waits, GetSystemTime(Precise)AsFileTime cost, wall-clock steps (093).
   `hook_chain.c [ITERS]`: hooks added/removed while a chain runs (same/other thread) + cost of a
   3-hook CallMsgFilter/PeekMessage (081). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
   with 300 extra modules (081).
