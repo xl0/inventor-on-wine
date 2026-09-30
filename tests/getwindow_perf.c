@@ -2,7 +2,7 @@
  * window tree with GetWindow(GW_CHILD / GW_HWNDNEXT) after every message, and
  * Inventor has thousands of windows. Creates a hidden parent with N children
  * (each with a few grandchildren), walks the tree ITERS times and prints the
- * cost per call of GetWindow and a few other per-window calls MFC makes.
+ * cost per call of GetWindow and a few other per-window calls MFC makes (GetProp: 081).
  * Usage: getwindow_perf.exe [N] [ITERS]
  * Build: x86_64-w64-mingw32-gcc -O2 -o getwindow_perf.exe getwindow_perf.c -luser32 */
 #include <windows.h>
@@ -51,6 +51,13 @@ int main(int argc, char **argv)
     t = now();
     for (i = 0; i < iters; i++) for (j = 0; j < n; j++) count += !!GetPropA(all[j], "x");
     printf("GetProp: %.0f ns/call\n", (now() - t) * 1e9 / (iters * n));
+    for (j = 0; j < n; j++) SetPropA(all[j], "AfxOldWndProc423", all[j]);
+    t = now();
+    for (i = 0; i < iters; i++) for (j = 0; j < n; j++) count += GetPropA(all[j], "AfxOldWndProc423") == all[j];
+    printf("GetProp (set, by name): %.0f ns/call\n", (now() - t) * 1e9 / (iters * n));
+    t = now();
+    for (i = 0; i < iters; i++) for (j = 0; j < n; j++) count += !!GetPropA(all[j], (const char *)(ULONG_PTR)0xc02c);
+    printf("GetProp (unset, by atom): %.0f ns/call\n", (now() - t) * 1e9 / (iters * n));
     t = now();
     for (i = 0; i < iters; i++) for (j = 0; j < n; j++) count += IsWindowVisible(all[j]);
     printf("IsWindowVisible: %.0f ns/call\n", (now() - t) * 1e9 / (iters * n));

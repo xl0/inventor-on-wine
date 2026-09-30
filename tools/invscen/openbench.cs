@@ -2,6 +2,8 @@
 // does; run samples once first so the tree exists), then opens and closes each
 // document of INVSCEN_OPEN (';'-separated, relative to ...\Models or absolute)
 // INVSCEN_N times (default 3). Leaves samples.ipj active.
+// INVSCEN_SYNC=DIR (Windows path): around each walk, create DIR\walk.start and wait for
+// DIR\walk.go, then create DIR\walk.end and wait for DIR\walk.done (attach a tracer, 081).
 using System;
 using Inventor;
 
@@ -21,6 +23,16 @@ static class Scenario
             else if (fd.ReferencedFile != null) n += Walk(fd.ReferencedFile, seen);
         }
         return n;
+    }
+
+    static void Sync(string mark, string wait)
+    {
+        string d = System.Environment.GetEnvironmentVariable("INVSCEN_SYNC");
+        if (d == null) return;
+        System.IO.File.Delete(d + "\\walk." + wait);
+        System.IO.File.WriteAllText(d + "\\walk." + mark, "");
+        for (int i = 0; i < 600 && !System.IO.File.Exists(d + "\\walk." + wait); i++) System.Threading.Thread.Sleep(100);
+        System.IO.File.Delete(d + "\\walk." + mark);
     }
 
     public static void Run()
@@ -51,10 +63,13 @@ static class Scenario
                 }, 900);
                 H.Step("walk refs " + i, () =>
                 {
+                    Sync("start", "go");
                     calls = 0;
                     var sw = System.Diagnostics.Stopwatch.StartNew();
                     int m = Walk(H.App.ActiveDocument.File, new System.Collections.Generic.HashSet<string>());
-                    return "missing " + m + ", ~" + calls + " calls, " + (sw.Elapsed.TotalMilliseconds * 1000 / calls).ToString("F0") + " us/call";
+                    var t = sw.Elapsed;
+                    Sync("end", "done");
+                    return "missing " + m + ", ~" + calls + " calls, " + (t.TotalMilliseconds * 1000 / calls).ToString("F0") + " us/call";
                 }, 900);
                 H.Step("close " + i, () => { H.App.Documents.CloseAll(false); return "docs open " + H.App.Documents.Count; }, 600);
             }

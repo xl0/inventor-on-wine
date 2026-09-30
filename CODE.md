@@ -178,7 +178,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   actctx_comcall.c): active context / manifest CLSID lookup in direct and cross-apartment/-process
   COM calls; `mfc_state.c`: AFX_MANAGE_STATE of Inventor's FEA DLL (070). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
   per SID (064).
-  `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057).
+  `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057, 081).
+  `hook_chain.c [ITERS]`: hooks added/removed while a chain runs (same/other thread) + cost of a
+  3-hook CallMsgFilter/PeekMessage (081). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
+  with 300 extra modules (081).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
@@ -347,7 +350,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
   `openbench`: activates samples.ipj, opens/closes `INVSCEN_OPEN` (;-list) `INVSCEN_N` times and times
-  a file-reference walk (per-COM-call cost, 057).
+  a file-reference walk (per-COM-call cost, 057). `INVSCEN_SYNC=C:\dir`: handshake files around each
+  walk (walk.start -> wait walk.go, walk.end -> wait walk.done) to attach strace to one walk (081).
   UI helpers: `INVSCEN_KEEP=1` keeps open docs at connect; `cmd` runs a command by internal
   name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
   transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
