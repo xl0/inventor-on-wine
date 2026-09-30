@@ -246,11 +246,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 981cd1037b8 (wine-11.18-438; 093: NtQuerySystemTime uses the precise realtime clock,
-  already-due absolute timeouts not rounded to the next tick; no protocol change). inv and inv2 restarted
-  on it (system32/syswow64 ntdll match build/). Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY only
-  known ones (i386 mfplat, user32:input, user32:win, x86_64 mfplat); timeouts unchanged (4).
-  inv full invscen suite: all 13 PASS; cold (fresh Inventor) step sum 132.3 s (hello 31.0), warm 125.9 s.
+- build/ = integ 1a3728c8a6e (wine-11.18-442; 090 AppContainer profile exports in userenv/kernelbase,
+  094 advapi32 LABEL_SECURITY_INFORMATION in SetNamedSecurityInfoW/SetSecurityInfo; no protocol change).
+  inv, inv2, inv4 restarted on it. Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY only known ones
+  (i386 mf, mfplat, user32:input, user32:win; x86_64 mfplat); timeouts unchanged (same 4).
+  inv full invscen suite: all 13 PASS; cold step sum 178.1 s and 187.5 s in two runs (hello 34; asmbig 40,
+  "place 200 occurrences" 29.9 s), slower than 132.3 s at 981cd1037b8 (host load 3-13 from other agents; unverified).
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
