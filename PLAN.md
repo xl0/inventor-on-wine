@@ -259,6 +259,9 @@ commits or screenshots). Read-only mode may remain after expiry.
 - 048 closed as an Inventor lock-order race (DllMain → .NET, same on Windows with same timing);
   harness now waits out the trial popup before the first document (0/40 hangs). Follow-up 092
   (Wine loader lookups wait for other threads' DllMain; Windows doesn't) — worker on inv3.
+- Perf method: single suite sums are noise (126–188 s on builds with no hot-path change, host
+  load 3–13). Perf claims need interleaved A/B on one prefix (as for 089); for stable numbers pin
+  cores and keep sibling hyperthreads busy (088: C6 exit latency).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
