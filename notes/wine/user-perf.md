@@ -36,6 +36,7 @@
   processes (taskset) and keep the siblings busy (nice-19 spinners) for stable numbers.
 - Windows 11 wait granularity (tests/wait_granularity.c): a process without timeBeginPeriod gets
   ~15.6 ms for 1 ms Sleep/waits/waitable timers (HIGH_RESOLUTION timers 1.6 ms), even if
-  NtQueryTimerResolution says 1 ms. Wine: ~1 ms always (draft 089).
+  NtQueryTimerResolution says 1 ms. Wine with 089: same (ntdll round_timeout, server timer rounding;
+  WINE_TIMER_RESOLUTION=0 turns it off; Wine timing threads exempt via ThreadWineHighResolutionTimers).
 - Idle CPU per process of a prefix: tools/idlecpu.sh; server request mix per client: strace the
   wineserver's reads and map pipe inodes (/proc/PID/fd) to clients.
