@@ -70,13 +70,19 @@ causes. Check whether the openbench bimodality follows the idle load.
   composition thread (wined3d_cs: get_window_parents/rectangles/offset + get_visible_region per
   present; Xlib re-reads ~/.Xdefaults on each new DC, see 091).
 - Edge, static page, idle: Wine GPU 4.7 % + browser 1.2 %; VM 0.00 % everywhere.
-- Fix: compose only after Commit() (global serial, shared visuals cross devices) or when a content
-  swapchain's GetLastPresentCount() changed; idle with MsgWaitForMultipleObjects instead of Sleep so
-  the GDI-path composition gets flushed (window surfaces flush when a thread idles in a message
-  wait; the old constant redraw hid that: dcomp tests 816/853/869/874/898 failed without it).
-- After: Edge static page GPU ~0.2-1.3 %, browser 0.2-0.6 %; updates (2 Hz counter) shown;
-  covering/uncovering keeps the content (061 offscreen re-present). Inventor, same state, 60 s:
-  the two non-animating WebView2 GPU processes 4.3 + 4.7 % -> 1.2 + 1.1 %.
+- Fix: compose only after Commit() (global serial, shared visuals cross devices), when a content
+  swapchain's GetLastPresentCount() changed, or when the target window was damaged (thread hooks:
+  WM_PAINT, WM_ERASEBKGND, WM_NCPAINT, WM_WINDOWPOSCHANGED, WM_SHOWWINDOW for a target hwnd; two
+  passes), plus a full recompose every 1 s for losses nobody reports (X exposes of offscreen client
+  surfaces). GDI-path output is flushed with GetQueueStatus(0) (a message wait would flush too but
+  sets the process idle event). Shared-visual roots are looked up again only after a commit.
+- Review (coordinator's dlost.exe: one red frame + commit, then damage): the first version (no damage
+  handling) lost the image on erase and hide/show (same process) and on Wine-popup/X covers (foreign
+  child, 000000); now all pass even when checked 150 ms after the damage (X cover via the 1 s net).
+- After: Edge static page GPU ~0.2-1.3 %, browser 0.2-0.6 %; updates shown; covered/uncovered OK.
+  Inventor, same state, 60 s: the two non-animating WebView2 GPU processes 4.3 + 4.7 % -> 1.0 + 0.9 %.
+  Closing the trial popup, an in-page context menu/dropdown and the Application Options dialog over
+  the static Home: Home pixel-identical 0.3-0.5 s after closing; tooltip over the Assistant OK.
 
 ### 5. Assistant pane: page animates, Wine pays more per frame (draft 091)
 - Assistant URL in its WebView2 History: ase-cdn.autodesk.com/adp/ad-csi-panel-web/r1/index.html;
@@ -89,11 +95,13 @@ causes. Check whether the openbench bimodality follows the idle load.
   Edge (tools/edge.sh install) + `--remote-debugging-port` + node 22 WebSocket works.
 
 ## Fix (fix/088-idle-cpu)
-- dcomp: Compose only after a commit or a new swapchain frame.
-- win32u: Don't let MsgWaitForMultipleObjects() time out early. (test in user32:msg)
+- dcomp: Compose only after a commit, a new swapchain frame or damage to the target.
+- win32u: Don't let MsgWaitForMultipleObjects() time out early. (test in user32:msg; waits are
+  relative, remaining time from the performance counter, also on re-waits after driver events:
+  reviewer's mwait.exe with xdotool mouse moves and QS_KEY mask: 0 early of 1170 waits vs 789 on base)
 No protocol change. Tests: user32:msg new check passes on Wine (fails on unfixed win32u: 10 x 1 ms
 waits in 997 us) and VM (VM's 5 other msg failures pre-existing, unrelated lines); dcomp 753/0 both
-arches. regress dcomp user32 win32u d3d11 dxgi vs build/ (same integ): 0 worse of 58.
+arches, VM 1099/0. regress dcomp user32 win32u d3d11 dxgi vs build/ (same integ): 0 worse of 58.
 
 ## Before / after (inv3, Inventor launched directly, popup and Assistant open, 60 s, % of one core)
 | process | integ | fix/088 | VM |
