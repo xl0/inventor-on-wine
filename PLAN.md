@@ -254,6 +254,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   1 s after closing the File menu and Application Options.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
+- Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
+  spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
+- Awaiting user: 089 (Windows 15.6 ms default wait granularity), 048 next (1-in-10 first view hang).
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
   laptop recheck of 084/085 + "having trouble" popup (seat contention?);
   081 (COM call round trips; biggest remaining perf gap), 078, 077;
