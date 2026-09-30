@@ -246,11 +246,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ af3c6679391 (+086: combase per-thread call-completion event cache; win32u
-  NtUserWaitForInputIdle closes its idle event; protocol unchanged). Full regress vs master 4e819f054dd:
-  no REAL/NEW, 2 FLAKY (x86_64 dxgi, mfplat; same on baseline). inv restarted on it: hello, asm,
-  drawing2 PASS (dialog watcher on). 085 smoke (older build): trial popup white ~7 s, content ~9 s after
-  the first frame, stays; pointer visible over it; popup X closes it.
+- build/ = integ 9c1eea5beac (+081: combase QI-first stub path, proxy/stub registration caches; ntdll
+  LdrUnloadDll fast path; server+win32u hook-chain snapshot + GetProp caches). Protocol 967 (was 965);
+  inv and inv2 restarted on it (inv3/inv4 down, update on next start). Full regress vs master 4e819f054dd:
+  no REAL/NEW; FLAKY: mfplat (both), i386 user32:win, x86_64 ntdll:exception (same on baseline).
+  inv: hello, asm, drawing2, openbench PASS (dialog watcher on). openbench Test Station walk 3.6-3.7 s
+  (~5.2 ms/call; open 4.3-6.4 s).
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
