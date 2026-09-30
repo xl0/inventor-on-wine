@@ -186,6 +186,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   with 300 extra modules (081).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
+  `loader_dllmain/` (`loader_dllmain.exe MODE [IL_DLL]` + dm_block/dm_plain.dll): which loader calls
+  of thread B wait while thread A sits in a DllMain (048, 092).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
   inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
@@ -271,6 +273,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
 - Ghidra 12.1.4 (`deps/ghidra_12.1.4_PUBLIC`, zip sha256 ddac49f9…d2d4db, from
   release notes) + Temurin JDK 21.0.12.1+1 (`deps/jdk-21.0.12.1+1`, tarball
   sha256 ce79869e…aee94, Adoptium). Only used by `tools/decomp.sh`.
+- `tools/gdb/winesyms.py`, `tools/gdb/sehbt.py`: gdb on a hung Wine process (winedbg can't attach
+  under the loader lock): symbols despite the preloader, .pdata backtraces per syscall frame (048).
 - `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports [ARG]` — headless
   Ghidra queries via `tools/Decomp.java`. Project cached per binary sha256 in
   `deps/ghidra-cache/` (+ Ghidra's XDG config/cache), flock per binary; first
@@ -317,8 +321,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   Inventor/winedbg/CER dialog by PID (never wineserver -k, see licensing below).
   The harness aborts a step at once on Inventor's "Licensing error" dialog or when
   Inventor is gone (RPC unavailable); timeouts list Inventor's visible dialogs.
-  It WM_CLOSEs the licensing agent's trial welcome popup (connect + step polls;
-  logs "dismissed trial welcome"; clicking its X broke the next ActiveView).
+  It WM_CLOSEs the licensing agent's trial welcome popup once visible 15 s (connect + step polls;
+  logs "dismissed trial welcome"; clicking its X broke the next ActiveView; closing during WebView2
+  init spins the agent, 088), and connect waits until it is gone: a first document during Inventor's
+  startup can deadlock it (048, app race). The watcher ignores FwUI's 2x2 hidden modal dialog.
   Expectations are analytic (volumes, centroids, flat-pattern lengths, view extents)
   or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another

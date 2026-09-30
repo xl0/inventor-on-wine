@@ -99,13 +99,16 @@ static class H
 
     // AdskLicensingAgent's "Welcome to your trial" popup at Inventor start (WebView2 in an
     // untitled 'webview' WS_POPUP, 860x500 or blank 640x480 (085); not shown while a killed Inventor's agent lingers):
-    // WM_CLOSE it. Clicking its X (cursor + mouse_event) instead made the next
+    // WM_CLOSE it once it has been visible 15 s (page loaded; closing it during WebView2 init leaves the
+    // agent spinning, 088). Clicking its X (cursor + mouse_event) instead made the next
     // Documents.Add's ActiveView null on Wine; WM_CLOSE doesn't, and Inventor keeps running.
-    static bool welcomed;
+    static bool welcomed, popup;  // popup: a trial popup was visible at the last Welcome()
+    static System.Collections.Generic.Dictionary<IntPtr, DateTime> shown = new System.Collections.Generic.Dictionary<IntPtr, DateTime>();
     public static void Welcome()
     {
         lock (typeof(H))
         {
+            popup = false;
             if (welcomed) return;
             var pids = new System.Collections.Generic.HashSet<uint>();
             foreach (var n in new[] { "AdskLicensingAgent", "AdskAccessUIHost" })
@@ -114,6 +117,9 @@ static class H
             {
                 uint pid; GetWindowThreadProcessId(w, out pid);
                 if (!pids.Contains(pid) || !IsWindowVisible(w) || Text(w, true) != "webview") return true;
+                popup = true;
+                if (!shown.ContainsKey(w)) shown[w] = DateTime.Now;
+                if ((DateTime.Now - shown[w]).TotalSeconds < 15) return true;
                 PostMessage(w, 0x10, IntPtr.Zero, IntPtr.Zero);  // WM_CLOSE
                 for (int i = 0; i < 50 && IsWindowVisible(w); i++) Thread.Sleep(100);
                 if (IsWindowVisible(w)) return true;  // retried on the next poll
@@ -212,6 +218,8 @@ static class H
                 RECT rc; GetWindowRect(w, out rc);
                 int ww = rc.R - rc.L, hh = rc.B - rc.T;
                 if ((cls == "#32770" && ww == 860 && hh == 525) || cls == "webview") return true;
+                // FwUI's untitled 2x2 "hidden modal dlg" while the popup is up (closing it ends Inventor's modal state)
+                if (cls == "#32770" && ww <= 2 && hh <= 2 && Text(w) == "") return true;
                 if (!Benign.Any(b => cls.Contains(b)) && !(cls.StartsWith("HwndWrapper[") && Text(w) == "")) now.Add(w);
                 return true;
             }, IntPtr.Zero);
@@ -389,6 +397,10 @@ static class H
                 catch (InvalidCastException) { Thread.Sleep(2000); }
             App.SilentOperation = System.Environment.GetEnvironmentVariable("INVSCEN_UI") == null;
             Welcome();
+            // A first document requested while Inventor still starts up (popup up, Home page being
+            // built) can deadlock Inventor: Uc.dll's DllMain runs managed code while Home's first
+            // HttpClient loads an assembly (048, app lock-order race). Wait until the popup is gone.
+            while (popup) { Thread.Sleep(1000); Welcome(); }
             // Deterministic start: discard whatever is open (dedicated test Inventor),
             // unless INVSCEN_KEEP is set (helpers for UI work on open documents).
             int n = App.Documents.Count;

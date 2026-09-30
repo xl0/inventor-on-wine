@@ -1,6 +1,11 @@
 # Debugging running apps — checked at wine-11.18-218-g4e819f054dd
 
-- ptrace is blocked (yama scope 1), so no strace/gdb attach. `winedbg` works:
+- Hung process where winedbg can't attach (it needs the loader lock for its break-in thread):
+  `gdb -p PID -ex 'source tools/gdb/winesyms.py' -ex 'source tools/gdb/sehbt.py' -ex sehbt`
+  (ELF + Wine PE symbols despite the preloader; .pdata unwinder for native PE code from each
+  syscall frame; `p loader_section` = OwningThread (Wine tid = TEB+0x48 per thread); in gdb use
+  `unsigned long long`, PE DWARF makes `long` 32-bit). Crit owners: `*(crit+0x10)`. 048.
+- (Old host, yama scope 1: no strace/gdb attach; now ptrace_scope=0.) `winedbg` works:
   `wine winedbg --command "info process"`, then a `--file` script with
   `attach 0xPID` / `bt all` / `bt 0xTID` / `detach`. `bt all` walks every
   process in the prefix — filter by "in process 0PID".

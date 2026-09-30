@@ -38,7 +38,7 @@ causes. Check whether the openbench bimodality follows the idle load.
   the page has loaded: still idle. Harness fresh starts: 1 of 4 spun.
 - Harness fix tried and reverted: closing only after 15 s visible (page loaded) avoids the spin but
   reproduces 048 (first part view hangs, main thread in a futex, winedbg can't attach): base build
-  1 of 10, fix build 3 of 11 such starts. Harness left as is (early WM_CLOSE); the spin, when it
+  1 of 10, fix build 3 of 11 such starts. Harness then left as is (early WM_CLOSE; since 048: late close + connect waits); the spin, when it
   happens, adds ~50 % agent + ~40 % wineserver to that session. Coordinator's call.
 - Not verified on Windows (VM Inventor not usable; would need a WebView2 test closing the controller
   while AddScriptToExecuteOnDocumentCreated is pending).
