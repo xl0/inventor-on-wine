@@ -255,6 +255,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   1 s after closing the File menu and Application Options.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
+- 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
+  134.0 vs 132.7 s — no slowdown; the inv-vs-inv4 gap is prefix/GPU/host load.
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 implement Windows per-process timer resolution
