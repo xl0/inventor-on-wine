@@ -246,13 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ f720de9f520 (wine-11.18-432; 089 per-process timer resolution; server protocol 968).
-  inv and inv2 restarted on it. Full regress vs master 4e819f054dd: no REAL/NEW, no new timeouts;
-  FLAKY: i386 mf, mfplat, user32:win. kernel32:sync 8 -> 24 s (tick-rounded waits, expected).
-  inv full invscen suite x2 (dialog watcher on): all 13 PASS both runs.
-  Idle CPU (inv, popup closed, Home): AdskIdentityManager ~7.3 %, wineserver ~11 %, Inventor.exe ~1.5 %.
-  Visual check (Inventor direct, popup closed, Assistant open): Home and Assistant content intact
-  1 s after closing the File menu and Application Options.
+- build/ = integ 1d006ebdafb (wine-11.18-436; 092 loader: atomic load counts, SRW lock for module lists,
+  lookups of initialized modules without the loader lock; no protocol change). inv and inv2 restarted on it
+  (system32/syswow64 ntdll match build/). Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY: i386 mf,
+  user32:input, user32:win, x86_64 mfplat, mfmediaengine (one first-run timeout, reruns pass on both builds);
+  timeouts otherwise unchanged (ieframe:ie, urlmon:url).
+  inv full invscen suite x2 from fresh Inventor (watcher on): all 13 PASS both; sums 190.6 / 184.8 s
+  (hello ~35-40 s cold start included), warm rerun 138.3 s (was 132.7-134.0). Inventor exits cleanly on close.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
