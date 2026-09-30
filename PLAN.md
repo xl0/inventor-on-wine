@@ -246,10 +246,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 4070c25758e (wine-11.18-415; 087 rpcrt4: one connection per server via alter_context,
-  connection-count fix). No protocol change (967). inv and inv2 restarted on it. Full regress vs master
-  4e819f054dd: no REAL/NEW; FLAKY: mfplat (both), i386 dxgi:dxgi, i386 user32:win (same on baseline).
-  inv full invscen suite (dialog watcher on): all 13 scenarios PASS (asmbig, export pass now).
+- build/ = integ 481a8f5f6ab (wine-11.18-417; 088: dcomp composes on commit/new frame/damage, win32u
+  MsgWait no early timeout; 087 rpcrt4 alter_context). No protocol change. inv and inv2 restarted on it.
+  Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY: mfplat (both), x86_64 ntdll:exception.
+  inv full invscen suite (dialog watcher on): all 13 scenarios PASS.
+  Visual check (Inventor direct, popup closed, Assistant open): Home and Assistant content intact
+  1 s after closing the File menu and Application Options.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
