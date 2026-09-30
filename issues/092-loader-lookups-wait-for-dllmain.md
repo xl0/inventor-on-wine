@@ -101,3 +101,19 @@ entry thunk into the test; todo_wine rows flip in the commit that fixes them.
   the harness waiting out the trial popup and 2 s polling, so no measurable startup change).
   Other threads' loader-lock waits: fewer (~460 vs ~550) but longer (thread starts queue behind
   the main thread's back-to-back loads; sum over parallel waiters, not wall time).
+
+## 048 race with the harness wait disabled (hello, fresh inv3 starts, private no-wait scen-hello.exe)
+| build | fresh starts | 048 hangs |
+|---|---|---|
+| build/ = integ f720de9f520 (A/B interleaved, this session) | 8 | 0 |
+| fix/092 tip | 8 (A/B) + 10 | 6 + 4 |
+| fix/092 without the GetProcAddress commit (94cc2078a1d) | 8 | 0 |
+Captured hang (wt/092-runs/hang-124136): the same 048 cycle (main thread: Fc.dll delay load ->
+LoadLibraryExA(Uc.dll) -> DllMain -> managed -> JIT -> coreclr lock; TP worker: System.Net.Http ->
+coreclr assembly load -> LoadLibraryExW (new DLL) -> loader lock); no ldr_data_lock involvement.
+So lock-free GetProcAddress (Windows behaviour) lets the TP worker reach the coreclr lock during
+Uc.dll's DllMain instead of stalling in GetProcAddress first: Inventor's own lock-order bug
+(also possible on Windows, which doesn't block GetProcAddress) gets ~10x likelier under Wine's
+slow Uc.dll load. The committed harness waits out the popup and avoids it. Commits up to
+94cc2078a1d don't change the rate; merging the last commit is a trade-off for the coordinator.
+Connect times (2 s polling) unchanged in all variants.

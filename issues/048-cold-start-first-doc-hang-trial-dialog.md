@@ -96,4 +96,5 @@ Inventor's modal state and failed connect in 17 of 29 runs of the first attempt)
 | late close (15 s), no wait | integ 481a8f5f6ab | 63 | 4 |
 | late close (15 s), no wait | integ f720de9f520 | 40 | 2 |
 | late close + connect waits (committed) | integ f720de9f520 | 40 | 0 |
+| late close (15 s), no wait | fix/092 (lock-free GetProcAddress) | 18 | 10 (see 092) |
 One run of the first wait attempt (hidden dialog not exempt yet) had ActiveView null (037-like), 1/29.
