@@ -246,12 +246,10 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 9c1eea5beac (+081: combase QI-first stub path, proxy/stub registration caches; ntdll
-  LdrUnloadDll fast path; server+win32u hook-chain snapshot + GetProp caches). Protocol 967 (was 965);
-  inv and inv2 restarted on it (inv3/inv4 down, update on next start). Full regress vs master 4e819f054dd:
-  no REAL/NEW; FLAKY: mfplat (both), i386 user32:win, x86_64 ntdll:exception (same on baseline).
-  inv: hello, asm, drawing2, openbench PASS (dialog watcher on). openbench Test Station walk 3.6-3.7 s
-  (~5.2 ms/call; open 4.3-6.4 s).
+- build/ = integ 4070c25758e (wine-11.18-415; 087 rpcrt4: one connection per server via alter_context,
+  connection-count fix). No protocol change (967). inv and inv2 restarted on it. Full regress vs master
+  4e819f054dd: no REAL/NEW; FLAKY: mfplat (both), i386 dxgi:dxgi, i386 user32:win (same on baseline).
+  inv full invscen suite (dialog watcher on): all 13 scenarios PASS (asmbig, export pass now).
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
