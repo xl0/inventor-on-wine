@@ -20,6 +20,7 @@
   (delay-imported by msedge.exe: missing = 0xc06d007f crash) + kernelbase AppContainerRegisterSid /
   UnregisterSid / LookupMoniker / FreeMemory (GetProcAddress + CHECK: missing = int3 crash). Mapping in
   HKCU\Software\Classes\Local Settings\...\AppContainer\Mappings\<SID>. Implemented in fix/090.
-  Then %LOCALAPPDATA%\Packages\<name>\AC gets a low label via SetNamedSecurityInfo (094).
+  Then %LOCALAPPDATA%\Packages\<name>\AC gets a low label via SetNamedSecurityInfo (fixed in 094), then
+  UpdateProcThreadAttribute(SECURITY_CAPABILITIES) fails -> service disconnect + DumpWithoutCrashing (095).
 - Crashpad dumps: the delay-load DelayLoadInfo (exception param 0) lies on the captured stack; the
   DLL/function name pointers are RVAs into the exe's .rdata (read the strings from the file).
