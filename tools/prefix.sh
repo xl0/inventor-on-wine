@@ -3,15 +3,16 @@
 # Usage: tools/prefix.sh status [NAME]            wineserver, build, procs, licensing port, lease
 #        tools/prefix.sh env NAME [--defaults]    export lines for eval (--defaults: only unset vars)
 #        tools/prefix.sh start|stop NAME          [--holder H] [--force (stop the licensing host)]
+#        tools/prefix.sh kill-inventor NAME       [--holder H] [--orphans (helpers only, and only if no Inventor.exe runs)]
 #        tools/prefix.sh lease NAME [HOLDER] | release NAME [HOLDER]     [--force]
 # HOLDER defaults to $PREFIX_HOLDER. start/stop refuse on a prefix leased to another holder.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT=$PWD T=x/prefixes.tsv L=x/leases PORT=39683
-HOLDER=${PREFIX_HOLDER:-} FORCE= DEFAULTS= A=()
+HOLDER=${PREFIX_HOLDER:-} ORPH= FORCE= DEFAULTS= A=()
 cmd=${1:?usage: $0 status|env|start|stop|lease|release [NAME]}; shift
 while [ $# -gt 0 ]; do case $1 in
-	--force) FORCE=1;; --defaults) DEFAULTS=1;; --holder) HOLDER=$2; shift;; *) A+=("$1");; esac; shift; done
+	--force) FORCE=1;; --orphans) ORPH=1;; --defaults) DEFAULTS=1;; --holder) HOLDER=$2; shift;; *) A+=("$1");; esac; shift; done
 die() { echo "prefix.sh: $*" >&2; exit 1; }
 
 load() { # NAME -> N DISP BUS DRI VNC BUILD ROLE, WP
@@ -40,6 +41,15 @@ prefix_pids() {
 		case $anc in *" $p "*) continue;; esac
 		case $(cat /proc/$p/comm 2>/dev/null) in bash|sh|zsh|dash|timeout|setsid|make|tee|sleep|"") continue;; esac
 		echo $p
+	done
+}
+# Inventor.exe and the helpers it starts (by image name: every Wine process has Linux parent 1, so no
+# ancestry). Spared: the prefix's services (AdskLicensingService, AdskAccess*, AdskIdentityManager, ...).
+inv_pids() { # prints "PID image" lines
+	local p c
+	for p in $(prefix_pids); do
+		c=$(tr '\0' '\n' </proc/$p/cmdline 2>/dev/null | head -1) || continue; c=${c##*[\\/]}
+		case ${c%.exe} in Inventor|AdskLicensingAgent|msedgewebview2|InventorViewCompute|DwgTrans*|ADPClientService) echo $p $c;; esac
 	done
 }
 port_pid() { ss -ltnpH "sport = :$PORT" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2 || true; }
@@ -88,6 +98,11 @@ stop) load ${A[0]:?NAME}; check_lease; sp=$(server_pid)
 		for _ in $(seq 50); do [ -d /proc/$sp ] || break; sleep 0.2; done
 	fi
 	left=$(prefix_pids); if [ -n "$left" ]; then echo "killing leftovers: $left"; kill $left 2>/dev/null || true; sleep 2; kill -9 $left 2>/dev/null || true; fi ;;
+kill-inventor) load ${A[0]:?NAME}; check_lease
+	k=$(inv_pids)
+	if [ -n "$ORPH" ] && grep -q ' Inventor.exe$' <<<"$k"; then echo "$N: Inventor running, nothing to do"; exit 0; fi
+	[ -n "$k" ] || { echo "$N: nothing to kill"; exit 0; }
+	sed 's/^/killing /' <<<"$k"; kill -9 $(cut -d' ' -f1 <<<"$k") 2>/dev/null || true ;;
 start) load ${A[0]:?NAME}; check_lease
 	[ -z "$(server_pid)" ] || { echo "$N already running"; exit 0; }
 	if ! DISPLAY=$DISP xset q >/dev/null 2>&1; then

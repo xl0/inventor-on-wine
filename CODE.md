@@ -186,8 +186,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
-  inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|lease|release`
-  works from it (status: wineserver/build/procs/port holder/lease; servers are mapped to
+  inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
+  (kill-inventor: Inventor.exe + helpers by image name, since Wine processes all have Linux ppid 1;
+  spares services) works from it (status: wineserver/build/procs/port holder/lease; servers are mapped to
   prefixes by the server socket dir inode). `x/leases` (git-ignored, flock'd) records who
   uses a prefix; start/stop refuse on someone else's lease. `INV=inv3 tools/invscen/run.sh S`
   uses the table. `x/start.sh N BUS` = headless NVIDIA Xorg (needs DRI_PRIME=pci-0000_<bus>_00_0

@@ -44,6 +44,7 @@ if [ "$S" = all ]; then
 				for q in $(ps -eo pid,args | awk '$2 !~ /^(awk|sh|bash|\/bin\/sh)$/ && /Inventor\.exe|winedbg|senddmp\.exe|Autodesk CER.dialog/ { print $1 }'); do
 					if tr '\0' '\n' </proc/$q/environ 2>/dev/null | grep -qx "WINEPREFIX=$WP"; then kill -9 $q 2>/dev/null || true; fi
 				done
+				tools/prefix.sh kill-inventor "${INV:-inv}" >&2 || true # helpers (licensing agents, WebView2)
 				sleep 5; break
 			fi
 		done
