@@ -391,6 +391,7 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
   software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and
   diff with re-run check: REAL / NEW (not in baseline) / FLAKY.
+  Runs are serialized by flock on /tmp/regress.lock (concurrent invocations queue).
   Results cached in `deps/regress/<built commit>/`. Master baseline builder:
   `wt/regress-master` (detached worktree) + `wt/regress-master-build`.
 

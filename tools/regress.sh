@@ -21,6 +21,9 @@
 #     NEW with their re-runs and "consistent" (no re-run passed) or "intermittent".
 #     REAL lines get the commits BASE..NEW touching the module as suspects.
 #
+# Runs (and compare's re-runs) are serialized by flock on /tmp/regress.lock, so
+# concurrent invocations, e.g. workers' subset runs, queue up instead of clashing.
+#
 # Each of JOBS (32) shards gets its own prefix (cp -a of a template made with
 # this build; ~1.8 GB each, in /dev/shm), Xvfb display (first free from :120)
 # and HOME. Per unit: WINEDEBUG=-all, `module=b` like tools/runtest, a fresh
@@ -37,7 +40,10 @@ usage() { sed -n '2,/^set -eu/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1; }
 
 # Runs "arch module unit [tag]" task lines from stdin on build $1, into dir $2.
 run_units() {
-    local build=$1 out=$2 jobs=$3 tmo=$4 W d s i disps=()
+    local build=$1 out=$2 jobs=$3 tmo=$4 W d s i lk disps=()
+    # Runs are serialized (shared display numbers, CPU load); later invocations wait here.
+    exec {lk}> /tmp/regress.lock
+    flock -n $lk || { echo "regress: waiting for another run (/tmp/regress.lock)" >&2; flock $lk; }
     W=$(mktemp -d /dev/shm/regress.XXXXXX)
     trap "set +e; for s in \$(seq 0 $((jobs - 1))); do WINEPREFIX=$W/p\$s $build/server/wineserver -k 2>/dev/null; done; kill \$(jobs -p) 2>/dev/null; wait; rm -rf $W" EXIT
     trap exit INT TERM

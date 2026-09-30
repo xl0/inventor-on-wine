@@ -91,7 +91,7 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   AdskLicensingAgent/msedgewebview2/... helpers, not the prefix's services; `--orphans`: helpers
   only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning. If a -k is unavoidable, restart the other Inventors.
 - X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh
-  uses :120–:151 for its shards (and cleans them up) — pick your own Xvfb
+  uses :120–:151 for its shards (and cleans them up; runs queue on /tmp/regress.lock, so concurrent invocations are safe) — pick your own Xvfb
   display from :200 up.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
