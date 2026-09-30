@@ -256,7 +256,9 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
-- Awaiting user: 089 (Windows 15.6 ms default wait granularity), 048 next (1-in-10 first view hang).
+- Decisions (user delegated 2026-09-30): 089 implement Windows per-process timer resolution
+  (default on, one override knob) — worker on inv4; 048 first-view hang fixed in Wine rather than
+  harness workaround — worker on inv3; prefix.sh kill-inventor helper — Sonnet chore on inv.
 - Queue: event-handle leak; 082 (project Activate E_FAIL);
   laptop recheck of 084/085 + "having trouble" popup (seat contention?);
   081 (COM call round trips; biggest remaining perf gap), 078, 077;
