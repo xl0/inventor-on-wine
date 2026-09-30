@@ -246,13 +246,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 1d006ebdafb (wine-11.18-436; 092 loader: atomic load counts, SRW lock for module lists,
-  lookups of initialized modules without the loader lock; no protocol change). inv and inv2 restarted on it
-  (system32/syswow64 ntdll match build/). Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY: i386 mf,
-  user32:input, user32:win, x86_64 mfplat, mfmediaengine (one first-run timeout, reruns pass on both builds);
-  timeouts otherwise unchanged (ieframe:ie, urlmon:url).
-  inv full invscen suite x2 from fresh Inventor (watcher on): all 13 PASS both; sums 190.6 / 184.8 s
-  (hello ~35-40 s cold start included), warm rerun 138.3 s (was 132.7-134.0). Inventor exits cleanly on close.
+- build/ = integ 981cd1037b8 (wine-11.18-438; 093: NtQuerySystemTime uses the precise realtime clock,
+  already-due absolute timeouts not rounded to the next tick; no protocol change). inv and inv2 restarted
+  on it (system32/syswow64 ntdll match build/). Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY only
+  known ones (i386 mfplat, user32:input, user32:win, x86_64 mfplat); timeouts unchanged (4).
+  inv full invscen suite: all 13 PASS; cold (fresh Inventor) step sum 132.3 s (hello 31.0), warm 125.9 s.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
 - Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
