@@ -26,3 +26,10 @@ Closing the trial welcome via its X button made the first part's ActiveView
 null on 2/2 cold runs; WM_CLOSE doesn't (harness now uses WM_CLOSE). Possibly
 related to this hang. Also: after hello closes its document, the Home page
 stays blank (WebView2 redraw?) — unfiled.
+
+## Repro (088, 2026-09-29)
+Closing the trial popup with WM_CLOSE only after it was visible 15 s (page loaded), during hello's
+connect: `first part view` TIMEOUT in 1 of 10 cold starts on integ 9c1eea5beac (build/), 3 of 11 on
+fix/088 (the early close, current harness: no hang in this session's 5 cold starts, 1 with a part view). Hung state: main window black
+where the popup was, Home not repainted; Inventor main thread in futex wait, all threads sleeping,
+0 % CPU; `winedbg attach` never completes (loader lock held?). Harness change reverted.

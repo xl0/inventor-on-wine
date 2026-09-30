@@ -38,3 +38,8 @@
 - Edge (the browser) sandboxes its renderers in lowbox app containers
   (kernelbase CreateAppContainerToken, 026; before it, only --no-sandbox rendered). It launches from
   AdskIdentityManager through HKCR https.
+- Composition thread (device.c composite_thread_proc, fix/088): composes only after Commit()
+  (global commit serial, so shared visuals of other devices count) or when a content swapchain's
+  GetLastPresentCount() changed; otherwise it just polls every refresh period. It idles in
+  MsgWaitForMultipleObjects: the same-process path draws with GDI into the target's window surface,
+  which is flushed only when some thread of the process idles in a message wait.

@@ -31,3 +31,11 @@
   -e write,writev -xx -s 8`, the first int of each request is its number in
   `enum request` (include/wine/server_protocol.h); count only pipe fds (X11 writes
   go to a socket). openbench `INVSCEN_SYNC` brackets one walk for a tracer (081).
+- Benchmarks on this host (088): per-call timings of cross-process calls are bimodal (e.g. openbench
+  walk 1.8 vs 3.6 s) by CPU placement: C6 exit latency is 290 us (powersave, menu governor). Pin the
+  processes (taskset) and keep the siblings busy (nice-19 spinners) for stable numbers.
+- Windows 11 wait granularity (tests/wait_granularity.c): a process without timeBeginPeriod gets
+  ~15.6 ms for 1 ms Sleep/waits/waitable timers (HIGH_RESOLUTION timers 1.6 ms), even if
+  NtQueryTimerResolution says 1 ms. Wine: ~1 ms always (draft 089).
+- Idle CPU per process of a prefix: tools/idlecpu.sh; server request mix per client: strace the
+  wineserver's reads and map pipe inodes (/proc/PID/fd) to clients.
