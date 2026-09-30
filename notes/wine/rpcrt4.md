@@ -13,11 +13,17 @@
   connection. The client binds the first interface with bind, adds others to an idle
   connection with alter_context (context id = index), and sends `ActiveContextId` in each
   request. Authenticated connections are not reused for other interfaces (no auth trailer on
-  alter_context; the server rejects authenticated alter_context with a fault).
+  alter_context; the server rejects authenticated alter_context with a fault). A rejected
+  alter_context keeps the connection pooled (dropping the last one ends the server's association
+  group and runs down client context handles). Max RPC_MAX_CONTEXTS per connection.
   Server: the context table is only touched on the io thread; a request's interface is
   resolved there before it is queued (`RpcPacket.if_id`).
+- `RpcAssoc.connection_cnt` reaching 0 resets the association group id; every connection with
+  `->assoc` set is uncounted in RPCRT4_ReleaseConnection, so it's counted before connecting.
 - Windows (Win11, rpcrt4:server test): a second interface via the same or another binding
   handle to the same endpoint adds no handles, for ncacn_np, ncalrpc and ncacn_ip_tcp.
+- Windows wire details: alter_context_resp has an empty sec_addr; a request with an unknown
+  context id gets fault nca_s_unk_if; after a bind_nack the server closes the connection.
 - `RpcMgmtIsServerListening` over ncacn_ip_tcp returns ERROR_ACCESS_DENIED on Windows and Wine.
 - Handle counts in tests: NtQuerySystemInformation(SystemExtendedHandleInformation) works on
   both; GetProcessHandleCount returns 0 on Wine (072).
