@@ -246,10 +246,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 481a8f5f6ab (wine-11.18-417; 088: dcomp composes on commit/new frame/damage, win32u
-  MsgWait no early timeout; 087 rpcrt4 alter_context). No protocol change. inv and inv2 restarted on it.
-  Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY: mfplat (both), x86_64 ntdll:exception.
-  inv full invscen suite (dialog watcher on): all 13 scenarios PASS.
+- build/ = integ f720de9f520 (wine-11.18-432; 089 per-process timer resolution; server protocol 968).
+  inv and inv2 restarted on it. Full regress vs master 4e819f054dd: no REAL/NEW, no new timeouts;
+  FLAKY: i386 mf, mfplat, user32:win. kernel32:sync 8 -> 24 s (tick-rounded waits, expected).
+  inv full invscen suite x2 (dialog watcher on): all 13 PASS both runs.
+  Idle CPU (inv, popup closed, Home): AdskIdentityManager ~7.3 %, wineserver ~11 %, Inventor.exe ~1.5 %.
   Visual check (Inventor direct, popup closed, Assistant open): Home and Assistant content intact
   1 s after closing the File menu and Application Options.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
