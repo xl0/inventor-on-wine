@@ -138,8 +138,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
   `xproc_hidden_present.c`: other process presents D3D11 on its child of our container; we hide the
   container, screen pixel must stop showing its frames (065; Win11 pass, exit 0 = ok).
-  `expose_present.c`: D3D11 child presents once, another window covers/uncovers it, screen pixel
-  must keep the frame (061; exit 0 = ok). `layered_alpha.c`: ULW_ALPHA popup with alpha bands
+  `expose_present.c [nopump|show]`: D3D11 child presents, first frame must show, another window
+  covers/uncovers it, screen pixel must keep the frame (061, 078; exit 0 = ok).
+  `present_lag.c [N] [SYNCINTERVAL]`: N presents on a D3D11 child, the last must be on screen 500 ms
+  later (078: offscreen copy raced NVIDIA's present; exit 0 = ok). `layered_alpha.c`: ULW_ALPHA popup with alpha bands
   0..255: screen colour, WindowFromPoint, SendInput click per band (062). `layered_popup_probe.c
   [TITLE] [drag X|mdrag X Y DX|hit|alpha|max]`: another app's layered popups: rects, owner, screen
   grab, composited alpha (over own white/black windows), window drag with SendInput (062).
@@ -374,6 +376,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
   transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
   in-proc (their exceptions: EventPipe trick in notes/wine/debugging.md).
+- `tools/pixgrab.py WINID OUT.png`: a composite-redirected X window's pixmap (what a GPU client last
+  presented into an offscreen client surface; 078).
 - `tools/uilat/uilat.py SCEN... [--setup] [--tag T] [--record] [--perf ROLES]` — UI latency:
   XTest input, XDamage on root + XGetImage of a watched rect (window moves make no damage:
   polled). Step latency (isolated moves) and drag fps/lag (tracked rubber-band end / window

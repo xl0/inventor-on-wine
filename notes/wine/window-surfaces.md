@@ -45,8 +45,12 @@
 - Apps that present on their own schedule (Inventor/OGS) don't always repaint on the fix/005
   redraw (not inside Wine's move loops). fix/061: expose_window_surface() also re-runs the driver
   present of the toplevel's offscreen client surfaces (same process only): the redirected
-  offscreen X window keeps the last presented image. The first present of a new offscreen
-  surface doesn't reach the screen (078).
+  offscreen X window keeps the last presented image.
+- The offscreen copy runs right after the driver's present returns; NVIDIA may not have written
+  the image into the redirected window yet, so the copy shows the previous frame and the last
+  frame of a burst never shows (078). GLX waits (glXWaitForSbcOML / glFinish); fix/078 makes
+  Vulkan wait for the queue and EGL swaps glFinish. tools/pixgrab.py WINID reads a redirected
+  window's pixmap (what the app last presented), xwd -id of it returns screen garbage.
 - Per-pixel-alpha layered windows get an ARGB visual; alpha-0 pixels are cut from the X shape,
   every other pixel is drawn opaque (premultiplied colour) unless a compositing manager blends.
   The shape is also the input region, so hiding low-alpha pixels would make them click-through

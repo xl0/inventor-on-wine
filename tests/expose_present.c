@@ -2,12 +2,16 @@
  * stops, like Inventor's viewport between redraws. Another top-level window covers it
  * and goes away again (X Expose on Wine): the screen must show the last presented
  * frame, not black (issue 061). The child ignores WM_PAINT, as Inventor's OGS does.
- * Prints the screen pixel in the child before the cover and after it's gone.
- * Exit 0 = ok. Run with WINE_D3D_CONFIG=renderer=vulkan.
+ * The first present of the new child must show too (issue 078).
+ * Prints the screen pixel in the child after the first present, before the cover and
+ * after it's gone. Exit 0 = ok. Modes: `nopump` = first present right after creating the
+ * swapchain, `show` = toplevel created hidden and shown right before the first present.
+ * Run with WINE_D3D_CONFIG=renderer=vulkan.
  * Build: x86_64-w64-mingw32-gcc -O2 -o X.exe X.c -ld3d11 -lgdi32 -luuid */
 #define COBJMACROS
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <windows.h>
 #include <d3d11.h>
 
@@ -51,14 +55,15 @@ int main( int argc, char **argv )
     ID3D11DeviceContext *ctx;
     HWND hwnd, child, cover;
     ID3D11Texture2D *bb;
-    COLORREF before, after;
+    COLORREF first = 0, before, after;
     IDXGISwapChain *sc;
     ID3D11Device *dev;
     POINT pt = {100, 100};
+    const char *mode = argc > 1 ? argv[1] : "";
 
     setvbuf( stdout, NULL, _IONBF, 0 );
     RegisterClassA( &wc );
-    hwnd = CreateWindowA( "static", "expose_present", WS_POPUP | WS_CLIPCHILDREN | WS_VISIBLE,
+    hwnd = CreateWindowA( "static", "expose_present", WS_POPUP | WS_CLIPCHILDREN | (strcmp( mode, "show" ) ? WS_VISIBLE : 0),
                           100, 100, 400, 300, 0, 0, 0, 0 );
     child = CreateWindowA( "gpu_child", NULL, WS_CHILD | WS_VISIBLE, 100, 50, 200, 200, hwnd, 0, 0, 0 );
     sd.BufferCount = 2;
@@ -71,15 +76,16 @@ int main( int argc, char **argv )
                                          D3D11_SDK_VERSION, &sd, &sc, &dev, NULL, &ctx ));
     CHECK(IDXGISwapChain_GetBuffer( sc, 0, &IID_ID3D11Texture2D, (void **)&bb ));
     CHECK(ID3D11Device_CreateRenderTargetView( dev, (ID3D11Resource *)bb, NULL, &rtv ));
-    pump( 500 );
+    if (strcmp( mode, "nopump" )) pump( 500 );
+    if (!strcmp( mode, "show" )) ShowWindow( hwnd, SW_SHOW ); /* present right after showing */
     ClientToScreen( child, &pt );
-    /* the first present of a new offscreen child doesn't reach the screen on Wine: present twice */
     for (int i = 0; i < 2; i++)
     {
         ID3D11DeviceContext_OMSetRenderTargets( ctx, 1, &rtv, NULL );
         ID3D11DeviceContext_ClearRenderTargetView( ctx, rtv, i ? red : green );
         IDXGISwapChain_Present( sc, 0, 0 );
         pump( 500 );
+        if (!i) first = screen_pixel( pt.x, pt.y );
     }
     before = screen_pixel( pt.x, pt.y );
 
@@ -91,6 +97,7 @@ int main( int argc, char **argv )
     pump( 1000 );
     after = screen_pixel( pt.x, pt.y );
 
-    printf( "child pixel before the cover %06lx, after %06lx (expect 0000ff = red)\n", before, after );
-    return !(before == RGB(255, 0, 0) && after == RGB(255, 0, 0));
+    printf( "child pixel after the first present %06lx (expect 00ff00 = green), before the cover %06lx, "
+            "after %06lx (expect 0000ff = red)\n", first, before, after );
+    return !(first == RGB(0, 255, 0) && before == RGB(255, 0, 0) && after == RGB(255, 0, 0));
 }

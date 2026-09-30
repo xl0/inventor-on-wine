@@ -131,3 +131,7 @@ dialog alone therefore does not establish licensing refusal or its cause.
   hardware-compositing path now taken instead of the software fallback. Compare
   with commits 55dd37db46b / d5a3a4bf755 reverted, and with the GPU-crash evidence
   (crash dumps, GPU process restarts) on the laptop's hybrid-GPU setup.
+- 078 (server): the remaining white phase (~4 s) is WebView2 presenting white frames itself (its
+  offscreen window is white too), no lost presents; fix/078 doesn't change it. The laptop's
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu` never reaches msedgewebview2's command line.
+  Laptop hypotheses (PRIME/vblank-late presents, DPI): see 078.
