@@ -272,6 +272,8 @@ commits or screenshots). Read-only mode may remain after expiry.
 - 2026-10-01: disk hit 108 GB free (/tmp filled by per-run prefix copies, 17 stale worktree
   builds). Pruned merged worktrees/builds (branches kept) and finished scratch dirs → 312 GB;
   worker.md now caps scratch at ~10 GB.
+- integ ahead of build/: +099 (COM cancel semantics, refcounted call state, dead-server GetBuffer
+  event leak) — rebuild + regress after soak #3 (running on build/, inv).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
