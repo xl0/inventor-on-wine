@@ -1,7 +1,8 @@
 /* sizemove_log.c: captioned window that logs the move/size notifications it gets
  * (WM_ENTERSIZEMOVE/WM_EXITSIZEMOVE, WM_MOVING/WM_SIZING, WM_WINDOWPOSCHANGED,
  * WM_CAPTURECHANGED, WM_NCLBUTTONDOWN, WM_SYSCOMMAND), one line each with a millisecond timestamp (077).
- * The top 40 px of the client area are a caption (HTCAPTION).
+ * The top 40 px of the client area are a caption (HTCAPTION). While the right button is held in
+ * the client area the window moves itself by timer (SetWindowPos, no capture).
  * Usage: sizemove_log.exe [SECS] [X Y W H]; exits after SECS (default 60), prints
  * "summary enter N exit N" and returns 1 if the counts differ or a size-move is still open.
  * Build: x86_64-w64-mingw32-gcc -O2 -o sizemove_log.exe sizemove_log.c */
@@ -37,6 +38,16 @@ static LRESULT CALLBACK wndproc( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp )
     case WM_NCLBUTTONDOWN: log_msg( "WM_NCLBUTTONDOWN", hwnd ); break;
     case WM_SYSCOMMAND: log_msg( "WM_SYSCOMMAND", hwnd ); break;
     case WM_DESTROY: PostQuitMessage( 0 ); break;
+    case WM_RBUTTONDOWN: SetTimer( hwnd, 2, 30, NULL ); break;
+    case WM_TIMER:
+        if (wp == 2)
+        {
+            RECT rc;
+            if (!(GetAsyncKeyState( VK_RBUTTON ) & 0x8000)) { KillTimer( hwnd, 2 ); break; }
+            GetWindowRect( hwnd, &rc );
+            SetWindowPos( hwnd, 0, rc.left + 4, rc.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE );
+        }
+        break;
     case WM_NCHITTEST: /* app-drawn caption strip like Inventor's: top 40 px of the client */
     {
         POINT pt = { (short)LOWORD(lp), (short)HIWORD(lp) };
@@ -72,7 +83,7 @@ int main( int argc, char **argv )
     fflush( stdout );
     while (GetMessageA( &msg, NULL, 0, 0 ))
     {
-        if (msg.message == WM_TIMER && msg.hwnd == hwnd) DestroyWindow( hwnd );
+        if (msg.message == WM_TIMER && msg.hwnd == hwnd && msg.wParam == 1) DestroyWindow( hwnd );
         TranslateMessage( &msg );
         DispatchMessageA( &msg );
     }

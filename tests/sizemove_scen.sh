@@ -3,7 +3,11 @@
 # and drive WM moves/resizes with xdotool; the probe's log goes to OUT (077).
 # Scenarios: modmove (MOD+B1 drag), modresize (MOD+B3 drag), caption (drag the app-drawn caption:
 # Wine's own move loop), click (plain clicks), quick (5 short MOD drags), modfirst (MOD released
-# before the button), kbmove / kbresize (openbox with A-F7 Move / A-F8 Resize keybinds + arrows).
+# before the button), kbmove / kbresize (openbox with A-F7 Move / A-F8 Resize keybinds + arrows),
+# selfmove (right button held in the client: the app moves itself), dblclick (caption double-click,
+# second press held: maximize), stale (focus another client with FOCUSKEY, default super+j, then
+# move the window from outside; needs another client, an xev is started). Expected 0/0 for the last
+# three apart from win32u's own caption-click pair.
 # MODKEY: super for awesome, alt for openbox.
 D=$1; OUT=$2; MOD=${3:-super}; SCENS=${4:-"modmove modresize caption"}
 W=$(cd "$(dirname "$0")/.." && pwd)
@@ -51,6 +55,17 @@ for s in $SCENS; do
     xdotool keyup $MOD; sleep 0.3
     for i in $(seq 6 10); do xdotool mousemove $((cx+i*10)) $cy; sleep 0.05; done
     sleep 0.3; xdotool mouseup 1; sleep 1 ;;
+  selfmove)
+    xdotool mousemove $cx $cy; sleep 0.3; xdotool mousedown 3; sleep 1.5; xdotool mouseup 3; sleep 1 ;;
+  dblclick)
+    geo; xdotool mousemove $((X+150)) $((Y+20)); sleep 0.3; xdotool click 1; sleep 0.08; xdotool mousedown 1
+    sleep 0.6; xdotool mouseup 1; sleep 1.5 ;;
+  stale)
+    xev -geometry 200x200+1100+600 >/dev/null & XE=$!; sleep 1
+    xdotool mousemove $cx $cy click 1; sleep 0.5; xdotool key ${FOCUSKEY:-super+j}; sleep 0.8
+    echo "focus: $(xdotool getwindowfocus getwindowname)" >> $OUT.drv
+    xdotool windowmove $WID $((X+90)) $((Y+30)); sleep 1
+    xdotool mousemove 1200 700 click 1; sleep 0.5; kill $XE ;;
   kbresize)
     xdotool mousemove $cx $cy; sleep 0.2; xdotool click 1; sleep 0.3
     xdotool key alt+F8; sleep 0.5
