@@ -240,8 +240,11 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   Never restart it while Inventors run. Other prefixes' services coexist harmlessly (random HTTP port,
   e.g. inv's 127.0.0.1:45691). inv2 is an ordinary test prefix on build/. To refresh inv-lic from inv2:
   stop inv-lic (`--force`), `rsync -aX --delete prefixes/inv2/ prefixes/inv-lic/`, start it.
-  "Device limit reached" on start: another device (the user's laptop, "mafa") holds the trial
-  seat. Fix: the user closes Inventor there, then Check again; don't click Pause product.
+  Licence = ONE active device (server "hong-Precision-7960-Tower", the VM and the user's laptop
+  "mafa" each count; a running session keeps its seat until its next check, so two can look
+  concurrent). "Device limit reached": another device holds the seat. To use the VM's Inventor,
+  stop all server Inventors (and inv-lic's checkout) first, then Check again in the VM. Never
+  click Pause product (account action — the user's call).
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the
   user.WINEREPARSE xattr of `name?` dirs (052); plain copies break them.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).

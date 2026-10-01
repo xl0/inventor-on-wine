@@ -258,7 +258,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   pairs, 098 claimed a gain; the place scenario's first part 11.1 -> 10.5 s), first asm 2.3 -> 2.4,
   first drawing 2.4 -> 2.4, warm part/asm/drw 1.1/1.2/0.9 -> 1.05/1.05/0.9. Open: first-part gain not reproduced.
 - Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
-- Licence: at least 2 concurrent devices (laptop + server both ran 2026-09-29); VM is a device too.
+- Licence: ONE active device (server, VM, laptop each count); VM Inventor needs server Inventors stopped.
 - 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
   134.0 vs 132.7 s — no slowdown; the inv-vs-inv4 gap is prefix/GPU/host load.
 - 048 closed as an Inventor lock-order race (DllMain → .NET, same on Windows with same timing);
