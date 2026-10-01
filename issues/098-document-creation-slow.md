@@ -122,3 +122,17 @@ iLogic add rule is unchanged (not analysed).
 - tools/regress.sh (ntdll kernel32 kernelbase windowscodecs gdiplus psapi dbghelp user32 ole32
   oleaut32 msvcrt ucrtbase; 332 units) vs deps/regress/2cfee5f132e: 1 worse, FLAKY (rerun after the fold-in: same)
   (x86_64 kernel32:debugger, base re-runs fail the same way).
+
+## Bisect of the "first part slower on integ" A/B (inv, 2026-10-01)
+Coordinator's A/B (docbench first part 9.8 -> 11.3 s on 4f92c92ace1 vs 2cfee5f132e) does not reproduce.
+Variants: A = 2cfee5f132e, M = e92bc658688 (097 only), B = build/ 4f92c92ace1. Interleaved A,M,B x4, fresh
+Inventor per run, docbench INVSCEN_N=3, host load 5-27 (medians, s; raw wt/bis-runs/r2/, script wt/bis-run.sh):
+| step | A | M | B |
+|---|---|---|---|
+| first part | 9.8 | 9.3 | 7.95 |
+| first asm | 2.4 | 2.2 | 1.95 |
+| first drawing | 2.45 | 2.4 | 1.95 |
+Spread within a variant <= 0.7 s; B fastest in 4/4 rounds. 097 gains ~0.5 s, 098 another ~1.3 s: no culprit.
+An earlier 3-round attempt (wt/bis-runs/r1) ran while another agent's regress held the host at load 60-120:
+first part 8-18 s, 5 of 9 runs hit the "no ActiveView" flake (037); discarded. The earlier 9.8 vs 11.3 was
+most likely host load. Lesson: check /proc/loadavg (< ~25) before an A/B.
