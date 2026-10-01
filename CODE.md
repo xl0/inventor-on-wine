@@ -186,7 +186,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `abs_timeout.c [rel|bench|clock]`: absolute wait/timer deadlines (system vs precise base, past,
   early-return counts), relative condvar waits, GetSystemTime(Precise)AsFileTime cost, wall-clock steps (093).
   `hook_chain.c [ITERS]`: hooks added/removed while a chain runs (same/other thread) + cost of a
-  3-hook CallMsgFilter/PeekMessage (081). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
+  3-hook CallMsgFilter/PeekMessage (081). `qi_remote.c`: which QIs on a cross-process proxy reach the
+  object, IRpcOptions Query/Set, cost of a remote QI (097). `mapview_perf.c`: map/unmap view,
+  mutex wait+release, SetEvent, VirtualProtect costs (097). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
   with 300 extra modules (081).
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
@@ -369,6 +371,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   "Wine PostScript File" on FILE: from tests/addprinter.exe), `content` (CC tree, 064),
   `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
+  `place`: asmbig's "place 200 occurrences" alone, `INVSCEN_N` rounds, per call kind split;
+  `INVSCEN_PLACE=hidden|cheap`, `INVSCEN_SYNC` like openbench (097).
   `openbench`: activates samples.ipj, opens/closes `INVSCEN_OPEN` (;-list) `INVSCEN_N` times and times
   a file-reference walk (per-COM-call cost, 057). `INVSCEN_SYNC=C:\dir`: handshake files around each
   walk (walk.start -> wait walk.go, walk.end -> wait walk.done) to attach strace to one walk (081).

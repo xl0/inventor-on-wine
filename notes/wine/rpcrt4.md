@@ -6,9 +6,14 @@
   after the reply; concurrent calls to one server open more connections. Pooled connections
   stay until the association's last binding handle is freed (COM proxies to a dead server
   keep them forever).
-- ncalrpc and ncacn_np are both named pipes in Wine: one pipe handle + one cached overlapped
-  event per client connection (`RpcConnection_np.event_cache`). The server runs one io thread
-  per connection (`RPCRT4_io_thread`), requests go to thread-pool workers.
+- ncalrpc and ncacn_np are both named pipes in Wine: one pipe handle + two cached overlapped
+  events per connection (`RpcConnection_np.event_cache[2]`: the server's io thread reads the next
+  request while a worker writes the reply). The server runs one io thread per connection
+  (`RPCRT4_io_thread`), requests go to thread-pool workers. Every pipe read/write is a wineserver
+  request; reads go through `read_buf` (whole messages, 097) instead of header/rest/body reads.
+- Cost of a cross-process COM call (097, `tests/qi_remote.c`, remote QI loop): Wine integ ~580 us,
+  with 097 ~320 us, Windows ~160 us. Path: client thread -> pipe -> server io thread -> worker ->
+  posted DM_EXECUTERPC to the STA (combase dispatch_rpc) -> reply back the same way.
 - Presentation contexts (087): `RpcConnection.contexts` holds the interfaces bound on a
   connection. The client binds the first interface with bind, adds others to an idle
   connection with alter_context (context id = index), and sends `ActiveContextId` in each
@@ -27,3 +32,9 @@
 - `RpcMgmtIsServerListening` over ncacn_ip_tcp returns ERROR_ACCESS_DENIED on Windows and Wine.
 - Handle counts in tests: NtQuerySystemInformation(SystemExtendedHandleInformation) works on
   both; GetProcessHandleCount returns 0 on Wine (072).
+- combase proxies (Windows ground truth, 097): QI for IUnknown, IMarshal, IMultiQI, IClientSecurity,
+  IRpcOptions, ICallFactory succeed and IAgileObject, INoMarshal fail locally; any other IID goes
+  to the server every time (no negative cache). .NET RCW creation QIs IManagedObject,
+  IProvideClassInfo, IInspectable, INoMarshal, IAgileObject, IRpcOptions per new object, so each
+  remote one is a call into the server's STA (and, for MFC servers, a full idle cycle there).
+  Wine lacks ICallFactory (no async calls).
