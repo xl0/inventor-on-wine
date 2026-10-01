@@ -275,7 +275,7 @@ commits or screenshots). Read-only mode may remain after expiry.
 - integ ahead of build/: +099 (COM cancel semantics, refcounted call state, dead-server GetBuffer
   event leak), +104 (display-device cleanup under the init mutex: mode-switch flakes), +105
   (desktop explorer no longer inherits the app debugger), +095 (real lowbox tokens, SECURITY_CAPABILITIES;
-  PROTOCOL 969: restart all test prefixes) — rebuild +
+  PROTOCOL 969: restart all test prefixes), +077 (WM-started moves get ENTER/EXITSIZEMOVE) — rebuild +
   regress after soak #3 (running on build/, inv).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
