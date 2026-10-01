@@ -52,15 +52,20 @@ sessions; within one session stable). Hidden documents: 5-10 s.
   Set > 10 = 0x800106ad, Set 7 then Query 7), in-process E_INVALIDARG; Set(locality) E_INVALIDARG.
 
 ## Fixes (wt/097, fix/097, on integ 2cfee5f132e; no server protocol change)
-- 33e6b9a189c combase: Implement IRpcOptions on proxies.
-- c44b3b6b2ee combase: Don't query the server for IAgileObject and INoMarshal on proxies.
+- 695aef546e1 combase: Implement IRpcOptions on proxies.
+- 1c7a986097a combase: Don't query the server for IAgileObject and INoMarshal on proxies.
   Together: 6 of 19 cross-process calls per placed occurrence gone (as on Windows).
-- 2eca6cfe3c2 combase: Use the cached call event to wait for calls dispatched to an STA.
-- 62391586981 rpcrt4: Cache two events per named pipe connection (server io thread reads while a
+- 1f06b88c902 combase: Use the cached call event to wait for calls dispatched to an STA.
+- 73f2207439b rpcrt4: Cache two events per named pipe connection (server io thread reads while a
   worker writes; the single cache slot made every reply create+close an event).
-- dce805e2733 rpcrt4: Read whole messages from named pipes (was 3 pipe reads = server requests per
+- cf670484882 rpcrt4: Read whole messages from named pipes (was 3 pipe reads = server requests per
   fragment: common header, rest of header, body).
-  Last three: remote QI loop (`qi_remote.exe`, 3 alternating runs) 567-583 us -> 307-328 us
+  Reads only continue into the next pipe message when the read started there or the previous read
+  stopped mid-message (STATUS_BUFFER_OVERFLOW), like direct reads; zero-length "wait for data"
+  reads don't consume (async notifier); buffer = RPC_MAX_PACKET_SIZE.
+- d08143577f2 combase: Don't reuse the call event of a call cancelled by the message filter (fixes
+  integ's 086 event caching; the late completion's use-after-free predates it: draft 099).
+  Remote QI loop (`qi_remote.exe`, 3 alternating runs) 567-583 us -> 307-328 us
   (Windows 161 us).
 
 ## Results (inv3, `place`, fresh Inventor per run, 3 rounds per run, interleaved, medians of 9 rounds)
@@ -71,7 +76,11 @@ sessions; within one session stable). Hidden documents: 5-10 s.
 - ole32:marshal test_proxy_interfaces (IAgileObject/INoMarshal never reach the object) and
   test_proxy_rpc_options: VM x86_64 + i386 0 failures; Wine both arches 0 failures.
 - regress rpcrt4|ole32|combase|oleaut32|rpcss|ole2|olecli32|shell32|urlmon vs the integ
-  2cfee5f132e baseline: 0 worse of 116 units.
+  2cfee5f132e baseline: 0 worse of 116 units (also after the review fixes).
+- Review fixes: rpcrt4 server/rpc/rpc_async + ole32 marshal on Wine x86_64/i386 0 failures; on the
+  VM ole32 marshal 0, rpcrt4 rpc 1 (I_RpcMapWin32Status) and i386 server 8 failures, same with the
+  integ test binaries. Reviewer's echo.c stress (ncalrpc, ncacn_np, 64/32-bit) 0 errors; raw2.c
+  (8 raw-PDU cases) output identical to integ.
 
 ## Left / ideas
 - Remaining per call (~320 us vs 160 us): every pipe read/write is a wineserver request, plus 4
