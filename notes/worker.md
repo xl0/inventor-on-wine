@@ -93,6 +93,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh
   uses :120–:151 for its shards (and cleans them up; runs queue on /tmp/regress.lock, so concurrent invocations are safe) — pick your own Xvfb
   display from :200 up.
+- Disk is shared and finite (one 3.7 TB volume; /tmp lives on it). Keep scratch prefixes and
+  copies under ~10 GB total: reuse prefixes instead of copying one per run, delete finished ones
+  by explicit path, and never copy inv* prefixes (38 GB each) for scratch work.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
 - Conformance test on Wine: `wt/NNN-build/wine
