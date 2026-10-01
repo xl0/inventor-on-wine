@@ -275,8 +275,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - integ ahead of build/: +099 (COM cancel semantics, refcounted call state, dead-server GetBuffer
   event leak), +104 (display-device cleanup under the init mutex: mode-switch flakes), +105
   (desktop explorer no longer inherits the app debugger), +095 (real lowbox tokens, SECURITY_CAPABILITIES;
-  PROTOCOL 969: restart all test prefixes), +077 (WM-started moves get ENTER/EXITSIZEMOVE) — rebuild +
+  PROTOCOL 969: restart all test prefixes), +077 (WM-started moves get ENTER/EXITSIZEMOVE), +091 Xft
+  resources read once — rebuild +
   regress after soak #3 (running on build/, inv).
+- 091 held on fix/091 (wt/091): cross-process geometry/visible-region caches + server change
+  counter (protocol 970). Micro-bench 9 µs → 0.2 µs per query, but no measured idle-CPU gain
+  (Assistant unchanged, Edge −8 %) and broad correctness surface — revisit if a workload needs it.
+  Real per-frame cost: 107 (Mojo pipe/IOCP round trips ~75 % of requests), 108 (wined3d CS spin).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
