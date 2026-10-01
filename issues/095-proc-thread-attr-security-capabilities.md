@@ -1,5 +1,5 @@
 # 095 UpdateProcThreadAttribute(PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES) unsupported
-Status: fixed on branch (awaiting merge) · Owner: worker-095 · Branch: fix/095-security-capabilities (wt/095, on integ c3bcda7c5e4) · Found in: 094
+Status: fixed on branch (awaiting merge) · Owner: worker-095 · Branch: fix/095-security-capabilities (wt/095, on integ de4940b5b86) · Found in: 094
 
 ## Symptom
 Edge 154's on-device-model service (`cr.sb.odm<hash>`, AppContainer sandbox, ~3 min after start) never
@@ -28,7 +28,15 @@ CreateProcess. (Attribute 26 = COMPONENT_FILTER, which Chromium tolerates as ERR
   named event: access denied (named objects live in AppContainerNamedObjects\<SID>).
   ALL_APPLICATION_PACKAGES_POLICY=1 (LPAC): S-1-15-2-1 ACEs no longer apply (HKCU/HKLM keys denied too);
   a WoW64 LPAC child of kernel32_test died with STATUS_DLL_NOT_FOUND.
-- NtCreateLowBoxToken from a lowbox token: STATUS_ACCESS_DENIED; non-capability SID: STATUS_INVALID_PARAMETER.
+- NtCreateLowBoxToken (tests/lowbox_args.c): from a lowbox token STATUS_ACCESS_DENIED; non-capability SID or
+  S-1-15-3 alone: STATUS_INVALID_PARAMETER; NULL capability SID: STATUS_ACCESS_VIOLATION; count>0 with NULL
+  array: STATUS_INVALID_PARAMETER_MIX; count > 4096: STATUS_INVALID_PARAMETER (x64; 4096 distinct caps ok);
+  revision != 1 or > 15 sub-authorities: STATUS_INVALID_SID; access 0 = access of the source handle.
+  (3+ identical capability SIDs were rejected too, 2 were not: not emulated.)
+- TokenAppContainerSid: minimum size sizeof(TOKEN_APPCONTAINER_INFORMATION) (8/4), retlen = that + SID length
+  (x64 lowbox: 48); non-lowbox: TokenAppContainer NULL.
+- CreateProcess with the attribute: no LOCALAPPDATA in the environment -> ERROR_ENVVAR_NOT_FOUND (203);
+  LOCALAPPDATA longer than MAX_PATH is rewritten normally.
 
 ## Design / fix (fix/095-security-capabilities)
 - server: tokens carry the package SID + capabilities (new `create_lowbox_token` request; duplicates and
@@ -44,11 +52,15 @@ CreateProcess. (Attribute 26 = COMPONENT_FILTER, which Chromium tolerates as ERR
   isolation, TokenAppContainerNumber, lowbox-source -> 87 in CreateProcess (Wine: 5).
 
 ## Tests
-Commits (wt/095, fix/095-security-capabilities on integ c3bcda7c5e4):
-2cec7d1f232 ntdll: Create real lowbox tokens in NtCreateLowBoxToken().
-0ecf753dfe4 kernelbase: Return ERROR_NOT_APPCONTAINER from CreateAppContainerToken() for non-package SIDs.
-7958974e2ea kernelbase: Accept the ALL_APPLICATION_PACKAGES_POLICY and COMPONENT_FILTER attributes.
-8fd70dd7bea kernelbase: Support PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES.
+Commits (wt/095, fix/095-security-capabilities on integ de4940b5b86, protocol version 969; review fixes folded in):
+354990a429c ntdll: Create real lowbox tokens in NtCreateLowBoxToken().
+2d401476617 kernelbase: Return ERROR_NOT_APPCONTAINER from CreateAppContainerToken() for non-package SIDs.
+9bc9a04f613 kernelbase: Accept the ALL_APPLICATION_PACKAGES_POLICY and COMPONENT_FILTER attributes.
+6c4ab969234 kernelbase: Support PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES.
+Review fixes: TokenAppContainerSid size probing (was stuck at 20 on x64), NtCreateLowBoxToken argument checks
+(+ wow64 thunk with NULL/huge arrays), access 0, missing/long LOCALAPPDATA, leftover %TEMP%\seccaps.
+After the rebase: kernelbase:security 118 tests 0 failures on VM + Wine (both arches); kernel32:process VM
+only the pre-existing :4638, Wine 112/176 = baseline; regress subset 0 worse of 158 units.
 
 - kernel32:process gets test_security_capabilities_attribute (attribute sizes, unregistered -> 2,
   non-package -> 4250, NULL -> 87, bad capability -> 87; child in the container checks IsAppContainer,

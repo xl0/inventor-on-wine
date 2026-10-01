@@ -121,7 +121,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   and dirty-rect Present1. `layered_child_gpu.c`: cross-process D3D child in a colour-keyed
   layered window. `syscommand_hidden.c`: SC_MAXIMIZE/MINIMIZE on hidden windows.
   `wofset.c`: WofSetFileDataLocation / FSCTL_SET_EXTERNAL_BACKING.
-  `lowbox_token.c`: NtCreateLowBoxToken / CreateAppContainerToken token properties.
+  `lowbox_token.c`: NtCreateLowBoxToken / CreateAppContainerToken token properties; `lowbox_args.c`: their argument
+  validation + TokenAppContainerSid sizes (095).
   `hkcu_proto.c`: per-user URL protocol via HKCR / AssocQueryString. `hkcr_merge.c`: HKCR merged
   view probe (which side backs open/create/query/enum; needs admin).
   `tlb_cache.c`: typelib cache + PSDispatch/PSOAInterface proxy/stub probe and benchmark (032).
