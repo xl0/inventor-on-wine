@@ -274,7 +274,8 @@ commits or screenshots). Read-only mode may remain after expiry.
   worker.md now caps scratch at ~10 GB.
 - integ ahead of build/: +099 (COM cancel semantics, refcounted call state, dead-server GetBuffer
   event leak), +104 (display-device cleanup under the init mutex: mode-switch flakes), +105
-  (desktop explorer no longer inherits the app debugger; kernel32:debugger flake) — rebuild +
+  (desktop explorer no longer inherits the app debugger), +095 (real lowbox tokens, SECURITY_CAPABILITIES;
+  PROTOCOL 969: restart all test prefixes) — rebuild +
   regress after soak #3 (running on build/, inv).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
