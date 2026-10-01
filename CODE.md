@@ -184,6 +184,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   COM calls; `mfc_state.c`: AFX_MANAGE_STATE of Inventor's FEA DLL (070). `account_domain_sid.c`: GetWindowsAccountDomainSid/EqualDomainSid
   per SID (064).
   `getwindow_perf.c [N] [ITERS]`: ns per GetWindow/GetParent/GetProp/... over a tree of N children (057, 081).
+  `xproc_geometry.c [ITERS]`: helper process owns a child of our toplevel; its GetAncestor/MapWindowPoints/
+  GetWindowRect/GetDCEx region must follow our moves/resizes/hides at once, then ns/call (091; Win11 pass).
   `wait_granularity.c [phase|loops|periods|nt|running|periodic|pool|mmtimer]`: timer resolution semantics of
   timed waits/timers, timeBeginPeriod/NtSetTimerResolution (089; Win11 ground truth in the issue).
   `abs_timeout.c [rel|bench|clock]`: absolute wait/timer deadlines (system vs precise base, past,

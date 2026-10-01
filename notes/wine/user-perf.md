@@ -17,6 +17,11 @@
   hook chains (`queue_shm_t.hooks_serial` + `get_hook_chain` snapshot per thread/id;
   LL/winevent hooks still use start/get_hook_info/finish), GetProp
   (`window_shm_t.props_serial`, per-thread cache; results by unknown names aren't cached).
+- 091: window trees spanning processes (Chromium GPU child in the browser window) cache the last server
+  answer of get_window_parents / get_window_rectangles / get_windows_offset per thread, and DCEs keep their
+  visible region, while `desktop_shm_t.windows_serial` is unchanged (server windows_changed(): positions,
+  Z-order, parents, styles, regions, layered, DPI, monitors). New window state that affects geometry or
+  visible regions must call windows_changed(). tests/xproc_geometry.c checks it (Win11 = Wine).
 - Still server calls: GetWindow(GW_HWNDFIRST/LAST/OWNER of other processes),
   PeekMessage/GetMessage (every call that returns a message, and when the queue
   bits say there may be one), GetProp by a name that isn't an atom.
@@ -56,3 +61,7 @@
   WaitForSingleObject/ReleaseMutex per document; in-kernel only with ntsync, host kernel 6.8 has none),
   CreateFileMapping/MapViewOfFile/Unmap cycles: 8 server calls, ~250 us vs 49 us on Win11
   (tests/mapcycle_perf.c), case-insensitive misses scanning whole directories (find_file_in_dir).
+- Measuring per-frame cost of cross-process work (091): unpinned CPU% swings 2x with host load; pin the
+  processes + wineserver to a few cores with nice-19 spinners on the siblings (inst/091/spin.sh), compare
+  interleaved, and count requests/frame (inst/091/reqmix.sh) as the deterministic metric. A/B by swapping
+  module files: copy + rename, never `cp` over a mapped .so (running processes crash).
