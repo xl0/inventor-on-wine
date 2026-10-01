@@ -411,9 +411,18 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   see notes/wine/debugging.md. RSS/mapping growth in soaks comes from `samples` iterations only.
 - `tools/regress.sh run BUILD` / `compare BASE.txt NEW.txt` — sharded full
   conformance-suite run (32 jobs, own prefix in /dev/shm + Xvfb :120+ per shard,
-  software GL/Vulkan, no Gecko/Mono; ~4 min for both arches, 1755 units) and
+  software GL/Vulkan; ~4 min for both arches, 1755 units) and
   diff with re-run check: REAL / NEW (not in baseline) / FLAKY.
-  Runs are serialized by flock on /tmp/regress.lock (concurrent invocations queue).
+  Template prefix has Wine Gecko 2.47.4 (deps/ MSIs, sha256 vs appwiz.cpl's GECKO_SHA, then
+  `regsvr32 mshtml.dll` for both arches: wineboot ran with mshtml disabled so the classes and the
+  text/html MIME handler were missing) and no Mono. Xvfb is 1920x1200 set to 1024x768 with
+  extra RandR modes (tools/xvfb-modes.c: holder process; modes die with their client, and
+  `xrandr --newmode` can't attach them on Xvfb).
+  Runs hold flock /tmp/regress.lock via `flock -o` (children never inherit it), so concurrent
+  invocations queue. Units with fixed localhost ports (webservices proxy/channel,
+  winhttp notification/winhttp, wininet:http, httpapi) also serialize on /tmp/regress-ports.lock.
+  `tools/regress.sh unit DLL:TEST [-a ARCH] [-n N]`: one unit N times, same environment, no run
+  lock (displays :152-:199, shares the port lock); ~40 s template setup.
   Results cached in `deps/regress/<built commit>/`. Master baseline builder:
   `wt/regress-master` (detached worktree) + `wt/regress-master-build`.
 

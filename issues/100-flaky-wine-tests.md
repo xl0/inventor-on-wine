@@ -32,6 +32,16 @@ here is blocked by network. `FLAKY` in compare = unit got worse in one run vs ba
    sysparams, shell32:* etc. are consistent failures from the fixed 1024x768 Xvfb screen/no RandR
    modes. Baseline noise, not flaky. 173 of 1757 units are bad in all 30 runs (list: `awk` over results.txt).
 
+## Harness fixes (done in tools/regress.sh)
+Finding 1: units with fixed localhost ports serialize on /tmp/regress-ports.lock (also winhttp:winhttp 7532,
+wininet:http 7531, httpapi). Finding 3: Gecko 2.47.4 + `regsvr32 mshtml.dll` in the template (wineboot runs
+with mshtml disabled, so without regsvr32 the text/html MIME handler is missing and urlmon/ieframe still
+time out); ieframe:ie, urlmon:url and ~25 mshtml/itss/urlmon units pass. Finding 4: Xvfb 1920x1200 set to
+1024x768 plus RandR modes (tools/xvfb-modes.c): user32:monitor, dxgi (62 -> 2), ddraw pass.
+Always-bad units 174 -> 118, timeouts 5 -> 0. Mode-switch tests (d3d9, ddraw) are now occasionally flaky
+under load (missing WM_DISPLAYCHANGE / mode not applied), they failed always before.
+`tools/regress.sh unit DLL:TEST -n N` runs a single unit repeatedly.
+
 ## Table (sorted by cost x fixability; cost = rate x run time + effect on compare)
 
 "hist" = bad runs/30 in deps/regress (counted by status!=pass; for crash/timeout units bad = not the

@@ -91,8 +91,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   AdskLicensingAgent/msedgewebview2/... helpers, not the prefix's services; `--orphans`: helpers
   only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning. If a -k is unavoidable, restart the other Inventors.
 - X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh
-  uses :120–:151 for its shards (and cleans them up; runs queue on /tmp/regress.lock, so concurrent invocations are safe) — pick your own Xvfb
-  display from :200 up.
+  uses :120–:151 for its shards (and cleans them up; runs queue on /tmp/regress.lock, so concurrent invocations are safe;
+  `tools/regress.sh unit DLL:TEST -n 10` runs one unit repeatedly without queueing, on :152-:199) — pick your own Xvfb
+  display from :200 up. Don't edit tools/regress.sh in place while a run is active (bash reads it lazily): write a new file and `mv` it.
 - Disk is shared and finite (one 3.7 TB volume; /tmp lives on it). Keep scratch prefixes and
   copies under ~10 GB total: reuse prefixes instead of copying one per run, delete finished ones
   by explicit path, and never copy inv* prefixes (38 GB each) for scratch work.
