@@ -57,8 +57,11 @@
   (Windows hit-tests every alpha > 0 pixel): 062, 042.
 - Moves: with _NET_WM_MOVERESIZE (openbox) the WM moves the frame, Wine waits in
   move_resize_window() (sends WM_ENTER/EXITSIZEMOVE). Without it (awesome 4.3) win32u's
-  sys_command_size_move() loop does SetWindowPos per mouse move. WM-initiated moves (Mod4+drag)
-  get neither ENTER nor EXITSIZEMOVE (077).
+  sys_command_size_move() loop does SetWindowPos per mouse move. WM-initiated moves (Mod4+drag,
+  Alt+drag, keyboard moves): fix/077 posts ENTER/EXITSIZEMOVE when the WM changes the config
+  while it grabs the keyboard or a button is down; the end is seen via XI2 raw button release
+  (delivered despite grabs) or FocusIn(NotifyUngrab). openbox sends no client ConfigureNotify
+  during a move, only the frame's (host window -> GravityNotify), the synthetic one at the end.
 - DCE visible regions are cached per process and invalidated only by that process' own
   window changes. NtUserGetDCEx always refreshes DCs of foreign windows and (fix/065) of
   own windows whose toplevel is foreign (GPU-process children in another app's tree);

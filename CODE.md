@@ -147,6 +147,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   [TITLE] [drag X|mdrag X Y DX|hit|alpha|max]`: another app's layered popups: rects, owner, screen
   grab, composited alpha (over own white/black windows), window drag with SendInput (062).
   `sc_move_hittest.c`: SC_MOVE|n from WM_LBUTTONDOWN + SendInput drag, does it move (076).
+  `sizemove_log.c` + `sizemove_scen.sh`: window logging ENTER/EXITSIZEMOVE, MOVING, POSCHANGED
+  (top 40 client px = caption); the script drives WM moves/resizes with xdotool (077).
   `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,
