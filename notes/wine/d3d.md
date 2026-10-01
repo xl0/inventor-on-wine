@@ -31,3 +31,9 @@
 - Finding which resource a d3d11 call hits: +d3d11 traces lack buffer descs; a temporary ERR in
   wined3d (resource type/size/bind/usage + `__builtin_return_address(0)`) and addr2line on the PE
   (`addr - module base from /proc/PID/maps + ImageBase 0x180000000`) is quicker than +d3d.
+- lavapipe (Mesa 23.2, regress.sh's Vulkan) always uses the runtime's threaded vk_queue submit:
+  vkQueueSubmit returns before waits/commands are even looked at, so destroying a VkBuffer or
+  VkSemaphore a submitted batch still uses crashes in a host thread. Real drivers usually survive the
+  same misuse. Found: mfplat D3D12 buffers (fixed in 102), vkd3d fence released after a queued
+  Wait (103). vkd3d doesn't zero committed resources; lavapipe memory is malloc garbage, so tests
+  expecting zeroed textures (mfplat d3d12) fail randomly there.

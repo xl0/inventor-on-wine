@@ -74,3 +74,11 @@
   dlls offset = RVA (.text at 0x1000 both), so `addr2line -f -i -e build/dlls/X/x86_64-windows/X.dll
   $((ImageBase + off))`. Autodesk CER leaves `Temp\Inventor<ts>.dmp` (+ `.tmp` XML with the last
   commands, `Inventor<ts>.txt` with the CLR stack) and keeps `cer_dialog.exe` running (074).
+- Native crash in a host-library thread (lavapipe/llvmpipe/GLib workers have no TEB): with 102's
+  ntdll fix Wine prints `err:seh:handle_host_thread_signal signal N at PC (addr A) in a non-Wine
+  thread` and the default action kills the process (before: a second SEGV in the handler, rc 139,
+  no trace). ptrace (gdb attach) changed timing enough to hide 102's race; instead a temporary
+  `backtrace()`/`backtrace_symbols_fd(.., 2)` in that function prints `lib.so(+off)` frames
+  through the signal frame. Mesa symbols: Ubuntu's `*-dbgsym_<ver>_amd64.ddeb` from
+  ddebs.ubuntu.com (debuginfod.ubuntu.com lacked them), `dpkg-deb -x` to scratch (no install),
+  `addr2line -f -i -e .../.build-id/xx/yyyy.debug OFF`. Mesa source: tag `mesa-<ver>`.
