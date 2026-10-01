@@ -1,0 +1,85 @@
+diff --git a/server/process.c b/server/process.c
+index 9a4d8a3f88c..e2aff4ff7e1 100644
+--- a/server/process.c
++++ b/server/process.c
+@@ -67,6 +67,13 @@
+ /* process object */
+ 
+ static struct list process_list = LIST_INIT(process_list);
++
++void dump_view_counts( FILE *f ) /* DEBUG 098 */
++{
++    struct process *process;
++    LIST_FOR_EACH_ENTRY( process, &process_list, struct process, entry )
++        fprintf( f, "views %d %u\n", process->unix_pid, list_count( &process->views ) );
++}
+ static int running_processes, user_processes;
+ static struct event *shutdown_event;           /* signaled when shutdown starts */
+ static struct timeout_user *shutdown_timeout;  /* timeout for server shutdown */
+diff --git a/server/request.c b/server/request.c
+index 5135ed50cfd..9070d6eaec2 100644
+--- a/server/request.c
++++ b/server/request.c
+@@ -268,10 +268,30 @@ static void send_reply( union generic_reply *reply )
+ }
+ 
+ /* call a request handler */
++/* DEBUG 098: request counts per client unix pid and thread */
++struct reqstat { int pid, tid; unsigned int n[REQ_NB_REQUESTS]; unsigned long long ns[REQ_NB_REQUESTS]; };
++static struct reqstat reqstats[512];
++void dump_reqstats(void)
++{
++    FILE *f = fopen( "/tmp/wineserver-reqstats.txt", "a" );
++    int i, r;
++    fprintf( f, "=== dump\n" );
++    { extern void dump_view_counts( FILE *f ); dump_view_counts( f ); }
++    for (i = 0; i < ARRAY_SIZE(reqstats) && reqstats[i].pid; i++)
++        for (r = 0; r < REQ_NB_REQUESTS; r++)
++            if (reqstats[i].n[r]) fprintf( f, "%d %d %d %u %llu\n", reqstats[i].pid, reqstats[i].tid, r, reqstats[i].n[r], reqstats[i].ns[r] );
++    fclose( f );
++    memset( reqstats, 0, sizeof(reqstats) );
++}
++
+ static void call_req_handler( struct thread *thread )
+ {
+     union generic_reply reply;
+     enum request req = thread->req.request_header.req;
++    struct timespec ts0, ts1;
++    int si, upid = thread->process->unix_pid, utid = thread->unix_tid;
++
++    clock_gettime( CLOCK_MONOTONIC, &ts0 );
+ 
+     current = thread;
+     current->reply_size = 0;
+@@ -301,6 +321,16 @@ static void call_req_handler( struct thread *thread )
+         }
+     }
+     current = NULL;
++    clock_gettime( CLOCK_MONOTONIC, &ts1 );
++    for (si = 0; si < ARRAY_SIZE(reqstats); si++)
++        if (!reqstats[si].pid || (reqstats[si].pid == upid && reqstats[si].tid == utid)) break;
++    if (si < ARRAY_SIZE(reqstats) && req < REQ_NB_REQUESTS)
++    {
++        reqstats[si].pid = upid;
++        reqstats[si].tid = utid;
++        reqstats[si].n[req]++;
++        reqstats[si].ns[req] += (ts1.tv_sec - ts0.tv_sec) * 1000000000ull + ts1.tv_nsec - ts0.tv_nsec;
++    }
+ }
+ 
+ /* read a request from a thread */
+diff --git a/server/signal.c b/server/signal.c
+index 0b38e23898d..a1159b03ab4 100644
+--- a/server/signal.c
++++ b/server/signal.c
+@@ -149,8 +149,10 @@ static void handler_poll_event( struct fd *fd, int event )
+ }
+ 
+ /* SIGHUP callback */
++extern void dump_reqstats(void);
+ static void sighup_callback(void)
+ {
++    dump_reqstats();
+ #ifdef DEBUG_OBJECTS
+     dump_objects();
+ #endif

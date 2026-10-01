@@ -1,9 +1,9 @@
 /* Per-file cost of a memory-mapped file read as Autodesk's xirang does it (098):
  * CreateFile, CreateFileMapping(0), MapViewOfFileEx, CloseHandle(mapping), DuplicateHandle(file),
  * touch the view, UnmapViewOfFile, CloseHandle x2.
- * mapview_perf.exe [N] [THREADS] [VIEWS]: N iterations over one small file; THREADS idle threads and
+ * mapcycle_perf.exe [N] [THREADS] [VIEWS]: N iterations over one small file; THREADS idle threads and
  * VIEWS other mapped views (of a pagefile section) exist meanwhile.
- * x86_64-w64-mingw32-gcc -O2 -o mapview_perf.exe mapview_perf.c */
+ * x86_64-w64-mingw32-gcc -O2 -o mapcycle_perf.exe mapcycle_perf.c */
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     for (i = 0; i < views; i++) MapViewOfFile(sec, FILE_MAP_READ, 0, 0, 4096);
     for (i = 0; i < threads; i++) CloseHandle(CreateThread(NULL, 0, idle, NULL, 0, NULL));
     GetTempPathA(MAX_PATH, path);
-    strcat(path, "mapview_perf.bin");
+    strcat(path, "mapcycle_perf.bin");
     file = CreateFileA(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
     for (i = 0; i < 16; i++) WriteFile(file, buf, sizeof(buf), &w, NULL);
     CloseHandle(file);

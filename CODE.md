@@ -197,6 +197,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   right; SetNamedSecurityInfo via OWNER RIGHTS-only DACLs; label readback) for files/dirs/keys/events (094).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
+  `mapcycle_perf.c [N] [THREADS] [VIEWS]`: CreateFileMapping/MapViewOfFile/Unmap cycle cost (098).
+  `wic_enum.c`: WIC metadata-reader enumeration cost + run-time registration visibility (098).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
@@ -287,6 +289,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   sha256 ce79869e…aee94, Adoptium). Only used by `tools/decomp.sh`.
 - `tools/gdb/winesyms.py`, `tools/gdb/sehbt.py`: gdb on a hung Wine process (winedbg can't attach
   under the loader lock): symbols despite the preloader, .pdata backtraces per syscall frame (048).
+  `tools/gdb/bpbt.py`: `bpbt NtFoo N SKIP` = PE callers of an Nt* call on a live process (098).
+- `tools/wineserver-reqstats.patch` (debug only): SIGHUP to wineserver dumps request counts and
+  handler time per client thread (+ view counts) to /tmp/wineserver-reqstats.txt (098).
 - `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports [ARG]` — headless
   Ghidra queries via `tools/Decomp.java`. Project cached per binary sha256 in
   `deps/ghidra-cache/` (+ Ghidra's XDG config/cache), flock per binary; first
@@ -373,6 +378,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
   `place`: asmbig's "place 200 occurrences" alone, `INVSCEN_N` rounds, per call kind split;
   `INVSCEN_PLACE=hidden|cheap`, `INVSCEN_SYNC` like openbench (097).
+  `docbench`: `INVSCEN_N` rounds of visible Documents.Add + Close per type of `INVSCEN_TYPES`
+  (part asm drw); round 1 after an Inventor start = one-time costs; `INVSCEN_SYNC` (098).
   `openbench`: activates samples.ipj, opens/closes `INVSCEN_OPEN` (;-list) `INVSCEN_N` times and times
   a file-reference walk (per-COM-call cost, 057). `INVSCEN_SYNC=C:\dir`: handshake files around each
   walk (walk.start -> wait walk.go, walk.end -> wait walk.done) to attach strace to one walk (081).

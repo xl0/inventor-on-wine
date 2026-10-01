@@ -45,3 +45,14 @@
   absolute deadlines follow wall-clock steps (tests/abs_timeout.c).
 - Idle CPU per process of a prefix: tools/idlecpu.sh; server request mix per client: strace the
   wineserver's reads and map pipe inodes (/proc/PID/fd) to clients.
+- Document creation in Inventor (098): server request stats per client thread with the debug patch
+  `tools/wineserver-reqstats.patch` (SIGHUP to wineserver dumps counts + handler time to
+  /tmp/wineserver-reqstats.txt; also per-process view counts), PE backtraces of the callers of an Nt*
+  call with `tools/gdb/bpbt.py` (`bpbt NtFoo N SKIP` in gdb: unix-side breakpoint + .pdata unwind from the
+  syscall frame; PE-side stub breakpoints see a stale frame). Off-CPU of one thread:
+  `perf record -e context-switches -c 1 --call-graph dwarf -t TID` (works with paranoid 1).
+- Costs found there: WIC CreateComponentEnumerator re-reading HKCR per call (2.3 ms vs 3 us native;
+  cached since 098), server view list scans (tree since 098), ADP analytics mutexes (~2k
+  WaitForSingleObject/ReleaseMutex per document; in-kernel only with ntsync, host kernel 6.8 has none),
+  CreateFileMapping/MapViewOfFile/Unmap cycles: 8 server calls, ~250 us vs 49 us on Win11
+  (tests/mapcycle_perf.c), case-insensitive misses scanning whole directories (find_file_in_dir).

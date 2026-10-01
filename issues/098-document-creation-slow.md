@@ -1,5 +1,5 @@
 # 098 First part view and new documents are 5-15x slower than Windows
-Status: open (draft, perf) · Owner: - · Branch: - · Found in: invscen suite (inv, integ 2cfee5f132e)
+Status: partly fixed (fix branch) · Owner: worker-098 · Branch: fix/098 (wt/098 on integ 2cfee5f132e) · Found in: invscen suite (inv, integ 2cfee5f132e)
 
 ## Symptom (Wine vs VM, invscen step times)
 - hello "first part view" (first Documents.Add of a visible part after start): 13.5 s vs 0.9 s
@@ -12,3 +12,104 @@ Profile document creation (first and subsequent): DLL loading (count, time, load
 window creation, registry/file access, .NET JIT. Separate first-view one-time costs (shader
 compile, DLL loads — can they be cached like on Windows?) from per-document costs. Fix Wine-side
 causes; prove with interleaved A/B on one prefix.
+
+## Status
+Three fixes on fix/098 (build wt/098-build, prefix inv4/:101): docbench first part view
+14.6 -> 12.8 s (suite hello 14.4 -> 11.2), first asm 3.2 -> 2.5, first drawing 2.9 -> 1.7,
+warm documents ~1.2 -> ~0.95 s, STEP export 1.4 -> 0.4, part reopen 1.7 -> 1.2 (A/B below).
+Remaining first-view cost is mostly per-server-call latency (asset loop, registry, mutexes),
+see "Remaining".
+
+## Method
+- `tools/invscen/docbench.cs`: INVSCEN_N rounds of Documents.Add(visible)+Close per type (part asm drw);
+  round 1 after a fresh Inventor start = one-time costs, later rounds = per-document.
+  INVSCEN_SYNC=C:\t\sync098 + `wt/098-sync.sh OUT N TRACER` attaches a tracer around each add
+  (tracers: wt/098-perf.sh, wt/098-req.sh = server request stats via the debug patch
+  tools/wineserver-reqstats.patch (SIGHUP dumps per-thread request counts/time), wt/098-gdb.sh,
+  wt/098-tools/bp.sh = gdb + tools/gdb/bpbt.py: PE backtraces at a unix-side Nt* function).
+- `wt/098-switch.sh BUILD` restarts inv4 on a build.
+
+## Findings (integ 2cfee5f132e, inv4)
+- The VM reference is not a cold start: the VM Inventor session is long-running, so its
+  "first part view 0.9 s" is a warm document. Wine warm (round 2): part/asm/drw 1.2 s each.
+  One VM docbench right after a fresh VM Inventor start (097 had just started it, possibly
+  busy): part 4.0, asm 2.8, drw 2.5 s. Wine cold: part ~14.5, asm ~3-4.5, drw ~3-4.5 s.
+- First part view (~14.5 s) on Wine: main thread ~12 s CPU, ~180k server round trips (~20 us
+  each here) of which:
+  - ~54k from ntdll alloc_tls_slot: every DLL with a TLS directory walked all ~500 threads
+    with NtGetNextThread + NtQueryInformationThread + NtClose (219 DLLs, 316 MB load in this step);
+  - ~45k registry (enum_key/open_key/get_key_value): windowscodecs CreateComponentEnumerator
+    re-enumerating HKCR\CLSID\{CATID_WICMetadataReader}\Instance for every PNG metadata block
+    (gdiplus PNG decode of UI images), ~800 enumerations; ~330 per later document;
+  - ~21k mutex select/release (no ntsync on this 6.8 kernel: in-kernel with ntsync).
+- 3.2 s of the first part view the main thread joins an adskassetapi worker (asset library):
+  xirang maps one file 15218 times (CreateFileMapping, MapViewOfFileEx, CloseHandle,
+  DuplicateHandle, UnmapViewOfFile, CloseHandle = 8 server calls). tests/mapcycle_perf.c: 250 us
+  per cycle on Wine vs 49 us on Win11; server map_view/unmap_view scanned the ~1550-view list.
+- Shader compilation is not significant: OGS keeps compiled effects on disk
+  (%TEMP%\ogs\<id>\Shader\...\*.fxo), so D3DCompile/vkd3d-shader HLSL compiles happen only on a
+  cold cache; device + swapchain + first shaders take <1 s (Vulkan instance/device/swapchain
+  creation ~0.35 s in the NVIDIA driver); no vkd3d-shader or driver pipeline compile shows in perf. .NET JIT runs on a background thread (~8 s CPU) and is
+  not on the main thread's critical path (DOTNET_ReadyToRun=0 / EnableWriteXorExecute=0 change nothing).
+
+## Fixes (fix/098)
+- 4541231380e ntdll: Keep a list of threads with TLS data instead of enumerating threads.
+  (+ kernel32 loader test: a thread that existed before the load sees the DLL's TLS data;
+  Win11 x86_64/i386 0 failures; fails on Wine if other threads are skipped)
+- c881ceede18 server: Look up memory views in a tree. (list kept for debug-event load order)
+- e6e1dd42660 windowscodecs: Cache the component lists of CreateComponentEnumerator.
+  Re-read on WICComponentEnumerateRefresh only. tests/wic_enum.c: 3 us per metadata-reader
+  enumeration on Win11 (45 readers) vs 2330 us on Wine before, 3.8 us after. A reader registered
+  at run time never showed up on Win11 (even in a new process, with Unsigned|Refresh), so the
+  cache semantics come from the documented Refresh flag, not from a probe.
+No protocol change.
+
+## A/B (inv4, interleaved, 3 runs each, fresh Inventor per run, docbench INVSCEN_N=3; medians, s)
+| step | base 2cfee5f132e | fix/098 |
+|---|---|---|
+| add part 1 (first view) | 14.6 | 12.8 |
+| add asm 1 | 3.2 | 2.5 |
+| add drw 1 | 2.9 | 1.7 |
+| add part 2/3 | 1.2 | 0.95 |
+| add asm 2/3 | 1.25 | 1.05 |
+| add drw 2/3 | 1.05 | 0.8 |
+Raw: wt/098-runs/ab1/.
+
+## Remaining (first part view on fix/098, ~12.8 s)
+- ~2.8 s: main thread joins the adskassetapi worker: 15218 x (CreateFileMapping, MapViewOfFileEx,
+  CloseHandle, DuplicateHandle, UnmapViewOfFile, CloseHandle) = 8 server calls each (~184 us per
+  cycle, ~33 us on Win11). xirang's stream read() maps the requested range per call (app design).
+  Only fewer/faster server calls help: e.g. get_mapping_info returning the section fd (saves
+  get_handle_fd, 1 of 8; protocol change, not done).
+- ~100k other main-thread server calls: app registry reads (NtQueryValueKey/NtOpenKeyEx ~10k),
+  ADP analytics mutexes (~19k select/release_mutex; ntsync would make them in-kernel),
+  icon churn (CreateIconIndirect/DestroyIcon: alloc/free_user_handle + GetCursor ~8k), window
+  management. Wineserver is also ~50% busy with msedgewebview2 clients during the step (088).
+- CPU: case-insensitive misses scan whole directories (find_file_in_dir, ~0.4 s: DLL search
+  path probes in Inventor\Bin), DLL image reads (219 DLLs, 316 MB, ~0.4 s), Vulkan
+  instance/device/swapchain creation (~0.35 s, NVIDIA driver), .NET JIT (background thread).
+
+## Suite A/B (inv4, interleaved, 3 runs each, fresh Inventor; "hello part", 60 s idle, then
+"drawing script export" in the same Inventor; medians, s; raw wt/098-runs/suite2/)
+| step | base | fix/098 | VM ref (warm) |
+|---|---|---|---|
+| hello first part view | 14.4 | 11.2 | 0.9 |
+| part new part | 1.3 | 0.9 | 0.5 |
+| part reopen | 1.7 | 1.2 | 0.5 |
+| drawing new drawing (first drawing) | 3.8 | 2.2 | 0.5 |
+| drawing reopen | 1.2 | 0.7 | 0.6 |
+| drawing close | 0.3 | 1.1 | 0.2 |
+| export STEP export | 1.4 | 0.4 | 0.2 |
+| script iLogic add rule | 1.8 | 1.8 | 0.6 |
+Drawing close is bimodal in both builds (0.2-0.3 or 1.1-1.2 s per run: A 0.2/0.3/1.2,
+B 1.1/1.1/0.2), not a regression signal. Without the idle gap (suite1, back-to-back
+scenarios) some later steps (drawing views, imports) were 0.2-0.3 s slower on fix/098: the
+shorter first view leaves Inventor's startup background work running into them.
+iLogic add rule is unchanged (not analysed).
+
+## Tests
+- kernel32:loader Win11 x86_64 17775 / i386 17672 tests, 0 failures; Wine both arches 0 failures.
+- windowscodecs (all units) and gdiplus on Wine: 0 failures.
+- tools/regress.sh (ntdll kernel32 kernelbase windowscodecs gdiplus psapi dbghelp user32 ole32
+  oleaut32 msvcrt ucrtbase; 332 units) vs deps/regress/2cfee5f132e: 1 worse, FLAKY
+  (x86_64 kernel32:debugger, base re-runs fail the same way).

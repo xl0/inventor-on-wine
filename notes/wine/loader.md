@@ -30,3 +30,8 @@
 - After rebuilding ntdll, kernel32:loader's `test_dll_file("ntdll.dll")` compares the loaded
   ntdll with the prefix's system32 copy: `wineserver -k; echo 0 > $WINEPREFIX/.update-timestamp; wine wineboot -u` (without the -k it
   sometimes doesn't copy).
+- TLS of dynamically loaded DLLs (fix/098): `tls_threads` (loader lock) lists the TEBs that ran
+  alloc_thread_tls; alloc_tls_slot updates those instead of enumerating threads through the server
+  (3 server calls per thread per TLS DLL: ~54k calls for Inventor's first part view). Entries of
+  threads killed without LdrShutdownThread stay (their TEB memory stays mapped/reused; a reused TEB
+  is re-registered once).
