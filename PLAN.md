@@ -246,12 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 4f92c92ace1 (wine-11.18-453; adds 097: combase local IRpcOptions/IAgileObject/INoMarshal,
-  STA call event reuse, rpcrt4 cached pipe events + whole-message reads; 098: ntdll TLS thread list,
-  server view tree, windowscodecs component cache; no protocol change). inv, inv2 restarted on it
-  (inv4 still runs the 1a3728c8a6e build). Full regress vs master 4e819f054dd: no REAL/NEW; FLAKY only
-  mf i386, user32:input i386, user32:win i386, mfplat x86_64 (all known); timeouts unchanged (same 4).
-  inv full invscen suite: 12/13 PASS; hello "first part view" ActiveView null once (037 flake: 2 reruns PASS).
+- build/ = integ 492d5679270 (wine-11.18-458; adds 097/098 as before, 102: ntdll host-thread signal handling,
+  mfplat waits for D3D12 copies; 101: server desktop-close race, win32u ClipCursor host warp + GetCursorPos
+  clamp; no protocol change). inv, inv2 restarted on it (inv4 still runs the 1a3728c8a6e build).
+  Full regress vs master 4e819f054dd (new template, Gecko): 0 worse of 1757 units, so no REAL/NEW/FLAKY.
+  Non-pass in both: 28 crash / 90 fail on build vs 30 / 91 on master; mfplat both arches and mf/dxgi
+  fail with varying counts (flaky); dcomp, ntdll:threadpool, ntdll:time now pass.
+  inv full invscen suite: 13/13 PASS (host load ~29).
   A/B on inv vs 2cfee5f132e (interleaved A,B x3, medians): place 200 occurrences round 1 20.1 -> 8.5 s
   (all 9 rounds 19.3 -> 7.7; A3 ran slow, host noise); docbench first part 9.8 -> 11.3 s (B slower in 3/3
   pairs, 098 claimed a gain; the place scenario's first part 11.1 -> 10.5 s), first asm 2.3 -> 2.4,
