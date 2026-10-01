@@ -1,6 +1,6 @@
 # 105: kernel32:debugger wow64 "ntdll after breakpoint" (x86_64 build)
 
-Status: fixed on fix/105 (wt/105: cd87017d9b3, daaf5acb00b on integ c3bcda7c5e4). Awaiting merge.
+Status: fixed on fix/105 (wt/105: cab481e280e fix, e57f8e74d0c optional, on integ c3bcda7c5e4). Awaiting merge.
 
 ## Symptom
 From 100 row 9: test_debug_loop_wow64 (64-bit debugger, 32-bit msinfo32 child,
@@ -30,18 +30,23 @@ with NtSetInformationProcess(ProcessDebugFlags, 0) (VM: child not debugged; valu
 STATUS_INVALID_PARAMETER, size 8 -> STATUS_INFO_LENGTH_MISMATCH). Wine only had the query.
 
 ## Fix (fix/105)
-- `ntdll: Implement NtSetInformationProcess(ProcessDebugFlags).` server set_process_info
-  mask SET_PROCESS_INFO_DEBUG_CHILDREN (protocol 969), wow64 pass-through, info.c tests
-  (pass on the VM, both arches).
-- `win32u: Don't let the desktop process inherit the app's debugger.` clears the flag
-  around the explorer launch and restores it. Ceiling: another thread of a debugged app
-  creating a process in that window doesn't inherit the debugger.
-- Rejected: detaching explorer after NtCreateUserProcess (NtRemoveProcessDebug): Wine queues
-  the startup events at init_process_done, before NtCreateUserProcess returns, so the
-  debugger still saw explorer's CREATE_PROCESS.
+- `cab481e280e win32u: Don't let the desktop process inherit the app's debugger.` When the app
+  has a debug port, explorer is created with a private debug object (PS_ATTRIBUTE_DEBUG_PORT, which
+  replaces inheritance) and NtRemoveProcessDebug detaches it before resuming: the queued startup
+  events are auto-continued, nobody sees them. Race-free, no protocol change.
+- `e57f8e74d0c ntdll: Implement NtSetInformationProcess(ProcessDebugFlags).` Optional, independent
+  (not needed by the fix): server set_process_info mask SET_PROCESS_INFO_DEBUG_CHILDREN
+  (**protocol 969**), wow64 pass-through, info.c tests (pass on the VM, both arches).
+- Rejected: (1) toggling ProcessDebugFlags around the launch (first version): another thread's
+  child created meanwhile loses its debugger. (2) PROCESS_CREATE_FLAGS_NO_DEBUG_INHERIT: on Windows
+  the child still inherits the debugger, the flag only clears the child's own ProcessDebugFlags
+  (VM, `-ntinherit`; Wine doesn't do even that -> draft 106). (3) NtRemoveProcessDebug of the
+  inherited debugger after creation: Wine queues the startup events at init_process_done, before
+  NtCreateUserProcess returns, so the app's debugger had already seen CREATE_PROCESS.
 
-## Results
+## Results (cab481e280e alone, protocol 968)
 `tools/regress.sh unit kernel32:debugger -a x86_64 -n 30`: before (build/, integ) 30/30 fail
-(2 failures each); after 30/30 pass idle, 30/30 pass with 100 spinners.
-`regress.sh run -j 8 -m '^(ntdll|kernel32|win32u)$'` wt/105-build vs build/ (integ): 124 units,
-only difference x86_64 kernel32:debugger fail 2 -> pass (0 worse).
+(2 failures each); after 30/30 pass idle, 30/30 pass with 100 spinners (same for the first,
+toggle-based version).
+`regress.sh run -j 8 -m '^(ntdll|kernel32|win32u)$'` vs build/ (integ): 124 units, only difference
+x86_64 kernel32:debugger fail 2 -> pass (0 worse).
