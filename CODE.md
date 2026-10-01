@@ -194,6 +194,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
   `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).
+  `seccaps_probe.c [run EXE]`: CreateProcess with SECURITY_CAPABILITIES: attribute sizes, child token/env/access
+  (`run EXE`: start EXE `process seccaps` in the container, for kernel32_test) (095).
   `setsecinfo_access.c`: access rights each *_SECURITY_INFORMATION flag needs (NtSetSecurityObject per handle
   right; SetNamedSecurityInfo via OWNER RIGHTS-only DACLs; label readback) for files/dirs/keys/events (094).
   `mydocs_path.c`: CSIDL_PERSONAL PIDL, SHGetPathFromIDList, desktop GetDisplayNameOf per SHGDN,
