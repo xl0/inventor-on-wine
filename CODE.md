@@ -202,6 +202,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `wic_enum.c`: WIC metadata-reader enumeration cost + run-time registration visibility (098).
   `desktop_owner_thread.c`: thread exits in the desktop's explorer must not close the desktop (Wine only, 101).
   `clipcursor_warp.c`: ClipCursor-moved cursor still reported after >100 ms (Win11: yes, 101).
+  `dbg_wow64_order.c [CMDLINE|-inherit]`: debug events of a DEBUG_PROCESS child in order (default
+  syswow64 msinfo32; pid, module names); `-inherit`: debuggee clears ProcessDebugFlags, is its child debugged (105).
   `displaychange_sync.c [W H|list]`: ChangeDisplaySettingsEx delivery of WM_DISPLAYCHANGE to own/other
   thread/process windows and mode visibility after return (104; the VM has only 1024x768).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls

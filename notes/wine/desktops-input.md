@@ -2,6 +2,8 @@
 
 - Every desktop's window belongs to an `explorer.exe /desktop` process, started by the first
   thread that needs it (`win32u/winstation.c:get_desktop_window`; inherits that process' stderr).
+  Its parent is that app, so a DEBUG_PROCESS debugger of the app used to get explorer as a
+  debuggee too (and killed the desktop on exit); fix/105 clears ProcessDebugFlags around the launch.
   The server closes the desktop when only the owner's threads remain: `server/winstation.c:
   remove_desktop_user` arms a 1 s timeout (`desktop->users == owner->running_threads`), then
   unlinks the name and posts WM_CLOSE; any new user cancels it. An exiting thread is still in
