@@ -20,6 +20,11 @@
   desktop (user32:input rawinput test 16, fix/101 test change).
 - `NtUserGetCursorPos` returns the server position only if it changed in the last 100 ms, else
   it asks the driver (X pointer). Anything that moves the server cursor without moving the host
-  pointer shows up only after 100 ms (ClipCursor before fix/101; mouse moves clamped by a clip).
+  pointer shows up only after 100 ms. fix/101: ClipCursor warps the host pointer when it moves
+  the cursor, and the driver position is clamped to the shm clip rect.
+- All desktops share the X pointer: SetCursorPos on a non-input desktop warps it (Windows: fails).
+  A new desktop's shm clip is (0,0,0,0) until its desktop window is sized, so the server clamps
+  cursor positions there to (0,0). A thread's desktop handle is closed when the thread exits
+  (`release_thread_desktop`), unlike Windows.
 - winex11 confines the pointer for ClipCursor only when the X input focus is on a window of the
   calling process (`grab_clipping_window`); otherwise clipping is server-side only.

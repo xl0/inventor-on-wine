@@ -1,11 +1,11 @@
 # 101 user32:input flaky: X_UnmapWindow BadWindow crash + SendInput returning 0 under load
-Status: fixed (fix/101-user32-input, 3 commits on integ 4f92c92ace1) · Owner: worker-101 · Found in: 100 triage
+Status: fixed (fix/101-user32-input, 3 commits on integ 0b527e717bb, after review round 1) · Owner: worker-101 · Found in: 100 triage
 
 Rates from 100: i386 10/30 bad in full regress runs (7 crash, 3 fail), x86_64 6/30; also on master.
 Three independent causes, one commit each (wt/101, build wt/101-build):
 
 1. `server: Don't count an exiting thread of the desktop owner as running.` (crash)
-2. `win32u: Move the host cursor when ClipCursor moves the cursor.` (+ test) ("got pos (49,51)")
+2. `win32u: Keep the cursor position within the clip rect.` (+ tests) ("got pos (49,51)")
 3. `user32/tests: Keep the main window over the other desktop's window in rawinput test 16.`
    (mouse_event / "SendInput returned 0")
 
@@ -31,9 +31,18 @@ SetCursorPos(49,51); ClipCursor(50,50,51,51): the server moves its cursor to (50
 pointer stays at (49,51) (the child has no focused window, so winex11 doesn't grab/confine).
 NtUserGetCursorPos asks the driver once the server position is >100 ms old -> (49,51).
 `tests/clipcursor_warp.c`: Win11 VM reports (50,50) at 0/150/300 ms; unfixed Wine (49,51) from
-150 ms on; fixed (50,50). Fix: NtUserClipCursor calls pSetCursorPos when set_cursor moved the
-cursor (like NtUserSetCursorPos). Test: Sleep(150) after that ClipCursor in test_SetCursorPos
-(fails 100 % without the fix, passes on Win11 VM i386+x86_64).
+150 ms on; fixed (50,50). Fix: NtUserClipCursor calls pSetCursorPos when set_cursor moved the cursor (like
+NtUserSetCursorPos), and NtUserGetCursorPos clamps the driver position to the shm clip rect
+(review: the host pointer can still leave the clip, e.g. xdotool / user; then GetCursorPos
+returned it unclamped). Tests in test_SetCursorPos: Sleep(150) after the first ClipCursor (fails
+100 % without the warp+clamp), and a thread on another desktop calling SetCursorPos(600,400)
+with clip (100,100)-(200,200) active, then GetCursorPos after 150 ms must be in the clip. Windows:
+that SetCursorPos fails, cursor stays (150,150); Wine: it warps the shared X pointer, so without
+the clamp GetCursorPos gives (600,400) (verified), with it (199,199). Deterministic, no external
+pointer mover. The thread needs GetDesktopWindow() first (a new desktop's shm clip is 0,0 until
+its desktop window sizes it, so the server clamps the SetCursorPos to 0,0 = no warp) and must
+SetThreadDesktop back before exiting: Wine closes a thread's desktop handle on thread exit
+(server release_thread_desktop), Windows doesn't (CloseDesktop then failed with error 6; not fixed).
 
 ## 3. mouse_event / SendInput fail (input.c:1879-1901, 4004), ~25 % under 100 spinners
 The input desktop is left on `rawinput_test_desktop` after test_rawinput. Case 16: the child's
@@ -58,7 +67,13 @@ windows are visible on the X screen (design; not changed).
   also on base (1/80 interleaved). Timing assumption in the test (5 ms for a cross-thread
   WM_NCHITTEST round trip).
 
-## Tests
+## Round 2 (after review, rebased on integ 0b527e717bb)
+- Wine loaded (100 spinners) 40 i386 + 40 x86_64: 0 bad; idle 10 + 10: 0 bad.
+- Wine cursoricon both arches: 0 failures. VM input x86_64/i386: same pre-existing set as below
+  (2612, 2673, 5105, 5756, 5772, 754/755); one VM run had 1872/1874 (GetMouseMovePointsEx
+  timestamps), not repeated in 3 reruns. VM cursoricon both arches: 0 failures.
+
+## Tests (round 1)
 - VM (Win11): user32_test input with the new test lines, x86_64 21 / i386 20 failures, none near
   the changed lines (pre-existing: 754/755 LL hook rshift, 2612/2673, 5102, 5753/5769).
 - Wine: input passes 0 failures idle and under load (see above).
