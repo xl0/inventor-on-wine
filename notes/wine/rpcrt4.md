@@ -38,3 +38,8 @@
   IProvideClassInfo, IInspectable, INoMarshal, IAgileObject, IRpcOptions per new object, so each
   remote one is a call into the server's STA (and, for MFC servers, a full idle cycle there).
   Wine lacks ICallFactory (no async calls).
+- Message-filter cancel (099, Windows ground truth): PENDINGMSG_CANCELCALL makes the call return
+  RPC_E_CALL_CANCELED at once, leaves the triggering message queued; the server finishes the call
+  (CoTestCancel there turns RPC_S_CALLPENDING -> RPC_E_CALL_CANCELED; Wine: stub). combase client
+  calls run on a private copy of the RPCOLEMESSAGE in a refcounted `message_state` (caller + call);
+  an orphaned call frees its message and closes its event when it completes.

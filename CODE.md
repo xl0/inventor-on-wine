@@ -189,7 +189,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   3-hook CallMsgFilter/PeekMessage (081). `qi_remote.c`: which QIs on a cross-process proxy reach the
   object, IRpcOptions Query/Set, cost of a remote QI (097). `mapview_perf.c`: map/unmap view,
   mutex wait+release, SetEvent, VirtualProtect costs (097). `freelib_perf.c`: LoadLibrary/FreeLibrary of a loaded DLL
-  with 300 extra modules (081).
+  with 300 extra modules (081). `com_cancel.c [sta|mta|psta|pmta]`: COM call cancelled by the message
+  filter (slow server in another apartment/process): return time, late reply, CoTestCancel (099).
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
   `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).
