@@ -1,5 +1,5 @@
 # 099 A COM call cancelled by the message filter keeps writing into freed call state
-Status: fixed · Owner: worker 099 · Branch: fix/099 (wt/099, on integ 492d5679270) · Found in: review of fix/097 (combase/rpc.c, integ 2cfee5f132e)
+Status: fixed · Owner: worker 099 · Branch: fix/099 (wt/099, on integ 492d5679270: cf739bb2a07 cdab4188fa8 5ce88cc17d3) · Found in: review of fix/097 (combase/rpc.c, integ 2cfee5f132e)
 
 ## Symptom (code reading, not seen in an app)
 The brief assumed CoWaitForMultipleHandles returns RPC_E_CALL_CANCELED while the call is in flight
@@ -37,15 +37,31 @@ the client thread when the call starts; MessagePending returns PENDINGMSG_CANCEL
   calls from server dispatch (dispatch_rpc) by `bypass_rpcrt`. The binding stays alive for an
   orphaned rpcrt4 call via the connection's binding ref (I_RpcGetBuffer..I_RpcFreeBuffer).
   The per-thread cached event (086) is only returned to the cache by a caller whose call completed.
-- 59257ef2826 combase: Return from a call right away when the message filter cancels it.
-  CoWaitForMultipleHandles breaks out on CANCELCALL without dispatching the pending messages.
+- cdab4188fa8 combase: Return from a call right away when the message filter cancels it.
+  CoWaitForMultipleHandles breaks out on CANCELCALL without dispatching the pending messages, and
+  only consults the filter while an outgoing call is pending (Windows: not in plain STA waits;
+  compobj's todo_wine on MessagePending dropped). Otherwise direct CoWaitForMultipleHandles callers,
+  ISynchronize::Wait and rpc_get_local_class_object would return early / spin on a cancel.
   Test ole32:marshal test_cancel_call (sta, mta, process sta, process mta): cancel returns at
   once, server still in call 1, message still queued; next call gets CLSID {2}; after the late
-  completion the third gets {3}.
+  completion the third gets {3}. The filter cancels only on the server's posted message.
+- 5ce88cc17d3 combase: Free the call state when a client channel fails to get a buffer.
+  Pre-existing (also upstream): NdrProxyGetBuffer raises without FreeBuffer when GetBuffer fails,
+  so every call to a dead server leaked the call event + message_state + cif (reviewer's deadsrv.c:
+  handles 47 -> 547 over 500 calls; now 44 -> 44). Test test_dead_server_call_handles (20 calls to
+  an exited server process: Wine without the fix +20 handles).
+- Reviewer's stress (cstress.c: 16-32 STA threads, random cancels, 4 server types, warn+heap, 37k
+  calls): 0 heap warnings, 0 crossed replies.
+
+## Follow-up (not done)
+An orphaned call to an in-process STA that CoUninitializes without pumping never runs, so the call
+state and the server object it references leak (reviewer's staleak.c). Option: complete pending
+DM_EXECUTERPC messages with RPC_E_DISCONNECTED before the apartment window is destroyed.
 
 ## Tests
-- ole32:marshal: VM x64 + i386 0 failures; Wine x64 + i386 0 failures (also under warn+heap, clean).
+- ole32:marshal + compobj (final, 5ce88cc17d3): VM x64 + i386 0 failures; Wine x64 + i386 0 failures
+  (marshal also under warn+heap, clean).
   integ combase: 4 failures (call finished before returning); early return without the
   ownership change: heap errors + wrong replies.
 - regress ole32|combase|rpcrt4|oleaut32|rpcss vs integ 492d5679270: 0 worse of 64 units;
-  `regress.sh unit ole32:marshal -n 10`: 10/10 pass per arch.
+  `regress.sh unit ole32:marshal -n 20`: 20/20 pass per arch.
