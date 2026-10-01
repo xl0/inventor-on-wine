@@ -266,11 +266,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Perf method: single suite sums are noise (126–188 s on builds with no hot-path change, host
   load 3–13). Perf claims need interleaved A/B on one prefix (as for 089); for stable numbers pin
   cores and keep sibling hyperthreads busy (088: C6 exit latency).
+  Check /proc/loadavg < ~25 before and during an A/B (a regress run pushes it to 60–120 and
+  produced a phantom 097/098 slowdown; clean bisect: first part 9.8 → 9.3 → 7.95 s).
 - 2026-10-01: disk hit 108 GB free (/tmp filled by per-run prefix copies, 17 stale worktree
   builds). Pruned merged worktrees/builds (branches kept) and finished scratch dirs → 312 GB;
   worker.md now caps scratch at ~10 GB.
-- integ ahead of build/: +102 (ntdll host-thread signals, mfplat D3D12 UAF) — rebuild after the
-  097/098 bisect finishes (it uses build/ as variant B).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
