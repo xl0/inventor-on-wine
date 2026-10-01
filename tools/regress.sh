@@ -75,8 +75,9 @@ run_units() {
         disps+=($d)
     done
     for d in "${disps[@]}"; do
-        for ((i = 0; i < 50; i++)); do [ -e /tmp/.X11-unix/X$d ] && break; sleep 0.2; done
-        [ -e /tmp/.X11-unix/X$d ] || { echo "regress: Xvfb :$d failed to start" >&2; exit 1; }
+        # the socket appears before Xvfb accepts clients (xvfb-modes then failed to connect)
+        for ((i = 0; i < 50; i++)); do xdpyinfo -display :$d > /dev/null 2>&1 && break; sleep 0.2; done
+        xdpyinfo -display :$d > /dev/null 2>&1 || { echo "regress: Xvfb :$d failed to start" >&2; exit 1; }
     done
     # Xvfb has one RandR mode; the holder adds more and must stay connected (it dies with Xvfb).
     gcc -O1 -o "$W/xvfb-modes" "$root/tools/xvfb-modes.c" -lX11 -lXrandr

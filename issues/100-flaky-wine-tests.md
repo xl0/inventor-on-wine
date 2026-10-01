@@ -40,6 +40,7 @@ time out); ieframe:ie, urlmon:url and ~25 mshtml/itss/urlmon units pass. Finding
 1024x768 plus RandR modes (tools/xvfb-modes.c): user32:monitor, dxgi (62 -> 2), ddraw pass.
 Always-bad units 174 -> 118, timeouts 5 -> 0. Mode-switch tests (d3d9, ddraw) are now occasionally flaky
 under load (missing WM_DISPLAYCHANGE / mode not applied), they failed always before.
+Those were a win32u registry race (issue 104, fixed); Xvfb startup now waits for xdpyinfo.
 `tools/regress.sh unit DLL:TEST -n N` runs a single unit repeatedly.
 
 ## Table (sorted by cost x fixability; cost = rate x run time + effect on compare)
