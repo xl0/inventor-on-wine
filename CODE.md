@@ -199,6 +199,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   SHGetNameFromIDList; `inv_mydocs.c [BINDIR]`: Inventor's own WinSupport OSxFolder::GetMyDocumentsDir (084).
   `mapcycle_perf.c [N] [THREADS] [VIEWS]`: CreateFileMapping/MapViewOfFile/Unmap cycle cost (098).
   `wic_enum.c`: WIC metadata-reader enumeration cost + run-time registration visibility (098).
+  `desktop_owner_thread.c`: thread exits in the desktop's explorer must not close the desktop (Wine only, 101).
+  `clipcursor_warp.c`: ClipCursor-moved cursor still reported after >100 ms (Win11: yes, 101).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
