@@ -53,15 +53,24 @@ see "Remaining".
   not on the main thread's critical path (DOTNET_ReadyToRun=0 / EnableWriteXorExecute=0 change nothing).
 
 ## Fixes (fix/098)
-- 4541231380e ntdll: Keep a list of threads with TLS data instead of enumerating threads.
+- 0ed662ef06c ntdll: Keep a list of threads with TLS data instead of enumerating threads.
   (+ kernel32 loader test: a thread that existed before the load sees the DLL's TLS data;
-  Win11 x86_64/i386 0 failures; fails on Wine if other threads are skipped)
-- c881ceede18 server: Look up memory views in a tree. (list kept for debug-event load order)
-- e6e1dd42660 windowscodecs: Cache the component lists of CreateComponentEnumerator.
+  Win11 x86_64/i386 0 failures; fails on Wine if other threads are skipped.)
+  Review fold-in: the TEB's TLS array pointer is read once and replaced by compare-and-swap: a
+  self-terminated thread keeps its entry and a new thread may reuse and clear its TEB meanwhile
+  (fault on NULL + index, also on the base build). Review repros (scratchpad tls/stress3.c,
+  large-TLS DLL + self-terminating threads): base faults, fix 3/3 clean on x86_64 and i386;
+  stress4.c (TLS data check from short/long-lived threads during loads) 0 bad on both arches.
+  Threads killed by another thread keep their entry until the TEB is reused; later TLS loads
+  allocate (leaked) data for them.
+- 095c04829f8 server: Look up memory views in a tree. (list kept for debug-event load order)
+- 7856919f576 windowscodecs: Cache the component lists of CreateComponentEnumerator.
   Re-read on WICComponentEnumerateRefresh only. tests/wic_enum.c: 3 us per metadata-reader
-  enumeration on Win11 (45 readers) vs 2330 us on Wine before, 3.8 us after. A reader registered
-  at run time never showed up on Win11 (even in a new process, with Unsigned|Refresh), so the
-  cache semantics come from the documented Refresh flag, not from a probe.
+  enumeration on Win11 (45 readers) vs 2330 us on Wine before, 3.8 us after. Reviewer's Win11
+  probe (decoders/format converters, wicreg.c): a component registered while the process runs
+  doesn't appear in it until WICComponentEnumerateRefresh (a new process sees it); one removed
+  from the registry keeps appearing until a refresh. Wine with the commit matches for all four
+  categories. (My own metadata-reader probe registration was never accepted by Win11.)
 No protocol change.
 
 ## A/B (inv4, interleaved, 3 runs each, fresh Inventor per run, docbench INVSCEN_N=3; medians, s)
@@ -111,5 +120,5 @@ iLogic add rule is unchanged (not analysed).
 - kernel32:loader Win11 x86_64 17775 / i386 17672 tests, 0 failures; Wine both arches 0 failures.
 - windowscodecs (all units) and gdiplus on Wine: 0 failures.
 - tools/regress.sh (ntdll kernel32 kernelbase windowscodecs gdiplus psapi dbghelp user32 ole32
-  oleaut32 msvcrt ucrtbase; 332 units) vs deps/regress/2cfee5f132e: 1 worse, FLAKY
+  oleaut32 msvcrt ucrtbase; 332 units) vs deps/regress/2cfee5f132e: 1 worse, FLAKY (rerun after the fold-in: same)
   (x86_64 kernel32:debugger, base re-runs fail the same way).
