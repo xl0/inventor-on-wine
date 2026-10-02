@@ -246,7 +246,11 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ b6dab895f3e (wine-11.18-469, PROTOCOL 969): adds 099 (COM cancel/refcounted calls), 104, 105,
+- build/ = integ 41a369af983 (wine-11.18-470, PROTOCOL 969): adds the 109 rpcrt4 fix (RpcServerUnregisterIf lost
+  wakeup). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757 (0 REAL/NEW/FLAKY;
+  27 crash / 90 fail non-pass, same as baseline). inv invscen all: 13/13 PASS; dwgloop N=30: PASS, no hang,
+  2.1-2.5 s per export (model+drawing 2.0 s).
+- Previous: build/ = integ b6dab895f3e (wine-11.18-469, PROTOCOL 969): adds 099 (COM cancel/refcounted calls), 104, 105,
   095 (lowbox tokens), 077, 091 (Xft read once) over 492d5679270. inv, inv2, inv4 restarted on it
   (inv3/inv4 workers now run their own builds).
   Full regress vs master 4e819f054dd (new template): 0 REAL / 0 NEW, 3 FLAKY (mf:mf, ntoskrnl, quartz:filtergraph;
