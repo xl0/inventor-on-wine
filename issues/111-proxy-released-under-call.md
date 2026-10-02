@@ -1,5 +1,5 @@
 # 111 Last Release of a proxy during an in-flight call returns 0 (Windows 1)
-Status: fixed · Owner: worker 112 · Branch: fix/112 (wt/112: 3b764fde891) ·
+Status: fixed · Owner: worker 112 · Branch: fix/112 (wt/112: ee90af12ce9) ·
 Found in: 110 worker (tests/r109/disc_probe.c `rel` mode)
 
 Releasing a proxy's last reference while another thread is calling through it returned 0 on
@@ -17,7 +17,7 @@ disc_probe `rel`: Release returns 1. ole32:marshal test_release_proxy_in_call (i
 host): Release from another MTA thread during the call returns 1; the call returns S_OK; when it
 has returned the object's stub is released (object refs back to 1). x64 + i386.
 
-## Fix (3b764fde891 combase: Keep a proxy referenced while a call through it is in progress.)
+## Fix (ee90af12ce9 combase: Keep a proxy referenced while a call through it is in progress.)
 The client channel keeps a weak pointer to its proxy manager (identity); GetBuffer (on success)
 AddRefs it, FreeBuffer releases it last. So the last release during a call is deferred to the
 call's FreeBuffer (also for calls orphaned by a message-filter cancel, 099: FreeBuffer runs when

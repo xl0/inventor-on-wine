@@ -53,7 +53,7 @@ the client thread when the call starts; MessagePending returns PENDINGMSG_CANCEL
 - Reviewer's stress (cstress.c: 16-32 STA threads, random cancels, 4 server types, warn+heap, 37k
   calls): 0 heap warnings, 0 crossed replies.
 
-## Follow-up (done in 112, e5cdd751e1c; staleak.c: refs back to 1 like Windows)
+## Follow-up (done in 112, 2ee2ac231ec; staleak.c: refs back to 1 like Windows)
 An orphaned call to an in-process STA that CoUninitializes without pumping never runs, so the call
 state and the server object it references leak (reviewer's staleak.c). Option: complete pending
 DM_EXECUTERPC messages with RPC_E_DISCONNECTED before the apartment window is destroyed.

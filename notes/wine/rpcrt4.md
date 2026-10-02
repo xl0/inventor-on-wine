@@ -53,6 +53,9 @@
 - STA CoUninitialize with calls queued (112, Windows ground truth): they fail RPC_E_DISCONNECTED
   during CoUninitialize, the method never runs, the stubs are released at once. combase:
   `rpc_cancel_queued_calls` + `apt->uninitialized` (checked under apt->cs when posting).
+  Same when the thread exits without CoUninitialize. An in-process call whose STA thread made a new
+  apartment between GetBuffer and SendReceive: Windows RPC_E_SERVER_DIED_DNE, not run (combase
+  checks the apartment window cached at GetBuffer).
 - A call holds its proxy (111, Windows: Release during the call returns 1): client channel
   GetBuffer AddRefs the proxy manager, FreeBuffer releases it.
 - Server listen (114): the np protseq server thread issues FSCTL_PIPE_LISTEN per endpoint with an APC

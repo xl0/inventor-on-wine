@@ -49,3 +49,6 @@ Process handles: 95 before COM, 128 after the first STA (ALPC Port 1 → 6), the
 ## Notes
 - `regress.sh unit rpcrt4:server -n 5` without `-j 1` fails: parallel copies bind the same TCP port
   (RPC_S_DUPLICATE_ENDPOINT 1740) and cascade.
+ole32:marshal is at the limit: one more in-process STA that marshals makes start_host_object time
+out (`rpcrt4_protseq_np_wait_for_new_connection wait failed with error 87`); 112's thread tests
+run in a child process because of it.
