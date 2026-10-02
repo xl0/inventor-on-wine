@@ -289,6 +289,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
+- `x/wayland.sh start|stop|env`, `x/wshot.sh` (screenshot + input), `x/winj.py`: headless mutter Wayland
+  session for winewayland.drv tests; build in `wt/wayland-build` (build/ lacks the driver). See notes/wine/wayland.md.
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
   inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
