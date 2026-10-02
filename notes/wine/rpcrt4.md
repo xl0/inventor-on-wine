@@ -55,3 +55,8 @@
   `rpc_cancel_queued_calls` + `apt->uninitialized` (checked under apt->cs when posting).
 - A call holds its proxy (111, Windows: Release during the call returns 1): client channel
   GetBuffer AddRefs the proxy manager, FreeBuffer releases it.
+- Server listen (114): the np protseq server thread issues FSCTL_PIPE_LISTEN per endpoint with an APC
+  routine and waits alertably on its manager event only (no MAXIMUM_WAIT_OBJECTS limit on endpoints);
+  the APC spawns the connection. ncacn_ip_tcp still waits on an event array (63-endpoint limit).
+  rpcrt4 has no way to remove an endpoint. combase registers one endpoint per process,
+  `\pipe\lrpc\\pipe\OLE_<pid>` (pid = oxid >> 32); Windows also keeps one per process.
