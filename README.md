@@ -18,29 +18,27 @@ Wine patches live in the fork **[xl0/wine, branch `integ`](https://github.com/xl
 a linear stack of commits on upstream master (`git format-patch master..integ`).
 This repo holds the harness, notes, issue write-ups and test programs.
 
-## Status (2026-09-29)
+## Status (2026-10-02)
 
 - **Install:** Autodesk's own web installer installs Inventor 2027 + the
   2027.1 update under Wine, matching the Windows install (optional Electrical
   Catalog needs Windows' inbox `tar.exe` — provided by `tools/tar.sh`).
-- **Launch & licensing:** Autodesk sign-in (OAuth via Edge inside the prefix,
-  custom-URI callback through the merged `HKCR` view), 30-day trial, licensing
-  services as real session-0 services.
-- **3D viewport:** renders like Windows (shaded, SSAO, tone mapping); sketch
-  rubber-band latency ~5 ms, orbit ~60 fps on wined3d-vk — on par with DXVK.
-- **Modelling via the COM API:** 13 scripted scenarios (~130 steps) pass —
-  features, parameters, sheet metal, assemblies (incl. 200 occurrences), drawings
-  (section/detail views, PDF/DWG/DXF), iLogic, STEP/IGES/SAT/Parasolid/STL
-  export and re-import, view images identical to Windows.
-- **Real-world data:** Autodesk's official 2022 and 2016 sample sets (69
-  documents each, up to 1,313-part assemblies) open, rebuild, migrate, save and
-  reopen with the same counts, BOM and mass properties as Windows; long
-  sessions no longer degrade (HWND generation fix).
-- **UI:** ribbon, dialogs (incl. file dialogs), sketch/extrude by hand, browser
-  pane, Autodesk Assistant (WebView2) work.
-- **Known gaps:** multi-file assembly open/reopen 2.5–7× slower than Windows;
-  a few cosmetic issues (popup shadows, maximized-window offset, splitter bar
-  without a compositing WM); last-digit math differences in some rebuilds.
+- **Launch & licensing:** Autodesk sign-in (OAuth via Edge inside the prefix),
+  30-day trial, licensing services as real session-0 services; the trial popup
+  (WebView2) shows content ~7 s after launch, like Windows (was ~17 s).
+- **3D viewport:** renders like Windows; sketch rubber-band ~5 ms, orbit ~60 fps.
+- **Modelling via the COM API:** 13 scripted scenarios pass; Autodesk's 2022 and
+  2016 sample sets (up to 1,313-part assemblies) open, rebuild, save and reopen with
+  the same results as Windows. Placing 200 occurrences 7.7 s (Windows 7.3 s);
+  cold first part view ~8 s (Windows 6.3 s).
+- **Long sessions:** 4-hour soaks without crashes; remaining memory/handle growth
+  is Inventor's own (Windows grows as much); DWG export hang fixed.
+- **Idle CPU:** Autodesk identity manager 14–21 % → ~3.5 % of a core (Windows 4 %)
+  via Windows' default 15.6 ms timer granularity.
+- **Window managers:** tested under openbox and awesome (the user's WM),
+  incl. WM-driven moves and caption drags.
+- **Known gaps:** a few cosmetic issues (popup shadows/splitter bars without a
+  compositor); WebView2 animation costs more CPU than on Windows.
 
 ## Environment
 
@@ -82,7 +80,7 @@ calls.
 
 ## What we ran into (and fixed)
 
-About 60 issues so far; ~95 of our own commits on `integ` plus Wine-Staging's
+About 115 issues so far; ~190 of our own commits on `integ` plus Wine-Staging's
 DirectComposition series. Highlights, roughly in the order the application hit
 them:
 
@@ -104,6 +102,13 @@ them:
 | Files/installers | POSIX delete semantics (Windows 10+); MSI rollback deleting pre-existing folders; OLE Packager objects | kernelbase/server, msi, packager (054, 051, 053) |
 | Files | `C:\dir\con.iam` treated as the console device (Windows 11 rules changed) | ntdll (035) |
 | File dialogs | No folder names in the path bar; clicking a file did nothing | shell32 (041, 043) |
+| COM performance | ~500 wineserver round trips per cross-process call (hooks, GetProp, registry, GetWindow) | win32u/server/combase caches, QI shortcuts (057, 081, 097) |
+| COM correctness | Event leaks, rpcrt4 connection per interface, lost wakeup in RpcServerUnregisterIf (DWG export hang), cancelled-call use-after-free, STA shutdown with queued calls, 64-apartment limit | combase/rpcrt4 (086, 087, 099, 109, 110, 112, 114, 116) |
+| Timing | Waits returned early (coarse clock), no Windows timer granularity | ntdll/win32u/server (088, 089, 093) |
+| Loader | Lookups waited for other threads' DllMain; TLS setup asked the server about every thread | ntdll (092, 098) |
+| WebView2/Edge | GPU-process crash loop, invisible cursor, missing AppContainer APIs, SECURITY_CAPABILITIES, slow first content | dcomp/d3d11/dxgi, win32u/winex11, userenv/kernelbase/advapi32, ntdll (085, 090, 094, 095) |
+| Window management | Caption drag under awesome did nothing; WM-started moves sent no size-move messages; black trails after drags | win32u/winex11 (061, 076, 077, 078) |
+| Wine's own test suite | Flaky units (desktop close race, display-mode race, debugger inheritance, signal handling on host threads) | server/win32u/ntdll (101, 102, 104, 105) |
 
 Several "bugs" turned out to be harness artifacts (a squashed screenshot
 format, `xwd -root` drawing Wine windows black under a WM, a busy-loop that
