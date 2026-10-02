@@ -69,3 +69,9 @@
   NtWaitForAlertByThreadId wait; with fix/108 the full spin is adaptive (200 pauses while full spins mostly
   end waiting). Per-thread CS cost: `perf stat -e task-clock,context-switches -t TID` + share of samples in
   wined3d_cs_run (inst/108/csprof.sh); spin/wake histograms: inst/108/debug.patch (rdtsc, ERR every 5 s).
+- Cross-process owners (085b): winex11's make_owner_managed() runs on every WindowPosChanged of a managed
+  window; for an owner in another process is_managed() is always FALSE, so it re-sends SetWindowPos to the
+  owner's thread each time. Synchronous, that blocked AdskLicensingAgent (popup owned by Inventor's busy main
+  window) for seconds per call; fix/085b posts it (SWP_ASYNCWINDOWPOS). Any synchronous send to another
+  process's window is a hang/latency risk: look for it first when a helper process's UI thread stalls
+  (gdb sehbt shows it parked in an NtUser* syscall with no callback frames).

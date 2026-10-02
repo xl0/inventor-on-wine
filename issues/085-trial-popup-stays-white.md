@@ -1,5 +1,5 @@
 # 085 Trial welcome popup stays white long after Inventor has loaded
-Status: fixed (awaiting review) · Owner: 085 worker · Branch: fix/085 (wt/085, on integ 77b5f2b6729) · Found in: user's laptop + inv4 (integ 3951ce31e31)
+Status: fixed (awaiting review) · Owner: 085 worker · Branch: fix/085 (wt/085, on integ 77b5f2b6729) · Found in: user's laptop + inv4 (integ 3951ce31e31) · launch-to-content time: fix/085b (wt/085b, 2 commits, awaiting review)
 
 ## Symptom
 On start, the licensing/trial popup ("Dig into your trial"; it is AdskLicensingAgent's
@@ -155,3 +155,63 @@ a black page with a spinner for ~1.5 s), content ~2 s after the popup window app
 window initialises. Frames: issues/attachments/085-vm-trial-popup-cold.png (4.0 / 4.5 / 5.0 / 6.0 / 6.5 s).
 
 ![VM cold start popup](attachments/085-vm-trial-popup-cold.png)
+
+## Launch-to-content time (085b worker, 2026-10-02) — fixed on fix/085b (wt/085b on integ 7e8ed9554cb)
+Measured on inv3/:100, prefix restarted per run, t = 0 at the Inventor.exe launch, screenshots every 0.1 s
+(`inst/085b/run.sh` + `grab.py`: "white" = a popup-sized white area, "content" = the trial image).
+Timeline (Wine, from +process, a Chromium startup trace and a netlog):
+
+| step | Windows | Wine before | Wine after |
+|---|---|---|---|
+| AdskLicensingAgent starts | ? | 1.5 | 1.5 |
+| msedgewebview2 browser process | ? | 3.8 | 3.8 |
+| popup shown (white, top-left, then centered) | 4.5 | 3.9 | 3.8 |
+| GPU / renderer processes | ? | 4.6 / 4.8 | 4.6 / 4.8 |
+| agent navigates to http://127.0.0.1:<svc>/ui/v2/ipm | ? | 7.5-15 (varies) | 5.0 |
+| spinner page (local), iframe ipm-aem.autodesk.com/…/trl.html | 5.0-6.0 | | 5.4-6.2 |
+| content | 6.5 | 14.2-14.6 (17.7 without restart) | 6.7-7.2 |
+
+A/B (interleaved, 4+4, `inst/085b/ab_final.sh`): before 14.52 14.58 14.56 14.21 s, after 7.19 6.72 6.66 8.18 s
+(8.18: whole Inventor startup slower, agent at 1.9 s). Host load makes everything up to ~1.5x slower (watch
+/proc/loadavg; runs record it).
+![before 7.2 s / after 7.2 s / before 14.8 s](attachments/085-launch-to-content-ab.png)
+
+### Cause 1 (~8 s): winex11 made the popup's owner managed synchronously
+The agent sets the popup's owner (GWLP_HWNDPARENT) to Inventor's main window, then resizes/centers it.
+X11DRV_WindowPosChanged -> make_owner_managed() did NtUserSetWindowPos(owner) on every SetWindowPos of the
+(active, so managed) popup; is_managed(owner) is always FALSE for another process's window, so each call
+sent WM_WINE_SETWINDOWPOS to Inventor's UI thread and waited 3-4 s while it was busy loading. The agent's UI
+thread (browser_native.dll CenterWindowOnScreen / resize) sat in NtUserSetWindowPos (gdb sehbt snapshots),
+so the agent navigated late and WebView2's NavigationThrottle (host callbacks) waited too.
+Windows: tests/owner_blocked.c (popup owned by a window of a hung process, resize/move): 0 ms; Wine 3947 ms,
+fixed 1 ms. Fix: SWP_ASYNCWINDOWPOS for the owner (+ user32:win test_blocked_owner; VM x86_64 0 failures,
+i386 only the pre-existing win.c:2750 scrollbar failures).
+
+### Cause 2 (~0.7 s): 1 TB reservations wrote 256 MB of vprot bytes
+Every renderer (V8 sandbox) reserves 1 TB (VirtualAlloc2 placeholder) and splits/frees parts; ntdll memset the
+per-page protection table for the whole range: 140 ms + 256 MB RSS per reservation, ~35 ms per free, all
+under virtual_mutex (other threads' VM calls stalled, RenderThreadImpl::Init 360 -> 30 ms).
+tests/bigmap_perf.c: Win11 0.0 ms; Wine 141 / 36 / 33 ms (placeholder reserve / plain reserve / free),
+fixed 0.2 / 0.0 / 0.9 ms. A/B (fix 1 applied): content 10.26 -> 9.55 s (4+4, non-restarted prefix).
+Fix: create_view() skips writing zero vprot bytes (pages outside views are always 0) and set_page_vprot()
+replaces whole cleared 1 MB directories with fresh zero pages.
+
+### Checked, not Wine-side bottlenecks now
+- Network: Chromium's own stack (BoringSSL, not schannel); the local UI (agent's service on 127.0.0.1)
+  answers in < 10 ms, trl.html + subresources from ipm-aem.autodesk.com in 0.1-0.2 s (netlog).
+- Remaining Wine costs on the path (each 0.05-0.5 s, mostly overlapped): msedge.dll (335 MB, FileAlignment
+  0x200) is pread into every Chromium process (~250 ms + 335 MB private each, Win11: 1 ms map, shared);
+  GPU init 0.5 s (CollectDriverInfoD3D 0.28 s + eglInitialize 0.23 s); DWriteFontProxy::MatchUniqueFont
+  150 ms (browser-side dwrite lookup during the first style recalc); first DComp present 115 ms. See 117.
+- Laptop note: the user's ~19 s white phase there likely includes cause 1 (Inventor's UI thread is busy
+  longer on slower hardware).
+
+### Tools (inst/085b)
+- `edge-args-hack.patch` (debug-only kernelbase hack): `WINE_EDGE_ARGS` appended to the agent's WebView2
+  browser command line. WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS can't work: the agent uses the open-source
+  webview library's built-in loader (browser_native.dll), not WebView2Loader, so no env/policy lookup.
+  Useful args: `--enable-logging --v=1 --log-file=C:\t\x.log` (opens a console window),
+  `--log-net-log=C:\t\net.json`, `--trace-startup=CATS --trace-startup-format=json --trace-startup-file=...
+  --trace-startup-duration=12` (default format is protobuf). Parsers: crlog.py, netlog.py, ctrace.py.
+- `snap.sh` (agent PE backtraces at given times), `restart.sh`, `use.sh` (swap .so/server variants by
+  rename), `ab_final.sh`, `tl.sh` (process start + popup times per run).

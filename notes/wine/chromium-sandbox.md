@@ -31,3 +31,8 @@
   crashes everywhere (cost an afternoon in 095).
 - Crashpad dumps: the delay-load DelayLoadInfo (exception param 0) lies on the captured stack; the
   DLL/function name pointers are RVAs into the exe's .rdata (read the strings from the file).
+- Process startup costs (085b, 117): each Chromium process maps msedge.dll (335 MB, FileAlignment 0x200 ->
+  pread, not mmap: ~250 ms + 335 MB private per process) and each renderer reserves a 1 TB V8 sandbox
+  (placeholder). Before fix/085b ntdll memset the vprot table for such ranges (256 MB, ~140 ms under
+  virtual_mutex). Passing browser args to an app's WebView2: only possible through the app or a debug hack
+  when it uses the webview library's built-in loader (no WEBVIEW2_* env/policy lookup): inst/085b/edge-args-hack.patch.
