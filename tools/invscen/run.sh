@@ -45,6 +45,9 @@ if [ "$S" = all ]; then
 					if tr '\0' '\n' </proc/$q/environ 2>/dev/null | grep -qx "WINEPREFIX=$WP"; then kill -9 $q 2>/dev/null || true; fi
 				done
 				tools/prefix.sh kill-inventor "${INV:-inv}" >&2 || true # helpers (licensing agents, WebView2)
+				# the licensing service keeps a stale agent whose invisible popup blocks the next connect
+				# (300 s timeout); killing the agents is not enough, only a prefix restart clears it
+				tools/prefix.sh restart "${INV:-inv}" >&2 || echo "prefix restart failed" >&2
 				sleep 5; break
 			fi
 		done

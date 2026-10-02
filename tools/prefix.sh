@@ -2,7 +2,7 @@
 # Prefix/display/GPU/build setup from x/prefixes.tsv; leases in x/leases (git-ignored).
 # Usage: tools/prefix.sh status [NAME]            wineserver, build, procs, licensing port, lease
 #        tools/prefix.sh env NAME [--defaults]    export lines for eval (--defaults: only unset vars)
-#        tools/prefix.sh start|stop NAME          [--holder H] [--force (stop the licensing host)]
+#        tools/prefix.sh start|stop|restart NAME  [--holder H] [--force (stop the licensing host)]
 #        tools/prefix.sh kill-inventor NAME       [--holder H] [--orphans (helpers only, and only if no Inventor.exe runs)]
 #        tools/prefix.sh lease NAME [HOLDER] | release NAME [HOLDER]     [--force]
 # HOLDER defaults to $PREFIX_HOLDER. start/stop refuse on a prefix leased to another holder.
@@ -98,6 +98,9 @@ stop) load ${A[0]:?NAME}; check_lease; sp=$(server_pid)
 		for _ in $(seq 50); do [ -d /proc/$sp ] || break; sleep 0.2; done
 	fi
 	left=$(prefix_pids); if [ -n "$left" ]; then echo "killing leftovers: $left"; kill $left 2>/dev/null || true; sleep 2; kill -9 $left 2>/dev/null || true; fi ;;
+restart) load ${A[0]:?NAME}  # clears state the services keep after a crashed Inventor (stale licensing agent)
+	set -- ${A[0]} ${HOLDER:+--holder $HOLDER} ${FORCE:+--force}
+	"$0" stop "$@"; "$0" start "$@" ;;
 kill-inventor) load ${A[0]:?NAME}; check_lease
 	k=$(inv_pids)
 	if [ -n "$ORPH" ] && grep -q ' Inventor.exe$' <<<"$k"; then echo "$N: Inventor running, nothing to do"; exit 0; fi
