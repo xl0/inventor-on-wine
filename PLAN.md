@@ -244,9 +244,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 
 ## Now (2026-10-02)
 - Reboot recovery done: inv-lic holds 39683; inv, inv2, inv4 up on build/ (inv3 down, for another worker); stale .X100/.X101/.X920 locks
-  from before were harmless. build/ = integ d22c74b6d6b (issue 119: linked-font sizing, Tahoma->one Noto CJK face, uniscribe fallback;
-  PROTOCOL 971). Full regress vs master 4e819f054dd: 0 worse of 1757. inv invscen all 13/13 PASS, dwgloop N=10 PASS (~1.9 s/export),
-  cjk renders CJK/Cyrillic in Arial/Tahoma/Segoe UI; ribbon + Home page text unchanged vs attachments.
+  from before were harmless. build/ = integ d7799da4d5c (wine-11.18-494, PROTOCOL 971; adds 120/122: menu loop ignores same-position moves,
+  delayed/coalesced fake WM_MOUSEMOVE incl. after show/hide, extra info 0). inv, inv2 restarted on it. Full regress vs master
+  4e819f054dd: 0 worse of 1757. inv invscen all 13/13 PASS, dwgloop N=10 PASS (~3.0 s/export, loadavg 5; was 1.9).
+  UI (xdotool): File menu, Fillet dropdown, browser context menu (Esc closes), ribbon tooltip appear/disappear OK; rubber 104-118 fps
+  lag p50 1.9-4.4 ms, orbit 60 fps. Unclear (no A/B): Modify panel slide-out and some context-menu rows (Visibility, Help Topics)
+  show no hover highlight; the slide-out ignores Escape (closes on outside click). Not yet compared against the previous build.
+  Older: d22c74b6d6b (119: linked-font sizing, Tahoma->one Noto CJK face, uniscribe fallback) was 0 worse, 13/13, dwgloop PASS (~1.9 s).
 - Older (2026-09-29):
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
