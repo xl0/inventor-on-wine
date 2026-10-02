@@ -220,6 +220,8 @@ static class H
                 if ((cls == "#32770" && ww == 860 && hh == 525) || cls == "webview") return true;
                 // FwUI's untitled 2x2 "hidden modal dlg" while the popup is up (closing it ends Inventor's modal state)
                 if (cls == "#32770" && ww <= 2 && hh <= 2 && Text(w) == "") return true;
+                // Qt tooltip drop-shadow strips (titled 'Inventor', ~19 px high, no children) flash up on every tooltip
+                if (cls.Contains("QWindowToolTipDropShadow") && hh <= 24) return true;
                 if (!Benign.Any(b => cls.Contains(b)) && !(cls.StartsWith("HwndWrapper[") && Text(w) == "")) now.Add(w);
                 return true;
             }, IntPtr.Zero);
