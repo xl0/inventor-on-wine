@@ -246,7 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 7e8ed9554cb (wine-11.18-480, PROTOCOL 971): adds 112 (STA uninit/thread exit fails queued calls; in-process
+- build/ = integ 43790927731 (wine-11.18-486, PROTOCOL 971): adds 106 (NO_DEBUG_INHERIT with inherited debugger), rpcrt4 tcp
+  close fix, 116 (rpcrt4 listen restart, RpcMgmtWaitServerListen lock order/done event), 085b (winex11 doesn't wait for another
+  process's owner when making it managed; ntdll skips protection bytes of whole cleared directories). inv, inv2 restarted on it.
+  Full regress vs master 4e819f054dd: 0 REAL/NEW, 2 FLAKY (i386 mfmediaengine, i386 oleaut32:typelib; both pass on rerun),
+  30 crash / 90 fail total. inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0 s per export. Trial popup shows
+  content 7.3 s after launch on inv (shell+spinner at 6.4 s; was 14-17.7 s before 085b).
+- Previous: build/ = integ 7e8ed9554cb (wine-11.18-480, PROTOCOL 971): adds 112 (STA uninit/thread exit fails queued calls; in-process
   calls check the target apartment window; proxy kept referenced during calls), 114 (rpcrt4 pipe listens complete via APC;
   combase one RPC endpoint per process). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757
   (0 REAL/NEW/FLAKY; 28 crash / 90 fail non-pass). inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0-3.3 s per
