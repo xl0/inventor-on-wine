@@ -26,3 +26,7 @@ Not reproduced: one session ran 4.1 h / 33 suites / 11 samples runs, "restore pr
 every time, including at 3.6 h and 4.1 h (soak #2: failed in the 6th samples run, 3.4 h); asmcon SaveAs stayed green.
 Another session was lost at 2.6 h to 109 (unrelated). Possibly timing-dependent (samples runs now take ~1000 s instead of
 ~1500 s); keep open as not reproducible.
+
+## Soak #4 (2026-10-02, integ d7799da4d5c)
+Not reproduced again: one 4.0 h session, 10 samples runs (last at 3.5 h): "restore project" passed 10/10, asmcon green in
+all 32 suites. Keep open as not reproducible.

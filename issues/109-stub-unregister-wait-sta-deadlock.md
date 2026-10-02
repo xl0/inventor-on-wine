@@ -58,3 +58,7 @@ accounting: every marshal registers the IID, so a live stub keeps it registered;
 - On the unfixed build one dwgloop run failed export DWG 20 with E_FAIL (2.8 s, no hang) and Inventor then
   failed new documents E_FAIL; not reproduced in 25 exports on the fixed build. Unknown, not investigated.
 - `tools/invscen/dwgloop.cs`: drawing + INVSCEN_N (10) DWG exports.
+
+## Soak #4 (2026-10-02, integ d7799da4d5c, with the fix)
+One Inventor session, 4.0 h, 32 suites, 10 samples runs: `drawing2 export DWG` passed 32/32, no hang, no E_FAIL cascade
+(soak #3: 2 of 61 hung). No crashes. Details: inst/soak/2026-10-02/summary.txt.
