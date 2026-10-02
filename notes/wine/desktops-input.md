@@ -30,3 +30,11 @@
   (`release_thread_desktop`), unlike Windows.
 - winex11 confines the pointer for ClipCursor only when the X input focus is on a window of the
   calling process (`grab_clipping_window`); otherwise clipping is server-side only.
+- Fake mouse moves (server `update_cursor_pos` -> `set_cursor_pos`): Windows posts WM_MOUSEMOVE
+  (extra info 0) to the window under a still cursor after any window is shown, hidden, moved or
+  resized (not after a no-op SetWindowPos). Wine did it only for moves/resizes of visible windows;
+  fix/120 adds show/hide. Wine's carry extra info 0xff515700 (upstream 094b9f7f109, to keep them out
+  of mouse-in-pointer), which Chromium reads as pen input (122). Chromium shows an HTML title
+  tooltip when a mouse move changes the position relative to its window after the first one it
+  got (window sliding under a still cursor does it on Windows too): tests/hover_tooltip.c,
+  tests/fake_mousemove.c (120).

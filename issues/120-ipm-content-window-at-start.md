@@ -1,5 +1,5 @@
 # 120 A visible "IPM Content" Chrome window (Unnamed Window, 82x24) at the top-left during Inventor start
-Status: draft · Owner: - · Found in: 118 environment campaign (inv4 :101, build/ 43790927731)
+Status: fixed (awaiting review) · Owner: 120 worker · Branch: fix/120 (wt/120, on integ 43790927731) · Found in: 118 environment campaign (inv4 :101, build/ 43790927731)
 
 ## Symptom
 About 15-25 s after launching Inventor (cold start), a tiny top-level window with an openbox frame ("Unnam...
@@ -43,3 +43,54 @@ class, title, visibility, style, ex-style and rect when first seen or changed
 - So on Windows the IPM host is a hidden (not WS_VISIBLE) Chrome window, or a differently titled one;
   the Wine 82x24 "IPM Content" is not shown by Windows. Note the title may be set only on a later navigation
   (the log has no 82x24 window at all), so check `WINEDEBUG=+win` on Wine for its creation style.
+
+## Findings (120 worker, inv3 :100 openbox)
+Two different windows were conflated above:
+1. **The 82x24 `Chrome_WidgetWin_1` the watcher reports is a Chromium HTML tooltip** reading
+   "IPM Content" (title attribute of the IPM iframe in AdskLicensingAgent's trial popup), created by
+   the agent's msedgewebview2 browser process: WS_POPUP|WS_VISIBLE|WS_CLIPSIBLINGS (`96000000`), ex
+   TOPMOST|TRANSPARENT|NOACTIVATE (`08000028`; Windows adds NOREDIRECTIONBITMAP), owner = the agent's
+   `webview` popup, placed just below-right of the pointer. Its window text is empty; "IPM Content"
+   is drawn text. It shows because the X pointer rests where the popup appears: X servers start with
+   the pointer at the screen centre (960,540), inside the popup (530,290 860x500, then it slides to
+   580,328). ![tooltip](attachments/120-ipm-tooltip.png)
+2. **The framed "Unnamed Window" with an icon at 0,0** (the issue's screenshot) is explorer.exe's
+   standalone systray (programs/explorer/systray.c, `show_systray` when no XEmbed tray exists, as
+   under openbox) holding AdskAccessUIHost's tray icon, 160x20 client at 1,16. Wine desktop
+   integration, not a Windows mismatch and not seen by the watcher (not under Inventor.exe). Hide
+   it with `HKCU\Software\Wine\Explorer\Desktops` `ShowSystray`=0 if it gets in the way.
+
+### Windows ground truth (VM, Edge, no Inventor)
+tests/hover_tooltip.c opens an Edge app window (one div with title="IPM Content") under a parked
+cursor and logs Edge's visible windows; `hook` logs the mouse messages Edge gets
+(tests/hover_tooltip_hook/hook.dll, global WH_GETMESSAGE hook).
+- Window opens under the still cursor: no tooltip. Edge's legacy window gets 2 WM_MOUSEMOVE right at
+  show time (extra info 0); more fake moves after load (`poke`: another window shown/moved) don't
+  show one either.
+- Cursor moved by 1 px (`move`), or the Edge window moved by 50,38 under the still cursor
+  (`slide=50`, `slide=2000`, like the trial popup's slide): tooltip, same class/styles as on Wine.
+So with the pointer over the popup's IPM area, Windows shows this tooltip too; the VM probe had none
+because its cursor was elsewhere.
+
+### Wine difference found and fixed
+tests/fake_mousemove.c (which window changes post WM_MOUSEMOVE to the window under a still cursor):
+Windows posts one after every show/hide/move/resize/create of any window; Wine only after
+moves/resizes of visible windows (server/window.c set_window_pos, `update_cursor_pos`). In the Edge
+test, Wine's first mouse move therefore came only ~1.3 s after show (a later layout change), after
+the page loaded, and Chromium took it as the cursor entering: tooltip without any movement.
+Fix `server: Sync the cursor position when a window is shown or hidden.` (+ user32 msg test in
+test_setwindowpos: show under the cursor, show/hide of another window). After it, fake_mousemove
+matches Windows step for step and the Edge open-under-cursor case shows no tooltip (slide still does,
+as on Windows). Wine's fake moves also carry extra info 0xff515700 (Chromium: pen), Windows 0: 122.
+
+The Inventor tooltip itself is legitimate (slide under the pointer), so the harness treats Chromium
+tooltips as benign: Harness.cs skips `Chrome_WidgetWin_*` with WS_EX_TRANSPARENT|WS_EX_NOACTIVATE.
+
+### Verification
+- user32:msg on the VM: new checks pass (5 failures elsewhere: 8741-8744 paint, 12795 error 5).
+  Wine (regress unit, both arches x2): only the pre-existing todo at 5744; old build fails all 3 new
+  checks (no-WM Xvfb). regress user32 win32u comctl32 dinput imm32 uiautomationcore vs integ: 0 worse.
+- Cold starts on inv3 (fix build + harness rule), screenshots every 0.5 s for 30 s, winlog of all
+  Inventor/Adsk/WebView2 windows: pointer parked at 1030,590 (over the popup): tooltip appears as on
+  Windows, `hello` PASS 3/3 (FAIL 3/3 before the harness rule, also with the Wine fix). Pointer at
+  1919,1079: no 82x24 window at all, `hello` PASS 2/2.

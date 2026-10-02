@@ -84,6 +84,7 @@ static class H
     [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr w, EnumProc f, IntPtr p);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr w, out uint pid);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr w);
+    [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr w, int i);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr w, out RECT r);
     [DllImport("user32.dll")] static extern bool PostMessage(IntPtr w, uint m, IntPtr a, IntPtr b);
     struct RECT { public int L, T, R, B; }
@@ -222,6 +223,9 @@ static class H
                 if (cls == "#32770" && ww <= 2 && hh <= 2 && Text(w) == "") return true;
                 // Qt tooltip drop-shadow strips (titled 'Inventor', ~19 px high, no children) flash up on every tooltip
                 if (cls.Contains("QWindowToolTipDropShadow") && hh <= 24) return true;
+                // Chromium/WebView2 tooltips (Chrome_WidgetWin_1, WS_EX_TRANSPARENT|WS_EX_NOACTIVATE): the trial
+                // popup's "IPM Content" one shows when the pointer rests where the popup slides in, Windows too (120)
+                if (cls.StartsWith("Chrome_WidgetWin_") && (GetWindowLong(w, -20) & 0x08000020) == 0x08000020) return true;
                 if (!Benign.Any(b => cls.Contains(b)) && !(cls.StartsWith("HwndWrapper[") && Text(w) == "")) now.Add(w);
                 return true;
             }, IntPtr.Zero);

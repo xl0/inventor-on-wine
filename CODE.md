@@ -230,6 +230,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `wic_enum.c`: WIC metadata-reader enumeration cost + run-time registration visibility (098).
   `desktop_owner_thread.c`: thread exits in the desktop's explorer must not close the desktop (Wine only, 101).
   `clipcursor_warp.c`: ClipCursor-moved cursor still reported after >100 ms (Win11: yes, 101).
+  `fake_mousemove.c`: which window changes post WM_MOUSEMOVE to the window under a still cursor (120).
+  `hover_tooltip.c [move] [hook] [poke] [slide=MS]`: Edge app window with an HTML title opened under a
+  parked cursor, logs Edge's windows, exit 1 = tooltip shown; `hook` + `hover_tooltip_hook/` (global
+  WH_GETMESSAGE hook DLL, `hookhost.exe SECS` for any app) log Edge/WebView2 mouse messages (120).
   `dbg_wow64_order.c [CMDLINE|-inherit|-ntinherit]`: debug events of a DEBUG_PROCESS child in order
   (default syswow64 msinfo32; pid, module names); `-inherit`: debuggee clears ProcessDebugFlags, is its
   child debugged; `-ntinherit`: NtCreateUserProcess with/without NO_DEBUG_INHERIT (105, 106).
@@ -381,7 +385,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   It WM_CLOSEs the licensing agent's trial welcome popup once visible 15 s (connect + step polls;
   logs "dismissed trial welcome"; clicking its X broke the next ActiveView; closing during WebView2
   init spins the agent, 088), and connect waits until it is gone: a first document during Inventor's
-  startup can deadlock it (048, app race). The watcher ignores FwUI's 2x2 hidden modal dialog.
+  startup can deadlock it (048, app race).
+  The watcher ignores FwUI's 2x2 hidden modal dialog and Chromium tooltips (120).
   Expectations are analytic (volumes, centroids, flat-pattern lengths, view extents)
   or structural counts taken from the VM once (STEP/IGES/SAT entities, STL
   triangles, SaveAsBitmap light-pixel share). Never pipe run.sh into another
