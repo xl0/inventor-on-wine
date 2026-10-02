@@ -414,6 +414,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   "Wine PostScript File" on FILE: from tests/addprinter.exe), `content` (CC tree, 064),
   `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
+  Environment probes (118): `paths` (non-ASCII/special/long dirs, `INVSCEN_CASES`), `locale` (run with LOCPATH/LC_ALL set;
+  `localedef -i de_DE -f UTF-8 DIR/de_DE.UTF-8`, no install), `cjk` (notes in several fonts), `docs` (lists open documents).
   `place`: asmbig's "place 200 occurrences" alone, `INVSCEN_N` rounds, per call kind split;
   `INVSCEN_PLACE=hidden|cheap`, `INVSCEN_SYNC` like openbench (097).
   `docbench`: `INVSCEN_N` rounds of visible Documents.Add + Close per type of `INVSCEN_TYPES`
