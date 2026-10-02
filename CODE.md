@@ -150,7 +150,11 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   covers/uncovers it, screen pixel must keep the frame (061, 078; exit 0 = ok).
   `present_lag.c [N] [SYNCINTERVAL]`: N presents on a D3D11 child, the last must be on screen 500 ms
   later (078: offscreen copy raced NVIDIA's present; exit 0 = ok). `layered_alpha.c`: ULW_ALPHA popup with alpha bands
-  0..255: screen colour, WindowFromPoint, SendInput click per band (062). `layered_popup_probe.c
+  0..255: screen colour, WindowFromPoint, SendInput click per band; `kinds`: LWA_ALPHA / colour key / opaque ULW (062).
+  `layered_splitter.c [SECS|auto]`: WPF-free stand-in for Inventor's splitter popup (alpha 3-6 bar dragged to
+  move a pane border) + a tooltip with a shadow; `layered_splitter.sh drag|move|cycle` drives it with xdotool on Wine,
+  `auto` (SendInput) on the VM (062).
+  `layered_popup_probe.c
   [TITLE] [drag X|mdrag X Y DX|hit|alpha|max]`: another app's layered popups: rects, owner, screen
   grab, composited alpha (over own white/black windows), window drag with SendInput (062).
   `sc_move_hittest.c`: SC_MOVE|n from WM_LBUTTONDOWN + SendInput drag, does it move (076).

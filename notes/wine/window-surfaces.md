@@ -51,10 +51,16 @@
   frame of a burst never shows (078). GLX waits (glXWaitForSbcOML / glFinish); fix/078 makes
   Vulkan wait for the queue and EGL swaps glFinish. tools/pixgrab.py WINID reads a redirected
   window's pixmap (what the app last presented), xwd -id of it returns screen garbage.
-- Per-pixel-alpha layered windows get an ARGB visual; alpha-0 pixels are cut from the X shape,
-  every other pixel is drawn opaque (premultiplied colour) unless a compositing manager blends.
-  The shape is also the input region, so hiding low-alpha pixels would make them click-through
-  (Windows hit-tests every alpha > 0 pixel): 062, 042.
+- Per-pixel-alpha layered windows get an ARGB visual; alpha-0 pixels are cut from the X shape.
+  With a compositing manager (_NET_WM_CM_Sn owner) the rest is blended. Without one (fix/062)
+  pixels below alpha 128 are cut too (they become click-through; the X shape is also the input
+  region and ShapeInput / InputOnly children can't reach outside it), the rest is drawn opaque.
+  A surface with no pixel >= 128 keeps the alpha > 0 shape and its outermost X ancestor (WM frame)
+  is XCompositeRedirectWindow(Manual)ed: not drawn, transparent to what is below, input intact.
+- Window surfaces are rounded up to 128 px; the padding starts as opaque white. fix/062 clears it
+  on UpdateLayeredWindow and adds it to the clip region (so it isn't taken for a client surface).
+- winex11's surface flush can run with win_data_mutex held by the same thread (WindowPosChanged ->
+  window_surface_set_shape): don't take the window data there, post a driver message.
 - Moves: with _NET_WM_MOVERESIZE (openbox) the WM moves the frame, Wine waits in
   move_resize_window() (sends WM_ENTER/EXITSIZEMOVE). Without it (awesome 4.3) win32u's
   sys_command_size_move() loop does SetWindowPos per mouse move. WM-initiated moves (Mod4+drag,

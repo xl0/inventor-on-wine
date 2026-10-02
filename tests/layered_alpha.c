@@ -2,15 +2,20 @@
  * different per-pixel alpha (premultiplied black), then per band: what the screen shows
  * (GDI screen grab), WindowFromPoint, and which window gets a SendInput click.
  *   layered_alpha.exe [secs]   keep the windows up for secs after the checks (screenshots)
+ *   layered_alpha.exe kinds    the other layered kinds over the red window: LWA_ALPHA 128 (blue),
+ *                              LWA_COLORKEY (green, magenta hole), ULW_ALPHA all opaque (white)
  * Build: x86_64-w64-mingw32-gcc -O2 -o layered_alpha.exe layered_alpha.c -lgdi32 */
 #include <windows.h>
 #include <stdio.h>
+
+BOOL WINAPI SetProcessDPIAware(void);
 
 static const BYTE alphas[] = {0, 1, 16, 64, 128, 255};
 #define NB (sizeof(alphas))
 #define BW 40
 #define H 120
 static HWND back, popup, clicked;
+static COLORREF fill = RGB(255, 0, 0);
 
 static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
@@ -20,8 +25,14 @@ static LRESULT CALLBACK proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         RECT r;
         GetClientRect(hwnd, &r);
         FillRect((HDC)wp, &r, (HBRUSH)GetStockObject(DC_BRUSH));  /* DC brush defaults to white */
-        SetDCBrushColor((HDC)wp, RGB(255, 0, 0));
+        SetDCBrushColor((HDC)wp, hwnd == back ? RGB(255, 0, 0) : fill);
         FillRect((HDC)wp, &r, (HBRUSH)GetStockObject(DC_BRUSH));
+        if (hwnd != back && fill == RGB(0, 255, 0))  /* colour key hole */
+        {
+            SetRect(&r, 0, 0, 40, 40);
+            SetDCBrushColor((HDC)wp, RGB(255, 0, 255));
+            FillRect((HDC)wp, &r, (HBRUSH)GetStockObject(DC_BRUSH));
+        }
         return 1;
     }
     return DefWindowProcA(hwnd, msg, wp, lp);
@@ -81,6 +92,41 @@ int main(int argc, char **argv)
     ShowWindow(popup, SW_SHOWNOACTIVATE);
     SetForegroundWindow(back);
     pump(1000);
+
+    if (argc > 1 && !strcmp(argv[1], "kinds"))
+    {
+        static const char *names[] = {"LWA_ALPHA 128", "LWA_COLORKEY", "ULW opaque", "LWA_COLORKEY hole"};  /* hole last: its click raises back */
+        HWND w[4];
+        ShowWindow(popup, SW_HIDE);
+        fill = RGB(0, 0, 255);
+        w[0] = CreateWindowExA(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "la", "a", WS_POPUP, 120, 120, 80, 80, 0, 0, 0, 0);
+        SetLayeredWindowAttributes(w[0], 0, 128, LWA_ALPHA);
+        ShowWindow(w[0], SW_SHOWNOACTIVATE);
+        pump(500);
+        fill = RGB(0, 255, 0);
+        w[1] = w[3] = CreateWindowExA(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "la", "k", WS_POPUP, 220, 120, 80, 80, 0, 0, 0, 0);
+        SetLayeredWindowAttributes(w[1], RGB(255, 0, 255), 0, LWA_COLORKEY);
+        ShowWindow(w[1], SW_SHOWNOACTIVATE);
+        pump(500);
+        w[2] = CreateWindowExA(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "la", "o", WS_POPUP, 0, 0, 10, 10, 0, 0, 0, 0);
+        for (i = 0; i < BW * NB * H; i++) bits[i] = 0xffffffff;
+        pos.x = 120; pos.y = 220; size.cx = size.cy = 80;
+        if (!UpdateLayeredWindow(w[2], 0, &pos, &size, hdc, &src, 0, &blend, ULW_ALPHA)) printf("ULW failed %lu\n", GetLastError());
+        ShowWindow(w[2], SW_SHOWNOACTIVATE);
+        pump(1000);
+        for (i = 0; i < 4; i++)
+        {
+            RECT r;
+            COLORREF c;
+            GetWindowRect(w[i], &r);
+            x = i == 3 ? r.left + 20 : r.left + 60; y = i == 3 ? r.top + 20 : r.top + 60;
+            c = screen_pixel(x, y);
+            click(x, y);
+            printf("%-17s: screen %02x%02x%02x click %s\n", names[i], GetRValue(c), GetGValue(c), GetBValue(c),
+                   clicked == w[i] ? "window" : clicked == back ? "back" : "none");
+        }
+        return 0;
+    }
 
     for (i = 0; i < NB; i++)
     {

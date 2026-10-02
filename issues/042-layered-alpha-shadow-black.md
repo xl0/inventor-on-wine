@@ -1,5 +1,5 @@
 # 042 Per-pixel-alpha popups: translucent shadow drawn opaque black (low)
-Status: open (draft, low) · Owner: - · Branch: - · Found in: UI test campaign (tooltips, menus)
+Status: fixed by 062 (fix/062): pixels below alpha 128 are no longer drawn without a compositor · Owner: worker-062 · Branch: fix/062 · Found in: UI test campaign (tooltips, menus)
 
 ## Symptom (integ d53133a66a1, :98 openbox, no compositor)
 Inventor's WPF popups (ribbon tooltips, File-menu flyouts, floating
@@ -20,3 +20,6 @@ this; likely a long-standing Wine limitation rather than a quick fix.
 062 (worker-061): winex11 does give these windows an ARGB visual (depth 32, xwininfo); only
 alpha-0 pixels are cut from the shape, the rest is drawn opaque because nothing blends without
 a compositing manager. See 062 "Why no fix" for the X11 shape/input trade-off.
+fix/062: without a compositing manager the shadow pixels (alpha < 128) are left out of the X shape, so the
+popup has no shadow instead of a black frame; they are click-through then (Windows hit-tests them).
+tests/layered_splitter.exe's tooltip: shadow pixel 000000 -> the pane colour. Not yet looked at in Inventor.
