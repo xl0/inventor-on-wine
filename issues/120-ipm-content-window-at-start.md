@@ -120,3 +120,31 @@ flaky), msg 5, win 0, all pre-existing); comctl32 tooltips/listview/trackbar 0, 
 Wine regress user32 win32u comctl32 dinput imm32 uiautomationcore: 0 worse.
 Cold starts on inv3 (rebuilt series): pointer over the popup: `hello` PASS 3/3 (tooltip shows, as on
 Windows); pointer in the corner: PASS 2/2, no 82x24 window. WebView2's fake moves now have extra info 0.
+
+## UI hover A/B (missing hover highlights after the 120 series)
+Report: no hover highlight in the Modify panel slide-out (3D Model tab) and on some browser context menu
+items; the slide-out stays open after two Escapes. A/B on inv4 :101, same steps and coordinates, XTest
+pointer in 3-5 px steps, highlight = item pixels differ from a pointer-parked base shot:
+A = integ d22c74b6d6b (before 120, out-of-tree build), B = build/ (d7799da4d5c). part/box.ipt open.
+
+| Item | A | B |
+|---|---|---|
+| Modify slide-out: Move Bodies / Bend Part / Copy Object | yes | yes |
+| Browser menu (XZ Plane): Copy, Measure, Visibility, Find in Window, How To | yes (5/5) | yes (5/5) |
+| Browser menu (box.ipt): Measure, Expand/Collapse All Children, Find in Window, iProperties, How To | not run | yes (6/6; also 2 s dwell, single jump) |
+| File menu: Save, Manage, iProperties, Print | yes | yes |
+| Fillet dropdown: Face Fillet, Full Round Fillet (Fillet pre-selected) | yes | yes |
+| Slide-out stays open after 2x Escape (keyboard focus stays in the main window) | yes | yes |
+
+Visibility, How To (Help Topics) are enabled in that context (not greyed) and highlight on both builds.
+Window classes: none is a Win32 menu (#32768), so the win32u menu-loop commit cannot be involved.
+Slide-out and File menu = WPF popups (`HwndWrapper[DefaultDomain;;...]`, WS_POPUP, NOACTIVATE|TOOLWINDOW,
+459x96); Fillet dropdown = WPF popup too (+ WPF tooltip window); browser/canvas context menus are drawn by
+Inventor's Qt overlay (`Qt687QWindowToolSaveBits` 'Marking Menu', 1920x1080, plus 'tb_HoverMTB').
+
+One reproducible miss, identical on A and B (8/8 each): after a browser context menu was opened and closed
+with Escape, the next Modify slide-out does not highlight the first item (Move Bodies) when the pointer
+approaches it in 1 px steps from the panel title; Bend Part, Copy Object and a second visit to Move Bodies
+do highlight. Without the context-menu round trip all 12 slide-out openings highlighted on every item.
+Verdict: not a regression of the 120 series (no per-commit bisect needed); a pre-existing
+first-hover-after-popup quirk (WPF/Qt hover state) and Escape not closing the NOACTIVATE slide-out.
