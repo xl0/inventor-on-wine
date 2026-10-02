@@ -1,5 +1,5 @@
 # Fonts: font linking and fallback (win32u, uniscribe, dwrite)
-Checked against integ 43790927731 + fix/119 (issue 119).
+Checked against integ d7799da4d5c + fix/123 (issues 119, 123).
 
 ## GDI font linking (dlls/win32u/font.c)
 - `load_system_links` builds `font_links` (name -> list of family entries) from
@@ -13,6 +13,17 @@ Checked against integ 43790927731 + fix/119 (issue 119).
   because a link on a *missing* font name makes that name resolve to its first link
   (`find_family_from_font_links` in `find_matching_face_by_name`): links on
   Microsoft Sans Serif would turn WinForms text into Noto CJK instead of Arial.
+- fix/123: without any of those Noto families, `font_funcs->get_language_fonts` (freetype.c) asks
+  fontconfig for `sans:lang=L:scalable=true` per language (ja, zh-cn, zh-tw, ko; ACP's first), keeps a
+  match only if its FC_LANG has L exactly (FcFontMatch returns a Latin font otherwise) and skips
+  languages an earlier match covers. font.c finds the face by NT path + face index (FC_INDEX is the
+  index Wine loaded the face with; skip `@` families) and links Tahoma to its family.
+- Host fonts are sticky per prefix: `update_external_font_keys` writes them to HKLM `...\Fonts` with full
+  paths and `load_registry_fonts` loads those in later sessions even if fontconfig no longer lists the
+  directory. To test with a private `FONTCONFIG_FILE`, create the prefix under that config.
+- Wine's family name = the font's name-table name (English, or the system language's); fontconfig's
+  FC_FAMILY list may differ, hence file + index. `find_family_from_name` only sees primary names.
+- `populate_system_links` ignores a link name that is itself a FontSubstitutes entry.
 - `create_child_font_list`: every font (not SYMBOL/OEM charset) gets its own links, then
   Microsoft Sans Serif + its links, then Tahoma + its links. So Tahoma's links are a
   global fallback; Wine links Arial too, Windows doesn't (Arial CJK = boxes there).
@@ -35,3 +46,7 @@ Checked against integ 43790927731 + fix/119 (issue 119).
 ## DirectWrite
 - dlls/dwrite/analyzer.c `system_fallback_config` hard-codes Noto family names per range
   (Noto Sans CJK SC/TC/KR/JP by locale): upstream's direction for missing Windows fonts.
+  All ~150 ranges are Noto names, matched by family name in the system collection (built from the
+  registry Fonts key); `MapCharacters` returns no font when the family is missing. dwrite has no
+  fontconfig access (its unixlib is FreeType only), so a by-language lookup needs a new win32u/gdi32
+  or unixlib path: not done (123).

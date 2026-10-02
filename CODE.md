@@ -137,7 +137,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `ctrlchar_text.c [FONT..|show]`: per-API table of how control chars are drawn/measured
   (GDI, DrawText, GCP, Uniscribe); `show`: "Pan\r" in ExtTextOut/DrawText/combo/listbox (039).
   `cjk_link.c [HEIGHT]`: GDI font linking of CJK chars per font (glyph index, outline size, advance;
-  119). `cjk_edit.c [SECS]`: CJK text in Edit controls + DrawText/ExtTextOut per font, screenshot it (119).
+  119); first a diagnostics block: registry SystemLink/FontSubstitutes/Replacements with installed checks,
+  East Asian families, which installed font Tahoma's linked glyphs come from (123). `cjk_edit.c [SECS]`: CJK text in Edit controls + DrawText/ExtTextOut per font, screenshot it (119).
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
   `xproc_hidden_present.c`: other process presents D3D11 on its child of our container; we hide the
   container, screen pixel must stop showing its frames (065; Win11 pass, exit 0 = ok).
