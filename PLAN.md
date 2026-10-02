@@ -246,7 +246,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 76edc4302b7 (wine-11.18-476, PROTOCOL 971): adds 109 (combase keeps interfaces registered when stubs
+- build/ = integ 7e8ed9554cb (wine-11.18-480, PROTOCOL 971): adds 112 (STA uninit/thread exit fails queued calls; in-process
+  calls check the target apartment window; proxy kept referenced during calls), 114 (rpcrt4 pipe listens complete via APC;
+  combase one RPC endpoint per process). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757
+  (0 REAL/NEW/FLAKY; 28 crash / 90 fail non-pass). inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0-3.3 s per
+  export. Issue 115 (release proxy to dead STA) no longer hangs: fixed by 112.
+- Previous: build/ = integ 76edc4302b7 (wine-11.18-476, PROTOCOL 971): adds 109 (combase keeps interfaces registered when stubs
   go away), 110 (CoDisconnectObject drops the apartment ref once), 107 (pipe I/O on an event-less completion port
   completes in the dequeuing thread; one-call port wait). inv, inv2 restarted on it. Full regress vs master
   4e819f054dd: 0 REAL/NEW, 2 FLAKY (mf:mf, user32:input; both pass on rerun/base), 28 crash / 90 fail total.
