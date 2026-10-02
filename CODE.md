@@ -247,7 +247,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   Licence = ONE active device (server "hong-Precision-7960-Tower", the VM and the user's laptop
   "mafa" each count; a running session keeps its seat until its next check, so two can look
   concurrent). "Device limit reached": another device holds the seat. To use the VM's Inventor,
-  stop all server Inventors (and inv-lic's checkout) first, then Check again in the VM. Never
+  stop all server Inventors (kill-inventor); the licensing services alone don't hold the seat
+  (verified 2026-10-02), then start Inventor in the VM. Never
   click Pause product (account action — the user's call).
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the
   user.WINEREPARSE xattr of `name?` dirs (052); plain copies break them.
