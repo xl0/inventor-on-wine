@@ -13,11 +13,14 @@ Checked against integ d7799da4d5c + fix/123 (issues 119, 123).
   because a link on a *missing* font name makes that name resolve to its first link
   (`find_family_from_font_links` in `find_matching_face_by_name`): links on
   Microsoft Sans Serif would turn WinForms text into Noto CJK instead of Arial.
-- fix/123: without any of those Noto families, `font_funcs->get_language_fonts` (freetype.c) asks
+- fix/123: without any of those Noto families, `font_funcs->get_language_font` (freetype.c) asks
   fontconfig for `sans:lang=L:scalable=true` per language (ja, zh-cn, zh-tw, ko; ACP's first), keeps a
-  match only if its FC_LANG has L exactly (FcFontMatch returns a Latin font otherwise) and skips
-  languages an earlier match covers. font.c finds the face by NT path + face index (FC_INDEX is the
-  index Wine loaded the face with; skip `@` families) and links Tahoma to its family.
+  match only if its FC_LANG has L exactly (FcFontMatch returns a Latin font otherwise). font.c finds
+  the face by NT path + face index (FC_INDEX is the index Wine loaded the face with; skip `@`
+  families), else by FC_FAMILY name (identical faces are kept once, C:\windows\Fonts loads first),
+  links Tahoma to its family and skips the languages that font covers.
+- A family made by `Fonts\Replacements` has an empty `faces` list: always use `get_family_face_list`.
+- `get_glyph_index_linked` never consults links for C0/C1 control characters.
 - Host fonts are sticky per prefix: `update_external_font_keys` writes them to HKLM `...\Fonts` with full
   paths and `load_registry_fonts` loads those in later sessions even if fontconfig no longer lists the
   directory. To test with a private `FONTCONFIG_FILE`, create the prefix under that config.

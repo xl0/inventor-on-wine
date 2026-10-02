@@ -1,5 +1,5 @@
 # 123 CJK font linking only works with Noto Sans CJK installed
-Status: fixed on fix/123 (wt/123, 2 commits on integ d7799da4d5c), not merged; laptop preview boxes/wrapping still unexplained (comparison below; probe output pending) · Owner: issue-123 worker · Found in: user's laptop (squares after 119, 2026-10-02)
+Status: fixed on fix/123 (wt/123, 4 commits on integ d7799da4d5c, review fixes done), not merged; laptop preview boxes/wrapping still unexplained (comparison below; probe output pending) · Owner: issue-123 worker · Found in: user's laptop (squares after 119, 2026-10-02)
 
 119 links Tahoma to "Noto Sans CJK JP/SC/TC/KR" by name. Hosts without those exact families
 (other CJK fonts: WenQuanYi, Droid Sans Fallback, Source Han, IPA, Takao, AR PL, system fonts
@@ -17,6 +17,30 @@ with other names, or Noto CJK under another family name) still show boxes.
 - `win32u: Link Tahoma to an East Asian font even when Tahoma has a substitute.` (ddd64feed24): see below.
 - Tests: gdi32:font `test_font_link` and usp10 `test_ScriptString_fallback` skip on "no font with
   SHIFTJIS_CHARSET" instead of font names.
+
+## Review fixes (2026-10-02)
+- `win32u: Don't use linked fonts for C1 control characters.` (0f916853d8b): U+0080-009F are never looked up
+  in links (C0 already wasn't); Unifont has glyphs for them and made them visible in Tahoma text
+  (gdi32:font test_control_chars, 6 failures with Unifont as the only CJK font; now 0).
+- `win32u: Find the East Asian link font also through replacements and by name.` (65707e3dc72):
+  - crash in every process when "Noto Sans CJK JP" is a `HKCU\Software\Wine\Fonts\Replacements` name (such a
+    family has no faces of its own): go through `get_family_face_list`, link the replaced family.
+  - backend call is now `get_language_font` (one language: file, index, FC_FAMILY, mask of covered languages);
+    when no face has that file + index (Wine kept the copy from C:\windows\Fonts: winetricks-installed
+    font that is also on the host) the family is looked up by name; a language only counts as covered
+    once a font was linked.
+  - tests skip unless a scalable SHIFTJIS_CHARSET font really has the test character (bitmap JIS fonts
+    under ACP 932, "Phetsarath OT" claiming the JIS code page).
+- Matrix after the fixes (gdi32:font / usp10, x86_64 + i386, "9" = the host todo-successes also on integ):
+  Noto visible 9/0 (r119 `fm` probe output identical to build/ d7799da4d5c); no Noto 9/0 (WenQuanYi);
+  Droid+IPA 9/0; Unifont only 9/0; Replacements "Noto Sans CJK JP" -> WenQuanYi 9/0 (no crash, links
+  WenQuanYi); wqy-zenhei.ttc copied into C:\windows\Fonts before the first start, same font on the host 9/0
+  (linked by name). ja_JP locale without any CJK outline font: both tests skip (42 other failures there,
+  same on build/). VM: usp10 0, font 9 (lines 2872/2894/5195, not in test_font_link).
+  regress.sh subset vs integ: 0 REAL (FLAKY i386 user32:win, fails on base too).
+- Not solved, documented: a prefix that still loads host fonts from its registry (HKLM Fonts, sticky) after
+  the fontconfig set shrank: links follow what fontconfig offers now (IPAGothic only -> Hangul not
+  linked although WenQuanYi is still loaded). The name fallback doesn't help: fontconfig never names that font.
 
 ## Fonts on the server and results
 `fc-list :lang=…`: Noto Sans/Serif/Mono CJK (all four), WenQuanYi Zen Hei (all four), Unifont (all four),
