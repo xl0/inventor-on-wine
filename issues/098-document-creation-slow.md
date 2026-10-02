@@ -136,3 +136,21 @@ Spread within a variant <= 0.7 s; B fastest in 4/4 rounds. 097 gains ~0.5 s, 098
 An earlier 3-round attempt (wt/bis-runs/r1) ran while another agent's regress held the host at load 60-120:
 first part 8-18 s, 5 of 9 runs hit the "no ActiveView" flake (037); discarded. The earlier 9.8 vs 11.3 was
 most likely host load. Lesson: check /proc/loadavg (< ~25) before an A/B.
+
+## Windows ground truth: cold start (VM, 2026-10-02)
+VM Inventor closed, `invstart` task started, `run.sh --vm hello` as soon as the trial popup showed
+content (~6.5 s after launch; Inventor at Home, popup visible):
+
+| hello | Windows cold | Wine (table above) |
+|---|---|---|
+| connect | 15.3 s (the harness waits for the popup to be visible 15 s, then WM_CLOSEs it; not Inventor load) | - |
+| first part view | **6.3 s** | 11.2-14.4 s |
+
+docbench (INVSCEN_N=3) right after, same session (so NOT cold for part; the first part view was in hello):
+add part 0.5/0.5/0.7 s, asm 1.5/0.7/0.5 s, drw 1.1/0.7/0.5 s (round 1 = the one-time cost of asm 1.5 and
+drw 1.1 s); closes 0.1-0.2 s. Wine warm: 0.95 s each.
+
+So Windows' cold first part view is 6.3 s, not 0.9 s: the 0.9 s reference was a warm document. Wine's
+8-11 s is about 1.5-2x the cold Windows cost, not 10x; the remaining cold-vs-warm gap is a one-time
+initialisation that Windows pays too (note the VM measurement ran while the popup's WebView2 and the
+licensing agent were also starting; 1 run only).

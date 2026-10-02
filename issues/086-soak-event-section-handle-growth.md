@@ -69,3 +69,25 @@ Per hour, one session 4.1 h (soak #2 in brackets): Event +747 [+1655], File +42 
 End dump: Event 3496, Section 3535, File 330, Key 427, Mutant/Semaphore flat (soak #2 end: 7886 / 2202 / 1492 / 391).
 Remaining Event growth ~750/h is not attributed (handle-attr.py not rerun); Section stays the largest and is app-side.
 Data: inst/soak/2026-10-01/summary.txt, part3/handles-{start,end}.txt.
+
+## Windows ground truth: samples twice on one session (VM, 2026-10-02)
+Same Inventor session (started ~2 h earlier, only light use), `run.sh --vm samples` twice back to back
+(9m19s each), Inventor.exe sampled with tools/soak/resprobe.exe (NtQuerySystemInformation handle table,
+`dump` for per-type counts; workspace inst/ref086/ not in git):
+
+| | WS | Private (commit) | Handles | Event | Section | File | Thread | IoCompletion |
+|---|---|---|---|---|---|---|---|---|
+| before | 360 MB | 207 MB | 1539 | 583 | 57 | 175 | 59 | 20 |
+| after run 1 | 2761 MB | 3863 MB | 4651 | 2307 | 951 | 254 | 209 | 105 |
+| after run 2 | 2583 MB | 5508 MB | 6180 | 3572 | 1209 | 252 | 213 | 112 |
+
+- Windows grows too, and by more than Wine: private bytes +3.65 GB (run 1) and +1.65 GB (run 2) = +5.3 GB
+  for two runs (Wine: ~1.8 GB RSS per run). WS stays ~2.6-2.8 GB because Windows trims/pages out; commit
+  is the comparable number. So the multi-GB growth per samples run is Inventor's own (caches/leaks), not Wine.
+- Handles +3112 (run 1), +1529 (run 2); Event +1724/+1265, Section +894/+258 (soak #3 Wine: ~320 Sections
+  per run), Thread +150 then +4 (view-compute worker threads, then flat), IoCompletion +85/+7,
+  Key +52/+6, Mutant +62/-1. Run 1 includes first-use costs; run 2 is closer to steady state:
+  Event +1265 and Section +258 per samples run on Windows, i.e. the Event/Section leak (saveToMappedFile
+  sections, AdpIPC events) is app-side and at least as large on Windows as on Wine.
+- Both runs: RESULT FAIL only on Speedometer.ipt "rebuild"/"reopen" volume check (vol 7.0235 vs 7.0199 cm3);
+  everything else PASS.

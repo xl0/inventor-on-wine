@@ -135,3 +135,23 @@ dialog alone therefore does not establish licensing refusal or its cause.
   offscreen window is white too), no lost presents; fix/078 doesn't change it. The laptop's
   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu` never reaches msedgewebview2's command line.
   Laptop hypotheses (PRIME/vblank-late presents, DPI): see 078.
+
+## Windows ground truth: cold start (VM, 2026-10-02)
+VM Inventor closed, then `Start-ScheduledTask invstart`, screendump every ~0.5 s from the launch
+(t = 0 just before the start command; the process StartTime is ~t+2 s). Frames:
+
+| t | screen |
+|---|---|
+| 0-2 | desktop |
+| 2.5-4.0 | Inventor splash ("Inventor Professional 2027" with progress bar) |
+| 4.5 | **popup window appears: pure white, one frame (<= 0.5 s)** |
+| 5.0-6.0 | popup chrome (Autodesk logo, X, "Change license type") on black with a spinner |
+| 6.5 | popup content ("26 DAYS LEFT / Dig into your trial", image) |
+| 10.5-19 | Inventor main window appears behind it, then loads Home; popup unchanged |
+
+So on Windows the white phase is <= 0.5 s (the popup is shown white for a single sampled frame, then
+a black page with a spinner for ~1.5 s), content ~2 s after the popup window appears. Wine: white ~4 s+
+(~19 s to content). Also one single-frame white flash at t=13.5 s (main window area) while Inventor's
+window initialises. Frames: issues/attachments/085-vm-trial-popup-cold.png (4.0 / 4.5 / 5.0 / 6.0 / 6.5 s).
+
+![VM cold start popup](attachments/085-vm-trial-popup-cold.png)

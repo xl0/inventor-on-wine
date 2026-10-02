@@ -20,3 +20,16 @@ Whether Windows behaves the same (it would be a severe Inventor bug, unlikely): 
 Windows UI run of steps 1-2 (VM clicks are off-limits for workers). If Windows keeps the
 component, look at what ends the post-generator transaction on Windows (idle / mouse-move
 processing after the modal dialog closes vs. Wine).
+
+## Windows ground truth (VM, 2026-10-02): same behaviour, not a Wine bug
+frame.iam from `run.sh --vm frame`, Design tab:
+1. Shaft > OK > File Naming OK: `Shaft:1` appears in the browser and viewport, status bar "Place
+   component" (the shaft hangs on the cursor waiting for a placement click).
+2. Click Spur Gear right away: as the dialog opens, `Shaft:1` is gone from the browser and the viewport
+   (first screenshot, left). Cancel: still gone.
+3. Repeat, but click once into the viewport after the File Naming OK (status "Ready", Shaft:1 placed at
+   the cursor), then Spur Gear: `Shaft:1` stays (right).
+Identical to Wine. It is Inventor's design: the generated component is still in unplaced "Place
+component" state until clicked, and starting another command cancels it. Close as not-a-bug.
+
+![VM](attachments/066-vm-gear-after-shaft.png)

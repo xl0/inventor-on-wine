@@ -23,3 +23,12 @@ Place from CC and bolted connection (same CC libraries) generate their parts fin
 ## Next
 Windows reference (VM with desktop CC libraries, or a known-good Frame Generator run) before
 digging; then trace the Frame Generator add-in (native: +seh/relay around the naming OK).
+
+## Windows ground truth (VM, 2026-10-02): blocked, no Content Center libraries
+Design > Insert Frame in frame.iam on the VM shows "Frame Generator: Content Center server query
+failed. Please check your Content Center configuration to make sure all required libraries are present
+or check Content Center connectivity to server." Panel cannot be used (no category/family list), so
+no members are generated and no Windows reference exists. Needs a VM with the desktop CC libraries
+(not installed) to compare; skipped.
+
+![VM](attachments/069-vm-no-content-center.png)
