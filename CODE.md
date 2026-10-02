@@ -251,6 +251,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   child debugged; `-ntinherit`: NtCreateUserProcess with/without NO_DEBUG_INHERIT (105, 106).
   `displaychange_sync.c [W H|list]`: ChangeDisplaySettingsEx delivery of WM_DISPLAYCHANGE to own/other
   thread/process windows and mode visibility after return (104; the VM has only 1024x768).
+  `r124/xstate_ctx.c [cfg|init|loc|mat|apc|exc]`: extended context (CONTEXT_EX/xstate) seen by vectored
+  handlers and special user APCs, xstate config, RtlLocateExtendedFeature argument validation;
+  `r124/nre_barrier.cs` / `gc_suspend.cs`: .NET 10 tests (build on the VM with the 4.8 csc, run with
+  `dotnet X.exe` + X.runtimeconfig.json): NRE in the JIT write barrier, GC suspension of a spinning thread (124, 126).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).

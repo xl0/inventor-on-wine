@@ -82,3 +82,13 @@
   through the signal frame. Mesa symbols: Ubuntu's `*-dbgsym_<ver>_amd64.ddeb` from
   ddebs.ubuntu.com (debuginfod.ubuntu.com lacked them), `dpkg-deb -x` to scratch (no install),
   `addr2line -f -i -e .../.build-id/xx/yyyy.debug OFF`. Mesa source: tag `mesa-<ver>`.
+- CoreCLR frames (`coreclr.dll+RVA`) without disassembly: Microsoft publishes the PDB. RSDS GUID+age from
+  the PE debug directory → `https://msdl.microsoft.com/download/symbols/coreclr.pdb/<GUID><age>/coreclr.pdb`,
+  `llvm-pdbutil-14 dump --publics --section-headers`, nearest public symbol per RVA; then read the function in
+  dotnet/runtime at the matching tag (124).
+- Standalone .NET 10 tests without an SDK: compile C# on the VM with the .NET 4.8 csc
+  (`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /platform:x64`), put a
+  `X.runtimeconfig.json` (framework Microsoft.NETCore.App 10.0.0, rollForward LatestMinor) next to it and run
+  `dotnet.exe X.exe` (copy `Program Files/dotnet/{dotnet.exe,host,shared/Microsoft.NETCore.App}` from an inv
+  prefix into a scratch prefix, 77 MB). Don't run it with `WINEDLLOVERRIDES=mscoree=`: IL-only
+  assemblies (mscorlib.dll facade) then fail to load with "Module not found" (124).

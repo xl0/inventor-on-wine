@@ -1,5 +1,5 @@
 # 124 Open dialog fails to repaint after Awesome resize; CoreCLR crash captured
-Status: open (draft, Windows unchecked) · Owner: - · Branch: - · Found in: user's laptop, integ d7799da4d5
+Status: open (crash part fixed on fix/124; dialog repaint part open) · Owner: - · Branch: fix/124 (crash) · Found in: user's laptop, integ d7799da4d5
 
 ## Report and scope
 
@@ -113,3 +113,60 @@ than publishing the core.
 
 No further interactive reproduction, Wine patch, registry workaround or
 automatic relaunch has been applied after the captured crash.
+
+## Crash: root cause and fix (worker 124-crash, branch fix/124 @ 34a7e2755b8)
+
+Status of the crash part: **fixed on fix/124**, reproduced and verified with a standalone .NET 10 test
+(no Inventor run). Independent of the Open-dialog repaint symptoms.
+
+**Cause.** The stack is CoreCLR handling an ordinary `NullReferenceException`: an AV in the JIT
+write barrier (reference store into a field of a null object; frame #22 is the write-barrier code
+copy). Frames #11-#18 by public symbols:
+`CLRVectoredExceptionHandlerShim` → `CLRVectoredExceptionHandler` → `AdjustContextForJITHelpers` →
+`Thread::VirtualUnwindToFirstManagedCallFrame` → `Thread::VirtualUnwindLeafCallFrame` → `GetSSP` →
+`LocateXStateFeature(ctx, XSTATE_CET_U)`; #2-#5 are `ProcessCLRException` → `EEPolicy::HandleFatalError`.
+`AdjustContextForJITHelpers` (dotnet/runtime src/coreclr/vm/excep.cpp) does `tempContext = *pContext`
+into a plain local `CONTEXT`: ContextFlags keeps CONTEXT_XSTATE, but no CONTEXT_EX follows the copy,
+so the "CONTEXT_EX" is whatever is on the stack behind it.
+- Windows 11: `RtlLocateExtendedFeature(2)` returns NULL for a feature that is not enabled (CET_U
+  without shadow stacks) without touching the context, length untouched.
+- Wine (XSAVEC CPUs = compaction enabled): read `xs->CompactionMask` through the garbage
+  `XState.Offset` first → AV inside the vectored handler → CoreCLR fail-fast, exit code 5.
+  Whether it faults depends on the stack residue, hence intermittent. Not AVX-512 specific.
+The context Wine hands to the handler is valid (probe below); no Wine dispatch path is at fault.
+
+**Fix.** `ntdll: Don't access the context for disabled features in RtlLocateExtendedFeature2().`
+(the enabled-features check now comes first for the compacted format too; length is left alone),
+with a conformance test in ntdll:exception (CONTEXT_EX of 0xcc, every disabled feature).
+
+**Repro / verification.** `tests/r124/nre_barrier.cs` (built on the VM with the .NET 4.8 csc, run
+with `dotnet nre_barrier.exe` on the 10.0.9 runtime copied from prefixes/inv into a scratch
+prefix): poisons the stack, then takes an NRE in the write barrier, 2000 times.
+Windows: `caught 2000 of 2000`. Wine before: `Fatal error. 0xC0000005`, rc 5 (3/3 runs).
+Wine after: `caught 2000 of 2000` (3/3).
+ntdll:exception: Wine x86_64 5598 tests 0 failures, i386 5111 / 0; VM: the new checks pass on both
+(the VM's 7 / 6 failures are older tests at lines 4764, 11754, 11921, 11925).
+
+**Probe** `tests/r124/xstate_ctx.c` (`cfg init loc mat apc exc`), VM vs Wine:
+- Hardware exceptions (AV, div0, int3, ud2, nested): both give flags 0x10005f and a valid CONTEXT_EX
+  (Legacy -1232/0x4d0, XState 240, compaction 0x80…e4, features 2/5/6/7 at 64/320/384/896).
+  Differences: XState.Length 0x788 (Win) vs 0x780; xstate Mask after `vzeroall` 0 (Win) vs 0xa0.
+- `RaiseException`: Windows 0x10004f with a valid CONTEXT_EX (context not 64-aligned, XState 64/0x780);
+  Wine 0x10000f and no CONTEXT_EX. `NtRaiseException(CONTEXT_FULL)`: Windows adds xstate (0x10005f),
+  Wine doesn't (valid empty CONTEXT_EX, but XState 0/0x19 where RtlInitializeExtendedContext uses 25/0).
+  Harmless for LocateXStateFeature (no CONTEXT_XSTATE flag → NULL).
+- `RtlLocateExtendedFeature` on Windows, one change at a time on a valid context: NULL (length
+  untouched) unless `XState.Offset >= All.Offset` and `XState.Offset + XState.Length <= All.Offset +
+  All.Length` (signed 32-bit); XState.Length itself does not bound the lookup (Length 0 still finds
+  features); bit 63 of CompactionMask is not required. Wine has none of that validation and bounds by
+  XState.Length. Not changed: nothing known depends on it.
+- XSTATE_CONFIGURATION: Windows `Features[].Offset` are compacted offsets (5: 0x340, 6: 0x380,
+  7: 0x580) and ControlFlags 3; Wine reports the standard-format offsets (0x440, 0x480, 0x680), flags 7.
+- VM CPU: AVX-512 (features 0xe7, PKRU listed but not enabled), no AMX, no CET. Server: + AMX in
+  XCR0, which Wine masks out.
+
+**Open / not done.**
+- Windows' CONTEXT_EX range validation and the software-exception CONTEXT_XSTATE (above) are left as is.
+- From the laptop core (optional, to confirm): in frame #10 `context_ex` (rcx at entry, or
+  frame #11's context + 0x4d0) and its 24 bytes; expected: an address inside frame #15's stack frame,
+  not the handler's `ContextRecord`, with a garbage XState.Offset.
