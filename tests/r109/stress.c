@@ -13,12 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* arg: 0 = one pointer, 1 = one int, 2 = none (the stdcall stack must match on i386) */
 static const struct { const IID *iid; int method; int arg; } ifs[] = {
     {&IID_IPersist,3,0},{&IID_IPersistStream,3,0},{&IID_IPersistStreamInit,3,0},{&IID_IPersistStorage,3,0},
     {&IID_IPersistFile,3,0},{&IID_IPersistPropertyBag,3,0},{&IID_IOleWindow,3,0},{&IID_IOleInPlaceObject,3,0},
     {&IID_IOleInPlaceActiveObject,3,0},{&IID_IOleInPlaceUIWindow,3,0},{&IID_IOleInPlaceFrame,3,0},
-    {&IID_IOleInPlaceSite,3,0},{&IID_IRunnableObject,3,0},{&IID_IClassFactory,4,1},{&IID_IStream,9,1},
-    {&IID_ILockBytes,5,1},{&IID_IStorage,10,1},
+    {&IID_IOleInPlaceSite,3,0},{&IID_IRunnableObject,3,0},{&IID_IClassFactory,4,1},{&IID_IStream,9,2},
+    {&IID_ILockBytes,5,2},{&IID_IStorage,10,2},
 };
 #define NIF (sizeof(ifs)/sizeof(ifs[0]))
 #define NSLOT 64
@@ -63,6 +64,8 @@ static HRESULT WINAPI o_method(IUnknown *i, void *a)
     }
     return S_OK;
 }
+/* methods without arguments: ILockBytes::Flush (5), IStream::Revert (9), IStorage::Revert (10) */
+static HRESULT WINAPI o_method0(IUnknown *i) { return o_method(i, NULL); }
 
 static DWORD WINAPI server_thread(void *arg)
 {
@@ -141,7 +144,8 @@ static DWORD WINAPI client_thread(void *arg)
         for (n = rand() % 4 + 1; n; n--)
         {
             void **v = *(void ***)p;
-            hr = ifs[k].arg ? ((HRESULT (WINAPI *)(void *, INT_PTR))v[ifs[k].method])(p, 1)
+            hr = ifs[k].arg == 2 ? ((HRESULT (WINAPI *)(void *))v[ifs[k].method])(p)
+               : ifs[k].arg ? ((HRESULT (WINAPI *)(void *, INT_PTR))v[ifs[k].method])(p, 1)
                             : ((HRESULT (WINAPI *)(void *, void *))v[ifs[k].method])(p, buf);
             count(hr);
         }
@@ -192,6 +196,7 @@ int main(int argc, char **argv)
     setvbuf(stdout, NULL, _IONBF, 0);
     vt[0] = o_qi; vt[1] = o_addref; vt[2] = o_release;
     for (i = 3; i < 16; i++) vt[i] = o_method;
+    vt[5] = vt[9] = vt[10] = o_method0;
 
     if (argc > 1 && !strcmp(argv[1], "server"))
     {

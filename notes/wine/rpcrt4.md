@@ -43,3 +43,9 @@
   (CoTestCancel there turns RPC_S_CALLPENDING -> RPC_E_CALL_CANCELED; Wine: stub). combase client
   calls run on a private copy of the RPCOLEMESSAGE in a refcounted `message_state` (caller + call);
   an orphaned call frees its message and closes its event when it completes.
+- Stub manager lifetime (combase, 110): `refs` = one apartment ref (held while connected) + one per
+  lookup/call in progress (dispatch_rpc holds one until the STA finished the call). The apartment ref
+  goes once, via `stub_manager_disconnect` (CoDisconnectObject or external refs reaching 0), which also
+  drops the manager from the object tree; its IPIDs stay callable until the last ref. Windows: calls
+  during the disconnected object's running call succeed, later ones RPC_E_DISCONNECTED; marshaling the
+  object again gives a new working connection.

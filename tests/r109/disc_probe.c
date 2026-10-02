@@ -2,6 +2,7 @@
  * newcall: a second client thread calls A while the first call is in progress.
  * double:  A calls CoDisconnectObject(A) twice in its call.
  * relmd:   a second client thread does CoReleaseMarshalData of A's objref (final RemRelease) during the call.
+ * remarshal: A marshals itself again after disconnecting; the client unmarshals that after the call and calls it.
  * Prints HRESULTs; the server reports whether it survived. */
 #define COBJMACROS
 #include <windows.h>
@@ -9,7 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
-struct shared { DWORD size; BYTE data[1024]; HRESULT wait_hr; LONG calls; LONG alive; };
+struct shared { DWORD size, size2; BYTE data[1024], data2[1024]; HRESULT wait_hr; LONG calls; LONG alive; };
 static struct shared *sh;
 static HANDLE ready, in_call, released, quit;
 static char mode[32];
@@ -35,6 +36,18 @@ static HRESULT WINAPI getclassid(IPersist *iface, CLSID *clsid)
     if (InterlockedIncrement(&sh->calls) != 1) return S_OK;
     CoDisconnectObject((IUnknown *)iface, 0);
     if (!strcmp(mode, "double")) CoDisconnectObject((IUnknown *)iface, 0);
+    if (!strcmp(mode, "remarshal"))
+    {
+        IStream *stream; HGLOBAL hglobal; HRESULT hr;
+        CreateStreamOnHGlobal(NULL, TRUE, &stream);
+        hr = CoMarshalInterface(stream, &IID_IPersist, (IUnknown *)iface, MSHCTX_LOCAL, NULL, MSHLFLAGS_NORMAL);
+        printf("server: remarshal %#lx\n", hr);
+        GetHGlobalFromStream(stream, &hglobal);
+        sh->size2 = GlobalSize(hglobal);
+        memcpy(sh->data2, GlobalLock(hglobal), sh->size2);
+        GlobalUnlock(hglobal);
+        IStream_Release(stream);
+    }
     SetEvent(in_call);
     sh->wait_hr = CoWaitForMultipleHandles(0, 10000, 1, &released, &index);
     printf("server: refs on object at end of call %ld\n", refs);
@@ -135,6 +148,17 @@ int main(int argc, char **argv)
         hr = IPersist_GetClassID(a, &c);
         printf("third call %#lx\n", hr);
         IPersist_Release(a);
+    }
+    if (!strcmp(mode, "remarshal"))
+    {
+        IPersist *b = NULL;
+        CreateStreamOnHGlobal(NULL, TRUE, &s);
+        IStream_Write(s, sh->data2, sh->size2, NULL);
+        IStream_Seek(s, (LARGE_INTEGER){{0}}, STREAM_SEEK_SET, NULL);
+        hr = CoUnmarshalInterface(s, &IID_IPersist, (void **)&b);
+        IStream_Release(s);
+        printf("remarshaled unmarshal %#lx\n", hr);
+        if (b) { printf("remarshaled call %#lx\n", IPersist_GetClassID(b, &c)); IPersist_Release(b); }
     }
     SetEvent(quit);
     if (WaitForSingleObject(pi.hProcess, 10000)) printf("server hangs\n");
