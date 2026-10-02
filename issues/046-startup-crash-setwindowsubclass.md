@@ -46,3 +46,18 @@ Not fixed: subclass data leaks when a subclassed window is destroyed (no WM_NCDE
 cleanup); cross-thread DefSubclassProc still reads the other thread's data.
 If it recurs: winedbg log (AeDebug, notes/wine/debugging.md) plus `GetWindowThreadProcessId`
 of the SetWindowSubclass hwnd would confirm which owner it was.
+
+## Local workstation reproduction
+Old build `47e296ffde4d` reproduced this on 2026-09-28 at 18:56 and 19:01.
+Both CER dumps fault at comctl32 v6 +0x722d9: `SetWindowSubclass`, old
+`commctrl.c:1071`, reading `proc->id`. Latest dump has
+`rax=0x0303030303030303`, target hwnd `0x7010c`, and exception parameters
+`[0, 0xffffffffffffffff]`. Private local dump:
+`prefixes/inv/drive_c/users/xl0/AppData/Local/Temp/Inventor260928190131.dmp`.
+The cursor trace routes that same hwnd's `WM_WINE_SETCURSOR` to process 0294,
+while crashing Inventor is process 0604: consistent with foreign-window access.
+Rebuilt to `38e4c1c00c` and resumed interactive use. Later captured local
+crashes have different signatures: the WPF font-fallback FailFast
+([083](083-wpf-keytip-font-fallback.md)) and the CoreCLR crash
+([124](124-open-dialog-resize-coreclr-crash.md)). No formal replay of the
+original failing interaction was performed.
