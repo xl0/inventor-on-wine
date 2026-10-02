@@ -156,7 +156,8 @@ window initialises. Frames: issues/attachments/085-vm-trial-popup-cold.png (4.0 
 
 ![VM cold start popup](attachments/085-vm-trial-popup-cold.png)
 
-## Launch-to-content time (085b worker, 2026-10-02) — fixed on fix/085b (wt/085b on integ 7e8ed9554cb)
+## Launch-to-content time (085b worker, 2026-10-02) — fixed on fix/085b (wt/085b on integ fc7ffde344a:
+c3d4019345f winex11, 0245ad67df8 ntdll; review fixes folded in)
 Measured on inv3/:100, prefix restarted per run, t = 0 at the Inventor.exe launch, screenshots every 0.1 s
 (`inst/085b/run.sh` + `grab.py`: "white" = a popup-sized white area, "content" = the trial image).
 Timeline (Wine, from +process, a Chromium startup trace and a netlog):
@@ -184,7 +185,9 @@ sent WM_WINE_SETWINDOWPOS to Inventor's UI thread and waited 3-4 s while it was 
 thread (browser_native.dll CenterWindowOnScreen / resize) sat in NtUserSetWindowPos (gdb sehbt snapshots),
 so the agent navigated late and WebView2's NavigationThrottle (host callbacks) waited too.
 Windows: tests/owner_blocked.c (popup owned by a window of a hung process, resize/move): 0 ms; Wine 3947 ms,
-fixed 1 ms. Fix: SWP_ASYNCWINDOWPOS for the owner (+ user32:win test_blocked_owner; VM x86_64 0 failures,
+fixed 1 ms. Fix: SWP_ASYNCWINDOWPOS for owners in other processes only (review: an async same-process
+owner got managed after its owned popup was mapped; the WM then kept the owner above the popup on openbox,
+moved it on awesome; reviewer's ownprobe thread/threadbusy now stack correctly on both) (+ user32:win test_blocked_owner; VM x86_64 0 failures,
 i386 only the pre-existing win.c:2750 scrollbar failures).
 
 ### Cause 2 (~0.7 s): 1 TB reservations wrote 256 MB of vprot bytes
@@ -194,7 +197,11 @@ under virtual_mutex (other threads' VM calls stalled, RenderThreadImpl::Init 360
 tests/bigmap_perf.c: Win11 0.0 ms; Wine 141 / 36 / 33 ms (placeholder reserve / plain reserve / free),
 fixed 0.2 / 0.0 / 0.9 ms. A/B (fix 1 applied): content 10.26 -> 9.55 s (4+4, non-restarted prefix).
 Fix: create_view() skips writing zero vprot bytes (pages outside views are always 0) and set_page_vprot()
-replaces whole cleared 1 MB directories with fresh zero pages.
+replaces whole cleared 1 MB directories with fresh zero pages (memset if that mmap fails, e.g. ENOMEM near
+vm.max_map_count). Reviewer's vmstress (random VM op sequences, VirtualQuery walk) gives identical logs
+for base and fixed builds.
+After the rebase (fc7ffde344a, 4+4 cold starts): before 14.1 / 17.6 / 17.5 / 17.7 s, after 6.6 / 6.6 / 8.8 /
+8.7 s (runs 2-4 resp. 3-4 in the slower startup mode, agent at ~1.9 s).
 
 ### Checked, not Wine-side bottlenecks now
 - Network: Chromium's own stack (BoringSSL, not schannel); the local UI (agent's service on 127.0.0.1)
