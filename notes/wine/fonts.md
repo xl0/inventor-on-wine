@@ -1,5 +1,5 @@
 # Fonts: font linking and fallback (win32u, uniscribe, dwrite)
-Checked against integ d7799da4d5c + fix/123 (issues 119, 123).
+Checked against integ d7799da4d5c + fix/123 (issues 119, 123); dwrite Arial alias: fix/083.
 
 ## GDI font linking (dlls/win32u/font.c)
 - `load_system_links` builds `font_links` (name -> list of family entries) from
@@ -53,3 +53,15 @@ Checked against integ d7799da4d5c + fix/123 (issues 119, 123).
   registry Fonts key); `MapCharacters` returns no font when the family is missing. dwrite has no
   fontconfig access (its unixlib is FreeType only), so a by-language lookup needs a new win32u/gdi32
   or unixlib path: not done (123).
+- System collection = registry Fonts key, plus `HKCU\Software\Wine\Fonts\Replacements` aliases, plus (fix/083) an
+  Arial family aliased to Liberation Sans / Arimo / DejaVu Sans / Tahoma when no Arial exists. "Arial Black"
+  belongs to the Arial family (weight-stretch-style model), so it alone makes `FindFamilyName("Arial")` succeed.
+
+## WPF (083)
+- WPF resolves fonts by family name in the DirectWrite system collection: the requested families, the
+  "Global User Interface" composite font (embedded in .NET Core's PresentationCore; 4.8: `WPF\Fonts\*.CompositeFont`
+  under the Framework dir; Latin on Win10 1809+ = Segoe UI, Segoe UI Symbol, Ebrima), then the null font Arial.
+  No Arial = `Environment.FailFast("Unrecoverable system error.")`, exit 35. Probe: `tests/r083/wpf_fallback.cs`.
+- To hide a host font from a prefix: delete its values from HKLM `...\Windows NT\CurrentVersion\Fonts`,
+  `...\Windows\CurrentVersion\Fonts` and HKCU `Software\Wine\Fonts\External Fonts`, then restart the prefix under a
+  `FONTCONFIG_FILE` without it. A later start with the default config adds it back.

@@ -1,5 +1,5 @@
 # 083 Inventor ribbon key tips crash in WPF font fallback
-Status: open (draft; corefonts installed, exact UI trigger/fix unverified) · Owner: - · Branch: - · Found in: local Inventor 2027.1
+Status: fixed on fix/083 (wt/083, ad75f606df3 on integ 02c2e3f4c37), not merged · Owner: issue-083 worker · Branch: fix/083 · Found in: local Inventor 2027.1
 
 ## Symptom
 On the local workstation, `integ 38e4c1c00c`
@@ -85,7 +85,61 @@ without evidence. The later captured CoreCLR access violation
 the CJK Format Text preview problem ([125](125-format-text-preview-cjk-richedit.md))
 is also not established as related.
 
-## Next
-When licensing permits, check ribbon key tips on the current build and record
-the exact trigger if this FailFast recurs. Use the server's Windows reference
-to distinguish a font prerequisite from Wine's WPF/font-fallback behavior.
+## Root cause (server, 2026-10-02)
+Not key-tip specific: WPF terminates whenever it has to draw text and the DirectWrite system font
+collection has no family named **Arial**.
+
+WPF (dotnet/wpf, same logic in .NET Framework 4.8) maps text in `TypefaceMap.MapByFontFamilyList`: the
+requested families, then the composite font "Global User Interface". .NET 10 embeds the composite fonts in
+PresentationCore; 4.8 reads `Microsoft.NET\Framework64\v4.0.30319\WPF\Fonts\*.CompositeFont` (installed
+by the .NET 4.8 setup, present in our prefixes; Wine needn't ship any). They have one section per OS
+version. For Windows 10 1809+ Latin/Cyrillic/Greek map to `Segoe UI, Segoe UI Symbol, Ebrima` only (older
+sections: `Segoe UI, Tahoma, Arial, ...`). When no physical family was found at all,
+`MapUnresolvedCharacters` looks up the "null font" `#ARIAL` and `Invariant.Assert`s it:
+`Environment.FailFast("Unrecoverable system error.")`, exit status 35 under Wine.
+
+So the crash needs: the text's own family missing, no Segoe UI / Segoe UI Symbol / Ebrima, no Arial.
+Wine's Tahoma doesn't help (not in the list), nor does fontconfig's Arial -> Liberation Sans alias or
+Arial Unicode MS (dwrite matches family names). "Arial Black" alone is enough: DirectWrite puts it in the
+Arial family. Inventor's key tips ask for a family that Wine lacks (adwindows.dll names Artifakt Element
+and Segoe UI), which is why they were the trigger on the laptop.
+
+Windows 11 (VM): Arial, Segoe UI, Segoe UI Symbol, Ebrima and Tahoma are all inbox; the probe measures
+every family, also a non-existent one (via Segoe UI).
+
+## Repro
+- Probe `tests/r083/wpf_fallback.cs` (build line in the file, .NET 4.8 csc of the prefix; runs on the VM
+  too): system families, then `FormattedText` in Tahoma, Arial, Segoe UI, Global User Interface and a
+  missing family; `png=OUT.png` renders the lines. Scratch prefix = copy of inv-net48 with the host font
+  values removed from HKLM `...\Fonts` and HKCU `Software\Wine\Fonts\External Fonts` (both, else they
+  are not re-added), run under a `FONTCONFIG_FILE` with only Liberation + DejaVu:
+  integ: `measure 'Arial':` then exit 35. VM: exit 0.
+- Inventor on inv2 (build/, d7799da4d5c): with the server's msttcorefonts Arial, Alt shows the key tips
+  and nothing crashes ![key tips](attachments/083-keytips-server.png)
+  After removing the `Arial*` and `Arial Black` values from those keys and starting the prefix and Inventor
+  with that `FONTCONFIG_FILE`: Inventor dies during startup with the same stack
+  (`TypefaceMap.MapUnresolvedCharacters` from a `TextBlock.MeasureOverride` of the home page host).
+  inv2 was restored afterwards (a start with the default fontconfig re-registers the fonts).
+
+## Fix (fix/083)
+`dwrite: Always provide an Arial family in the system font collection.` (ad75f606df3): after the
+`HKCU\Software\Wine\Fonts\Replacements` entries, a system collection without Arial gets an Arial family
+made of the faces of the first of Liberation Sans, Arimo, DejaVu Sans, Tahoma (Tahoma ships with Wine, so
+there always is one). Same mechanism as a user replacement; GDI is untouched (it already picks a sans
+font for a missing face name).
+
+Results on wt/083-build:
+- probe without Arial: exit 0, Arial = Liberation Sans; without Liberation/DejaVu: Arial = Tahoma. Text in
+  missing families is drawn with real glyphs from that Arial, not boxes.
+- Inventor on inv2 without Arial: starts, Alt shows the key tips
+  ![key tips, no Arial, fixed](attachments/083-keytips-no-arial-fixed.png)
+  (narrow letters: inv2's `Liberation Sans` regular/bold values name files that don't exist in
+  `C:\windows\Fonts`, so only the host's Liberation Sans Narrow faces are in that family; prefix state,
+  not part of this bug).
+- dwrite:font `test_system_fontcollection` checks that Arial is found: Wine x86_64 + i386 0 failures with
+  or without a host Arial (fails on integ without one); VM: passes (5 unrelated refcount failures at
+  font.c:8999-9051).
+- `regress.sh` dwrite + d2d1 vs build/: 0 worse of 8 units.
+
+Not done: no Segoe UI stand-in (text falls back to Arial, as measured), no GDI-side Arial family
+(`EnumFontFamilies("Arial")` stays empty without a host Arial).

@@ -286,6 +286,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   handlers and special user APCs, xstate config, RtlLocateExtendedFeature argument validation;
   `r124/nre_barrier.cs` / `gc_suspend.cs`: .NET 10 tests (build on the VM with the 4.8 csc, run with
   `dotnet X.exe` + X.runtimeconfig.json): NRE in the JIT write barrier, GC suspension of a spinning thread (124, 126).
+  `r083/wpf_fallback.cs [png=OUT] [FAMILY..]`: WPF (4.8) text measuring/rendering in missing font families;
+  exit 35 = WPF's FailFast for a system without Arial (083).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
