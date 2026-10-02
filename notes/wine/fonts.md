@@ -47,6 +47,8 @@ Checked against integ d7799da4d5c + fix/123 (issues 119, 123); dwrite Arial alia
   linking. Edit controls use SSA_LINK|SSA_FALLBACK.
 - Callers of ScriptShape with glyph indices get no linking at all (default glyph): riched20 did
   (fix/125 reshapes such runs with `fNoGlyphIndex`, see richedit.md).
+- `fNoGlyphIndex`: ScriptShape returns characters as glyphs; ScriptPlace measures them with
+  GetCharABCWidthsW and (fix/125) skips GPOS, which would index by glyph id.
 
 ## DirectWrite
 - dlls/dwrite/analyzer.c `system_fallback_config` hard-codes Noto family names per range

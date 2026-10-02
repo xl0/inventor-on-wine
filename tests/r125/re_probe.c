@@ -4,7 +4,8 @@
  *         per char EM_GETCHARFORMAT, x positions, "boxes" check on the drawn pixels, stream-out RTF; BMPs in cwd
  *   wrap  EM_SETTARGETDEVICE(screen DC, twips): line breaks of CJK / Latin text
  *   sel   selections reaching the final paragraph mark: what is left selected after deleting them
- * re_probe.exe [tom|bind|wrap|sel]...   (default: all)
+ *   eop   EM_SETCHARFORMAT(SCF_SELECTION) at an insertion point: format of the final paragraph mark
+ * re_probe.exe [tom|bind|wrap|sel|eop]...   (default: all)
  * x86_64-w64-mingw32-gcc -O2 -o re_probe.exe re_probe.c -lgdi32 -luser32 -lole32 -loleaut32 -luuid */
 #define COBJMACROS
 #include <windows.h>
@@ -326,6 +327,34 @@ static void test_sel(void)
     }
 }
 
+/* EM_SETCHARFORMAT(SCF_SELECTION) at an insertion point: does the final paragraph mark take the format? */
+static void test_eop(void)
+{
+    static const WCHAR *texts[] = { L"", L"abc" };
+    int t, pos, ins;
+
+    printf("== eop (%ls)\n", cls_name);
+    for (t = 0; t < 2; t++) for (pos = 0; pos < 2; pos++) for (ins = 0; ins < 3; ins++)
+    {
+        HWND hwnd = new_edit();
+        CHARRANGE all = { 0, -1 };
+        int len = lstrlenW(texts[t]), at = pos ? len : 0;
+        if (!t && pos) { DestroyWindow(hwnd); continue; }
+        set_font(hwnd, SCF_ALL, L"Arial", ANSI_CHARSET, 360);
+        SendMessageW(hwnd, WM_SETTEXT, 0, (LPARAM)texts[t]);
+        if (!t) { SendMessageW(hwnd, EM_EXSETSEL, 0, (LPARAM)&all); SendMessageW(hwnd, WM_CLEAR, 0, 0); }
+        else SendMessageW(hwnd, EM_SETSEL, at, at);
+        printf("-- text '%ls', caret %d, then %s\n", texts[t], at, ins == 0 ? "nothing" : ins == 1 ? "EM_REPLACESEL xy" : "EM_SETSEL elsewhere and back, EM_REPLACESEL xy");
+        set_font(hwnd, SCF_SELECTION, L"Tahoma", ANSI_CHARSET, 240);
+        print_cf(hwnd, "caret after SETCF", at, at);
+        if (ins == 2) { SendMessageW(hwnd, EM_SETSEL, 0, 1); SendMessageW(hwnd, EM_SETSEL, at, at); }
+        if (ins) { SendMessageW(hwnd, EM_REPLACESEL, FALSE, (LPARAM)L"xy"); print_cf(hwnd, "inserted", at, at + 2); len += 2; }
+        print_cf(hwnd, "final paragraph mark", len, len + 1);
+        if (len) print_cf(hwnd, "first char", 0, 1);
+        DestroyWindow(hwnd);
+    }
+}
+
 int main(int argc, char **argv)
 {
     static const struct { const WCHAR *dll, *cls; } impl[] = { { L"msftedit.dll", L"RICHEDIT50W" }, { L"riched20.dll", L"RichEdit20W" } };
@@ -342,6 +371,7 @@ int main(int argc, char **argv)
             if (!strcmp(a, "bind") || !strcmp(a, "all")) test_bind();
             if (!strcmp(a, "wrap") || !strcmp(a, "all")) test_wrap();
             if (!strcmp(a, "sel") || !strcmp(a, "all")) test_sel();
+            if (!strcmp(a, "eop") || !strcmp(a, "all")) test_eop();
         }
     }
     return 0;

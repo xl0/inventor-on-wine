@@ -18,9 +18,12 @@ Checked against integ d7799da4d5c + fix/125 (issue 125).
   (`Reset(tomCacheParms)` for gets, `Reset(tomApplyLater)` for sets). `props[]` is filled once at
   creation and is stale afterwards; values are points (twips_to_points / points_to_twips at the
   CHARFORMAT boundary). fix/125: `set_mask` records what was set in apply-later mode, tomApplyNow
-  applies only that; tomApplyTmp ignores setters.
+  applies only that; tomApplyTmp ignores setters. Spacing is in points too (sSpacing twips).
+  mingw's C CHARFORMAT2W has no pad word before wWeight: probes built with mingw read sSpacing
+  at wWeight's place (use Wine's headers or offsets).
 - A selection made with (0,-1) ends after the final paragraph mark (cpMax = len + 1). The mark can't
   be deleted, so delete paths must collapse the cursors themselves (`ME_DeleteSelection` does;
-  WM_CLEAR and cut didn't before fix/125).
+  WM_CLEAR and cut didn't before fix/125). A format set at an insertion point never reaches the
+  final paragraph mark, on Windows neither.
 - Debug channels: `+richedit` (messages with hwnd/wParam/lParam, itemize/layout),
   `+richedit_style` (formats), `+richedit_lists`, `+richedit_check`.

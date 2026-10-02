@@ -1,5 +1,5 @@
 # 125 Sketch "Format Text" dialog: CJK boxes in the edit/preview area, early wrap, one-pixel text after re-edit
-Status: fixed on fix/125 (wt/125, 5 commits on integ d7799da4d5c), not merged · Owner: issue-125 worker · Found in: user's laptop (integ d7799da4d5c, 144 DPI, awesome + picom); details in issues/123 "Laptop interactive comparison"
+Status: fixed on fix/125 (wt/125, 6 commits on integ 1e44ad82022, review follow-ups done), not merged · Owner: issue-125 worker · Found in: user's laptop (integ d7799da4d5c, 144 DPI, awesome + picom); details in issues/123 "Laptop interactive comparison"
 
 ## Symptom
 In a sketch, Text command → Format Text dialog (paste `中文测试`):
@@ -76,28 +76,48 @@ the sketch and overflows the box, while the edit breaks it by character.
 In the laptop screenshot the box holds ~3.5 characters, so the edit breaks after 3. Not verified against
 Inventor on Windows (the VM's Inventor must not be started); the rich-edit half is verified by the probe.
 
-## Fix (fix/125, wt/125)
-- bbdeb7aeb97 `riched20: Use GDI font linking for characters that the font lacks.` After ScriptShape,
+## Fix (fix/125, wt/125; rebased on integ 1e44ad82022 after review)
+- 078e761a90d `gdi32/uniscribe: Don't apply OpenType positioning without glyph indices.` With
+  `fNoGlyphIndex` ScriptPlace looked the characters up as glyph ids in GPOS (bogus pair kerning; the
+  next commit makes rich edit reach that path).
+- dee56086dfd `riched20: Use GDI font linking for characters that the font lacks.` After ScriptShape,
   a non-complex LTR run with a default glyph is reshaped with `fNoGlyphIndex`, so ScriptPlace/
   ScriptTextOut work on characters and GDI links (119: Tahoma -> Noto CJK; in Wine every font falls
   back to Tahoma's links).
-- 35592760bac `riched20: Convert the points of ITextFont properties set on a range to twips.`
-- 1af3ef1a608 `riched20: Only apply the properties set since tomApplyLater in ITextFont::Reset(tomApplyNow).`
-- 8fec8255d61 `riched20: Don't change the text format in ITextFont's tomApplyTmp mode.` (setters are
-  ignored: temporary display formatting itself isn't implemented).
-- e0dc972ce21 `riched20: Collapse the selection after WM_CLEAR and WM_CUT.`
+- 37116402e0f `riched20: Convert the points of ITextFont properties set on a range to twips.` (size,
+  position, kerning, spacing, both directions; float setters ignore tomUndefined).
+- 459b31906cc `riched20: Only apply the properties set since tomApplyLater in ITextFont::Reset(tomApplyNow).`
+- 3916f4ee582 `riched20: Don't change the text format in ITextFont's tomApplyTmp mode.` (setters are
+  ignored: temporary display formatting itself isn't implemented; tomApplyLater leaves the mode).
+- 8d88a6d7ae4 `riched20: Collapse the selection after WM_CLEAR and WM_CUT.` Cut copies, deletes,
+  collapses and notifies once; WM_CLEAR does nothing on read-only controls.
 - Tests: riched20 editor `test_font_linking` (halfwidth katakana in Tahoma measure like GDI; CJK
-  ideographs don't discriminate, Wine's Tahoma .notdef is 1 em wide), `test_delete_final_eop_selection`;
-  riched20 richole `test_ITextFont_range`; msftedit richole `test_ITextFont_tomApplyTmp`.
-  VM: riched20 editor 10729 / richole 183134, msftedit richole 53: 0 failures (x86_64 and i386).
-  Wine: 0 failures; without the fixes richole fails 6 checks, msftedit richole 1, test_font_linking 1
-  (the selection cases: see the probe diff, Wine kept (0,1) / (1,2)).
-  `tools/regress.sh run wt/125-build -m '^(riched20|riched32|msftedit)$'`: 10 units pass (wt/125-regress).
+  ideographs don't discriminate, Wine's Tahoma .notdef is 1 em wide), `test_delete_final_eop_selection`
+  (selection, text, one EN_SELCHANGE + one EN_CHANGE, read-only); riched20 richole
+  `test_ITextFont_range` (todo_wine: riched20.dll rejects tomApplyTmp); msftedit richole
+  `test_ITextFont_tomApplyTmp`; usp10 `test_ScriptPlace_no_glyph_index` (Tahoma, Arial, DejaVu Sans
+  if installed: without the fix 10 and 32 pairs off on Wine).
+  VM (x86_64 and i386): riched20 editor 10789, richole 183150, msftedit richole 58, usp10 32076
+  tests, 0 failures. Wine: 0 failures in riched20 editor/richole/txtsrv, riched32 editor, msftedit
+  richole, usp10.
+  `tools/regress.sh` on riched20, riched32, msftedit, gdi32, usp10, user32, comctl32 (146 units,
+  wt/125-regress2) vs the d7799da4d5c baseline: 0 REAL, 1 FLAKY (i386 user32:win, fails on the base
+  build too).
+  Reviewer probes (/dev/shm/r125rev/rv.c): notify: no duplicate notifications left for WM_CUT /
+  WM_CLEAR; lines differing from the VM 1531 (integ) -> 1485; tom: 143 -> 106.
 
 ## Leftovers / notes
 - IMF_AUTOFONT font binding and EM_GET/SETLANGOPTIONS are still unimplemented (GET returns 0 =
   "no auto font", which matches what Wine does). An app that leaves auto font on gets YaHei/SimSun
   runs on Windows, Tahoma + linking on Wine: same picture, different EM_GETCHARFORMAT.
+- Undo doesn't restore the selection (Windows: undo of WM_CLEAR/WM_CUT on an empty document selects
+  (0,1) again; Wine's undo records no selections). ITextFont setters don't validate ranges
+  (Windows: SetPosition(-3), SetKerning(-1), SetSize(2000) -> E_INVALIDARG), SetSize on an
+  insertion-point font doesn't set the typing format.
+- Not analysed: select all, Ctrl+X, Ctrl+V in Format Text pasted the text bold once (the cut text
+  ends with the paragraph mark, the hidden paste buffer's mark is System bold); plain paste and
+  typing over a selection are fine. Windows: a format set at an insertion point never reaches the
+  final paragraph mark (probe `eop`, inst/125/vm-eop.txt), same as Wine.
 - `ITextFont::SetUnderline` only takes tomTrue/tomFalse/tomToggle (tomSingle etc.: E_INVALIDARG);
   riched20.dll's E_INVALIDARG for tomApplyTmp isn't reproduced (Wine can't tell the classes apart).
 - The dialog keeps its size per user: after a DPI change it opens with the old pixel size and a
