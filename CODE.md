@@ -136,6 +136,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
   `ctrlchar_text.c [FONT..|show]`: per-API table of how control chars are drawn/measured
   (GDI, DrawText, GCP, Uniscribe); `show`: "Pan\r" in ExtTextOut/DrawText/combo/listbox (039).
+  `cjk_link.c [HEIGHT]`: GDI font linking of CJK chars per font (glyph index, outline size, advance;
+  119). `cjk_edit.c [SECS]`: CJK text in Edit controls + DrawText/ExtTextOut per font, screenshot it (119).
   `dtp_short.c`: short-date DateTimePicker layout (044, screenshot it).
   `xproc_hidden_present.c`: other process presents D3D11 on its child of our container; we hide the
   container, screen pixel must stop showing its frames (065; Win11 pass, exit 0 = ok).
@@ -415,7 +417,7 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `beam` (steel cantilever for the Stress Analysis UI, 063), `frame` (skeleton + frame.iam
   for Frame Generator / Design Accelerator UI; `INVSCEN_FRAME=check` lists generated parts).
   Environment probes (118): `paths` (non-ASCII/special/long dirs, `INVSCEN_CASES`), `locale` (run with LOCPATH/LC_ALL set;
-  `localedef -i de_DE -f UTF-8 DIR/de_DE.UTF-8`, no install), `cjk` (notes in several fonts), `docs` (lists open documents).
+  `localedef -i de_DE -f UTF-8 DIR/de_DE.UTF-8`, no install), `cjk` (notes in several fonts, `INVSCEN_FONTS` ;-list), `docs` (lists open documents).
   `place`: asmbig's "place 200 occurrences" alone, `INVSCEN_N` rounds, per call kind split;
   `INVSCEN_PLACE=hidden|cheap`, `INVSCEN_SYNC` like openbench (097).
   `docbench`: `INVSCEN_N` rounds of visible Documents.Add + Close per type of `INVSCEN_TYPES`
