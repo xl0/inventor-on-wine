@@ -242,7 +242,12 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Now (2026-09-29)
+## Now (2026-10-02)
+- Reboot recovery done: inv-lic holds 39683; inv, inv2, inv4 up on build/ (inv3 down, for another worker); stale .X100/.X101/.X920 locks
+  from before were harmless. build/ = integ d22c74b6d6b (issue 119: linked-font sizing, Tahoma->one Noto CJK face, uniscribe fallback;
+  PROTOCOL 971). Full regress vs master 4e819f054dd: 0 worse of 1757. inv invscen all 13/13 PASS, dwgloop N=10 PASS (~1.9 s/export),
+  cjk renders CJK/Cyrillic in Arial/Tahoma/Segoe UI; ribbon + Home page text unchanged vs attachments.
+- Older (2026-09-29):
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
