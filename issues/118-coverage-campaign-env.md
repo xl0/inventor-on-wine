@@ -21,6 +21,12 @@ Tooling added (not in `all`): `tools/invscen/{paths,locale,cjk,docs}.cs`.
    path then fails E_INVALIDARG, `GetFileAttributesW` on it fails. Wine accepts plain >259-char paths (a
    mingw probe created/queried a 399-char path with and without `\\?\`), so Inventor decides this itself; the Windows
    behaviour is not known (VM Inventor off limits), so no draft. Worth a VM check if Windows differs.
+   **Windows ground truth (VM, 2026-10-02, `run.sh --vm paths`, cases long245/long300):** identical.
+   `SaveAs` to a 274- and a 326-char path returns success (1.0 s, no error), the file is missing at the
+   requested path (`GetFileAttributesW` fails both with and without `\\?\`), and the document plus
+   `OldVersions\*.0001.ipt` were written into the ancestor folder whose file path is 248 chars (<260);
+   `Documents.Open` of the requested path fails E_INVALIDARG. 200-char dirs (222-char file) pass. So this is
+   Inventor's own behaviour, not a Wine bug (only the 14 s vs 1 s SaveAs time differs).
 2. A part kept open, a same-stem STEP imported and closed, then an assembly referencing the part saved and closed:
    the assembly close also closes the part (Documents.Count 0) and the harness' part RCW answers RPC_E_DISCONNECTED
    (reproducible, `paths` and a throwaway scenario). Looks like Inventor merging the imported `p.ipt` document with

@@ -25,3 +25,12 @@ at 150 % (HiDPI setting + Inventor started once the user allows it) shows the fo
 `reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 144 /f` in inv4, `tools/prefix.sh stop inv4 && start`,
 `INV=inv4 INVSCEN_KEEP=1 INVSCEN_CMD=AppApplicationOptionsCmd tools/invscen/run.sh cmd`, screenshot.
 Restore with `reg delete ... /v LogPixels /f` and another restart (done in the campaign).
+
+## Windows ground truth (VM, 2026-10-02): not obtainable at 150 %
+The VM display is 1024x768 (virtual adapter, resolution greyed out in Settings). Settings > System > Display >
+Scale offers only **100 % and 125 %** (150 % needs a larger resolution), so the 150 % check was skipped
+(nothing changed; Settings closed). Side observation: at 100 % and 1024x768 the Autodesk Assistant pane's
+"Tech Preview has ended..." toast wraps one word per line and overlaps "Learn more" on Windows too, so that
+item is Inventor's layout in a narrow pane, not Wine-specific. A 125 % run would need a sign-out for
+Inventor-wide DPI to be reliable; not attempted. To get 150 %: give the VM a bigger display (e.g. 1920x1080 via
+the qemu video device / a different virtual GPU) first.

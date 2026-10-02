@@ -1,0 +1,59 @@
+[Arial]
+[Tahoma]
+MSGOTHIC.TTC,MS UI Gothic
+MINGLIU.TTC,PMingLiU
+SIMSUN.TTC,SimSun
+GULIM.TTC,Gulim
+YUGOTHM.TTC,Yu Gothic UI
+MSJH.TTC,Microsoft JhengHei UI
+MSYH.TTC,Microsoft YaHei UI
+MALGUN.TTF,Malgun Gothic
+SEGUISYM.TTF,Segoe UI Symbol
+[Segoe UI]
+TAHOMA.TTF,Tahoma
+MEIRYO.TTC,Meiryo UI,128,96
+MEIRYO.TTC,Meiryo UI
+MSGOTHIC.TTC,MS UI Gothic
+MSJH.TTC,Microsoft JhengHei UI,128,96
+MSJH.TTC,Microsoft JhengHei UI
+MSYH.TTC,Microsoft YaHei UI,128,96
+MSYH.TTC,Microsoft YaHei UI
+MALGUN.TTF,Malgun Gothic,128,96
+MALGUN.TTF,Malgun Gothic
+MINGLIU.TTC,PMingLiU
+SIMSUN.TTC,SimSun
+GULIM.TTC,Gulim
+YUGOTHM.TTC,Yu Gothic UI,128,96
+YUGOTHM.TTC,Yu Gothic UI
+SEGUISYM.TTF,Segoe UI Symbol
+[MS Sans Serif]
+[Microsoft Sans Serif]
+MSGOTHIC.TTC,MS UI Gothic
+YUGOTHM.TTC,Yu Gothic UI
+MINGLIU.TTC,PMingLiU
+SIMSUN.TTC,SimSun
+GULIM.TTC,Gulim
+MSJH.TTC,Microsoft JhengHei UI
+MSYH.TTC,Microsoft YaHei UI
+MALGUN.TTF,Malgun Gothic
+SEGUISYM.TTF,Segoe UI Symbol
+[MS Gothic]
+MINGLIU.TTC,MingLiU
+SIMSUN.TTC,SimSun
+GULIM.TTC,GulimChe
+YUGOTHM.TTC,Yu Gothic UI
+MSJH.TTC,Microsoft JhengHei UI
+MSYH.TTC,Microsoft YaHei UI
+MALGUN.TTF,Malgun Gothic
+SEGUISYM.TTF,Segoe UI Symbol
+[SimSun]
+MICROSS.TTF,Microsoft Sans Serif,108,122
+MICROSS.TTF,Microsoft Sans Serif
+MINGLIU.TTC,PMingLiU
+MSMINCHO.TTC,MS PMincho
+BATANG.TTC,Batang
+MSYH.TTC,Microsoft YaHei UI
+MSJH.TTC,Microsoft JhengHei UI
+YUGOTHM.TTC,Yu Gothic UI
+MALGUN.TTF,Malgun Gothic
+SEGUISYM.TTF,Segoe UI Symbol

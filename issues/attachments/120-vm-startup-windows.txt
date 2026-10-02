@@ -1,0 +1,100 @@
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=0000000000b10368 cls='OleDdeWndClass' title='DDE Server Window' vis=0 style=84000000 ex=00000000 rect=0,0 0x0 NEW
+t=   63 AdskAccessUIHost.exe pid=11668 hwnd=000000000001033e cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=0000000000060222 cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=000000000001033a cls='Electron_NotifyIconHostWindow' title='' vis=0 style=84000000 ex=00000000 rect=0,0 0x0 NEW
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=00000000000800c8 cls='Chrome_WidgetWin_1' title='Autodesk Access' vis=0 style=04c70000 ex=00200100 rect=0,0 1024x768 NEW
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=00000000000600ca cls='Chrome_WidgetWin_0' title='' vis=0 style=06cf0000 ex=00000100 rect=130,130 768x519 NEW
+t=   63 AdskAccessUIHost.exe pid=11340 hwnd=000000000006005a cls='Base_PowerMessageWindow' title='' vis=0 style=84000000 ex=08000000 rect=0,0 0x0 NEW
+t=   63 AdskAccessCore.exe pid=11060 hwnd=00000000000202ee cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t=   78 AdskIdentityManager.exe pid=10856 hwnd=00000000000500d0 cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t=   78 AdskAccessService.exe pid=10360 hwnd=000000000003027a cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t=   78 AdskAccessUIHost.exe pid=11668 hwnd=0000000000010340 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskAccessUIHost.exe pid=11340 hwnd=000000000001033c cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskAccessUIHost.exe pid=11340 hwnd=0000000000010328 cls='MSCTFIME UI' title='MSCTFIME UI' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskAccessUIHost.exe pid=11340 hwnd=0000000000050054 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskAccessCore.exe pid=11060 hwnd=00000000000202f8 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskIdentityManager.exe pid=10856 hwnd=000000000004028e cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=   78 AdskAccessService.exe pid=10360 hwnd=0000000000030174 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 3078 Inventor.exe pid=24184 hwnd=00000000016902e4 cls='Afx:00007FF7A99D0000:0' title='Inventor DDE' vis=0 style=84000000 ex=00000000 rect=0,0 0x0 NEW
+t= 3078 Inventor.exe pid=24184 hwnd=00000000014d020c cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 3407 Inventor.exe pid=24184 hwnd=000000000020021c cls='#32770' title='' vis=1 style=9400084c ex=00090080 rect=82,98 860x525 NEW
+t= 3422 Inventor.exe pid=24184 hwnd=0000000000860572 cls='MSCTFIME UI' title='MSCTFIME UI' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 3750 Inventor.exe pid=24184 hwnd=0000000001f1038e cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t= 3750 Inventor.exe pid=24184 hwnd=0000000000f30386 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 4735 AdskLicensingAgent.exe pid=21264 hwnd=0000000002100462 cls='adpsdknotification' title='NotificationWindowHelper' vis=0 style=04c00000 ex=00000100 rect=-5,-5 136x39 NEW
+t= 4735 AdskLicensingAgent.exe pid=21264 hwnd=0000000000ac01c0 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 5844 AdskLicensingAgent.exe pid=15828 hwnd=0000000003e10592 cls='webview' title='' vis=1 style=94000000 ex=00000080 rect=0,0 640x480 NEW
+t= 5844 AdskLicensingAgent.exe pid=15828 hwnd=00000000001a0432 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 5844 AdskLicensingAgent.exe pid=15828 hwnd=000000000104038c cls='MSCTFIME UI' title='MSCTFIME UI' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 5953 msedgewebview2.exe pid=2080 hwnd=00000000008201e4 cls='crashpad_SessionEndWatcher' title='' vis=0 style=04c00000 ex=00000100 rect=0,0 136x39 NEW
+t= 5953 msedgewebview2.exe pid=2080 hwnd=00000000008a028a cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 6063 msedgewebview2.exe pid=23284 hwnd=00000000014702c6 cls='Chrome_WidgetWin_0' title='' vis=0 style=06cf0000 ex=00000100 rect=78,78 768x519 NEW
+t= 6063 msedgewebview2.exe pid=23284 hwnd=0000000000cd02e8 cls='Base_PowerMessageWindow' title='' vis=0 style=84000000 ex=08000000 rect=0,0 0x0 NEW
+t= 6063 Inventor.exe pid=24184 hwnd=00000000008702da cls='AfxMDIFrame140u' title='Autodesk Inventor 2027' vis=0 style=05cf0000 ex=00000100 rect=100,5 1014x710 NEW
+t= 6063 msedgewebview2.exe pid=23284 hwnd=000000000467034c cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 6172 msedgewebview2.exe pid=23284 hwnd=00000000009a03a8 cls='Chrome_WidgetWin_1' title='' vis=0 style=06cf0000 ex=00200100 rect=104,104 768x519 NEW
+t= 6282 msedgewebview2.exe pid=16764 hwnd=00000000026802ea cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t= 6297 msedgewebview2.exe pid=16764 hwnd=000000000048057c cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 6407 msedgewebview2.exe pid=23284 hwnd=00000000004c0570 cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t= 6407 AdskLicensingAgent.exe pid=15828 hwnd=0000000003e10592 cls='webview' title='' vis=1 style=94000000 ex=00000080 rect=82,110 860x500
+t= 6407 msedgewebview2.exe pid=23284 hwnd=0000000000180220 cls='MSCTFIME UI' title='MSCTFIME UI' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 6969 AdskLicensingAgent.exe pid=15828 hwnd=0000000003e10592 cls='webview' title='' vis=1 style=94000000 ex=00000080 rect=132,148 860x500
+t= 7516 Inventor.exe pid=24184 hwnd=00000000019e03b6 cls='HwndWrapper[DefaultDomain;;62bee609-65ec-41c0-9112-6672758e38ae]' title='SystemResourceNotifyWindow' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 7625 Inventor.exe pid=24184 hwnd=00000000005702e6 cls='HwndWrapper[DefaultDomain;;7ee66f44-04df-4fb2-a420-1bb393f3a1af]' title='MediaContextNotificationWindow' vis=0 style=84000000 ex=00000000 rect=0,0 0x0 NEW
+t= 7844 Inventor.exe pid=24184 hwnd=000000000051056e cls='GDI+ Hook Window Class' title='GDI+ Window (Inventor.exe)' vis=0 style=84000000 ex=00000000 rect=0,0 1x1 NEW
+t= 7860 Inventor.exe pid=24184 hwnd=00000000001e0230 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t= 9375 Inventor.exe pid=24184 hwnd=0000000000bb036a cls='Qt687ScreenChangeObserverWindow' title='' vis=0 style=04c00000 ex=00000100 rect=26,26 768x519 NEW
+t= 9375 Inventor.exe pid=24184 hwnd=0000000000160290 cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t= 9485 Inventor.exe pid=24184 hwnd=0000000001490354 cls='HwndWrapper[DefaultDomain;;aaf9c87e-cc6f-4d6b-86ab-76b41580c605]' title='' vis=0 style=04c00000 ex=00000100 rect=0,0 136x39 NEW
+t= 9922 Inventor.exe pid=24184 hwnd=00000000007f05da cls='AdApplicationButton' title='AdApplicationButton' vis=0 style=86000000 ex=00000020 rect=0,0 41x24 NEW
+t= 9922 Inventor.exe pid=24184 hwnd=00000000072c05de cls='AdApplicationButton' title='AdApplicationButton' vis=0 style=86000000 ex=00000020 rect=0,0 24x24 NEW
+t= 9922 Inventor.exe pid=24184 hwnd=00000000020405f6 cls='AdApplicationButton' title='AdApplicationButton' vis=0 style=86000000 ex=00000020 rect=0,0 41x41 NEW
+t=11578 Inventor.exe pid=24184 hwnd=000000000044062c cls='tooltips_class32' title='' vis=0 style=84000001 ex=00080080 rect=0,0 0x0 NEW
+t=11688 Inventor.exe pid=24184 hwnd=00000000008702da cls='AfxMDIFrame140u' title='Autodesk Inventor 2027' vis=0 style=05cf0000 ex=00000100 rect=-8,-8 1040x736
+t=11797 Inventor.exe pid=24184 hwnd=00000000008702da cls='AfxMDIFrame140u' title='Autodesk Inventor Professional 2027 - TRIAL (NON COMMERCIAL)' vis=0 style=05cf0000 ex=00000100 rect=-8,-8 1040x736
+t=13110 Inventor.exe pid=24184 hwnd=00000000013d0650 cls='OleDdeWndClass' title='DDE Server Window' vis=0 style=84000000 ex=00000000 rect=0,0 0x0 NEW
+t=16094 Inventor.exe pid=24184 hwnd=0000000000fd065a cls='Static' title='' vis=0 style=40000000 ex=00000000 rect=100,100 400x300 NEW
+t=16297 msedgewebview2.exe pid=2672 hwnd=0000000000b10500 cls='crashpad_SessionEndWatcher' title='' vis=0 style=04c00000 ex=00000100 rect=0,0 136x39 NEW
+t=16297 Inventor.exe pid=24184 hwnd=0000000000c31392 cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t=16297 Inventor.exe pid=24184 hwnd=00000000003813ca cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t=16297 Inventor.exe pid=24184 hwnd=0000000000130506 cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t=16297 Inventor.exe pid=24184 hwnd=00000000002e0504 cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t=16297 Inventor.exe pid=24184 hwnd=00000000008f051e cls='tooltips_class32' title='' vis=0 style=84000003 ex=00080080 rect=0,0 0x0 NEW
+t=16297 Inventor.exe pid=24184 hwnd=0000000000a003d2 cls='HwndWrapper[DefaultDomain;;412cef3f-79aa-4962-883c-e8c270f0039b]' title='Hidden Window' vis=0 style=04cf0000 ex=00000100 rect=26,26 768x519 NEW
+t=16297 Inventor.exe pid=24184 hwnd=0000000001a60472 cls='HwndWrapper[DefaultDomain;;45f1c3a3-b169-4b25-952f-898a2d8c881e]' title='' vis=0 style=06080000 ex=00080000 rect=-4,-1 5x3 NEW
+t=16313 msedgewebview2.exe pid=2672 hwnd=0000000000c902ce cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=16407 msedgewebview2.exe pid=17104 hwnd=00000000008400ac cls='Chrome_WidgetWin_0' title='' vis=0 style=06cf0000 ex=00000100 rect=78,78 768x519 NEW
+t=16407 msedgewebview2.exe pid=17104 hwnd=00000000000e03c4 cls='Base_PowerMessageWindow' title='' vis=0 style=84000000 ex=08000000 rect=0,0 0x0 NEW
+t=16407 Inventor.exe pid=24184 hwnd=0000000001a60472 cls='HwndWrapper[DefaultDomain;;45f1c3a3-b169-4b25-952f-898a2d8c881e]' title='' vis=1 style=96080000 ex=00080080 rect=-4,-1 5x3
+t=16422 msedgewebview2.exe pid=17104 hwnd=00000000000f0576 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=16516 msedgewebview2.exe pid=4836 hwnd=00000000001b03b4 cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t=16516 msedgewebview2.exe pid=17104 hwnd=00000000000d03e0 cls='Chrome_WidgetWin_1' title='Untitled' vis=0 style=06cf0000 ex=00200100 rect=4,0 1020x720 NEW
+t=16532 msedgewebview2.exe pid=4836 hwnd=00000000000c03e8 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=16625 msedgewebview2.exe pid=17104 hwnd=00000000000d03e0 cls='Chrome_WidgetWin_1' title='about:blank' vis=0 style=06cf0000 ex=00200100 rect=4,0 1020x720
+t=20172 Inventor.exe pid=24184 hwnd=0000000001a60472 cls='HwndWrapper[DefaultDomain;;45f1c3a3-b169-4b25-952f-898a2d8c881e]' title='' vis=1 style=96080000 ex=00080080 rect=860,143 5x554
+t=20172 Inventor.exe pid=24184 hwnd=00000000008702da cls='AfxMDIFrame140u' title='Autodesk Inventor Professional 2027 - TRIAL (NON COMMERCIAL)' vis=1 style=15cf0000 ex=00000100 rect=-8,-8 1040x736
+t=20282 msedgewebview2.exe pid=17104 hwnd=00000000000d03e0 cls='Chrome_WidgetWin_1' title='about:blank' vis=0 style=46000000 ex=00200000 rect=4,0 1020x720
+t=20391 Inventor.exe pid=24184 hwnd=0000000000160290 cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=000000000044062c cls='tooltips_class32' title='' vis=0 style=8c000001 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=0000000000c31392 cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=00000000003813ca cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=0000000000130506 cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=00000000002e0504 cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=00000000008f051e cls='tooltips_class32' title='' vis=0 style=8c000003 ex=00080080 rect=0,0 0x0
+t=20391 Inventor.exe pid=24184 hwnd=000000000021021c cls='#32770' title='' vis=0 style=84800004 ex=00010000 rect=511,359 2x2 NEW
+t=20391 Inventor.exe pid=24184 hwnd=0000000001a60472 cls='HwndWrapper[DefaultDomain;;45f1c3a3-b169-4b25-952f-898a2d8c881e]' title='' vis=1 style=9e080000 ex=00080080 rect=860,143 5x554
+t=20391 Inventor.exe pid=24184 hwnd=00000000008702da cls='AfxMDIFrame140u' title='Autodesk Inventor Professional 2027 - TRIAL (NON COMMERCIAL)' vis=1 style=1dcf0000 ex=00000100 rect=-8,-8 1040x736
+t=20719 AdskLicensingAgent.exe pid=15828 hwnd=0000000003e10592 cls='webview' title='' vis=1 style=94000000 ex=00000080 rect=82,110 860x500
+t=20719 Inventor.exe pid=24184 hwnd=00000000012802f4 cls='FWxWindowButtons' title='' vis=0 style=84000000 ex=00080000 rect=0,0 40x20 NEW
+t=20719 Inventor.exe pid=24184 hwnd=00000000000d0464 cls='tooltips_class32' title='' vis=0 style=84000001 ex=00080080 rect=0,0 0x0 NEW
+t=20938 msedgewebview2.exe pid=17224 hwnd=00000000000d0496 cls='Chrome_WidgetWin_0' title='' vis=0 style=06cf0000 ex=00000100 rect=130,130 768x519 NEW
+t=20938 msedgewebview2.exe pid=17224 hwnd=00000000000c03e2 cls='Base_PowerMessageWindow' title='' vis=0 style=84000000 ex=08000000 rect=0,0 0x0 NEW
+t=20938 msedgewebview2.exe pid=9388 hwnd=00000000000d039c cls='crashpad_SessionEndWatcher' title='' vis=0 style=04c00000 ex=00000100 rect=0,0 136x39 NEW
+t=20938 msedgewebview2.exe pid=17224 hwnd=0000000000140568 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=20938 msedgewebview2.exe pid=9388 hwnd=00000000000e0512 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=21047 msedgewebview2.exe pid=17224 hwnd=000000000015056a cls='Chrome_WidgetWin_1' title='Untitled' vis=0 style=06cf0000 ex=00200100 rect=4,0 1020x720 NEW
+t=21157 msedgewebview2.exe pid=17224 hwnd=00000000004d0040 cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t=21157 msedgewebview2.exe pid=15472 hwnd=00000000005c1384 cls='Chrome_WidgetWin_0' title='' vis=0 style=8c000000 ex=00000080 rect=0,0 0x0 NEW
+t=21157 Inventor.exe pid=24184 hwnd=00000000012802f4 cls='FWxWindowButtons' title='' vis=0 style=84000000 ex=00080000 rect=824,144 40x20
+t=21157 msedgewebview2.exe pid=15472 hwnd=0000000001060218 cls='IME' title='Default IME' vis=0 style=8c000000 ex=00000000 rect=0,0 0x0 NEW
+t=21485 Inventor.exe pid=24184 hwnd=00000000012802f4 cls='FWxWindowButtons' title='' vis=1 style=94000000 ex=00080000 rect=824,144 40x20
