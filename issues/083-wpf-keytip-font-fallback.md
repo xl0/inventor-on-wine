@@ -101,8 +101,8 @@ sections: `Segoe UI, Tahoma, Arial, ...`). When no physical family was found at 
 So the crash needs: the text's own family missing, no Segoe UI / Segoe UI Symbol / Ebrima, no Arial.
 Wine's Tahoma doesn't help (not in the list), nor does fontconfig's Arial -> Liberation Sans alias or
 Arial Unicode MS (dwrite matches family names). "Arial Black" alone is enough: DirectWrite puts it in the
-Arial family. Inventor's key tips ask for a family that Wine lacks (adwindows.dll names Artifakt Element
-and Segoe UI), which is why they were the trigger on the laptop.
+Arial family. Inventor's key tips presumably ask for a family the prefix lacks (adwindows.dll names Artifakt Element
+and Segoe UI; not traced), which would make them the first such text on the laptop.
 
 Windows 11 (VM): Arial, Segoe UI, Segoe UI Symbol, Ebrima and Tahoma are all inbox; the probe measures
 every family, also a non-existent one (via Segoe UI).
