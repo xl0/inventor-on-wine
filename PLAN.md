@@ -276,6 +276,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   counter (protocol 970). Micro-bench 9 µs → 0.2 µs per query, but no measured idle-CPU gain
   (Assistant unchanged, Edge −8 %) and broad correctness surface — revisit if a workload needs it.
   Real per-frame cost: 107 (Mojo pipe/IOCP round trips ~75 % of requests), 108 (wined3d CS spin).
+- 108 held on fix/108 (wt/108): adaptive CS spin works (spin share 32 → 7 %) but saves only
+  0.5–0.8 % of a core per WebView2 GPU process (prefix idle total unchanged) for a heuristic in
+  every wined3d user's hot path. Revisit only with a workload where the CS spin matters.
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
