@@ -246,13 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 492d5679270 (wine-11.18-458; adds 097/098 as before, 102: ntdll host-thread signal handling,
-  mfplat waits for D3D12 copies; 101: server desktop-close race, win32u ClipCursor host warp + GetCursorPos
-  clamp; no protocol change). inv, inv2 restarted on it (inv4 still runs the 1a3728c8a6e build).
-  Full regress vs master 4e819f054dd (new template, Gecko): 0 worse of 1757 units, so no REAL/NEW/FLAKY.
-  Non-pass in both: 28 crash / 90 fail on build vs 30 / 91 on master; mfplat both arches and mf/dxgi
-  fail with varying counts (flaky); dcomp, ntdll:threadpool, ntdll:time now pass.
-  inv full invscen suite: 13/13 PASS (host load ~29).
+- build/ = integ b6dab895f3e (wine-11.18-469, PROTOCOL 969): adds 099 (COM cancel/refcounted calls), 104, 105,
+  095 (lowbox tokens), 077, 091 (Xft read once) over 492d5679270. inv, inv2, inv4 restarted on it
+  (inv3/inv4 workers now run their own builds).
+  Full regress vs master 4e819f054dd (new template): 0 REAL / 0 NEW, 3 FLAKY (mf:mf, ntoskrnl, quartz:filtergraph;
+  baseline fails them too). Non-pass: 27 crash / 92 fail on build.
+  inv full invscen suite: 13/13 PASS (load ~18). samples: 464 PASS, 2 FAIL (Speedometer rebuild/reopen
+  volume, 055 known); dialog watcher now ignores Qt tooltip drop-shadow windows (0 DIALOG lines).
   A/B on inv vs 2cfee5f132e (interleaved A,B x3, medians): place 200 occurrences round 1 20.1 -> 8.5 s
   (all 9 rounds 19.3 -> 7.7; A3 ran slow, host noise); docbench first part 9.8 -> 11.3 s (B slower in 3/3
   pairs, 098 claimed a gain; the place scenario's first part 11.1 -> 10.5 s), first asm 2.3 -> 2.4,
@@ -272,12 +272,6 @@ commits or screenshots). Read-only mode may remain after expiry.
 - 2026-10-01: disk hit 108 GB free (/tmp filled by per-run prefix copies, 17 stale worktree
   builds). Pruned merged worktrees/builds (branches kept) and finished scratch dirs → 312 GB;
   worker.md now caps scratch at ~10 GB.
-- integ ahead of build/: +099 (COM cancel semantics, refcounted call state, dead-server GetBuffer
-  event leak), +104 (display-device cleanup under the init mutex: mode-switch flakes), +105
-  (desktop explorer no longer inherits the app debugger), +095 (real lowbox tokens, SECURITY_CAPABILITIES;
-  PROTOCOL 969: restart all test prefixes), +077 (WM-started moves get ENTER/EXITSIZEMOVE), +091 Xft
-  resources read once — rebuild +
-  regress after soak #3 (running on build/, inv).
 - 091 held on fix/091 (wt/091): cross-process geometry/visible-region caches + server change
   counter (protocol 970). Micro-bench 9 µs → 0.2 µs per query, but no measured idle-CPU gain
   (Assistant unchanged, Edge −8 %) and broad correctness surface — revisit if a workload needs it.
