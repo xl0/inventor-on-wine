@@ -30,7 +30,7 @@
 # Runs (and compare's re-runs) are serialized by flock on /tmp/regress.lock, so
 # concurrent invocations, e.g. workers' subset runs, queue up instead of clashing.
 # Units binding fixed localhost ports (webservices:proxy|channel, winhttp:notification|winhttp,
-# wininet:http, httpapi:httpapi) additionally hold /tmp/regress-ports.lock while running
+# wininet:http, httpapi:httpapi, rpcrt4:server) additionally hold /tmp/regress-ports.lock while running
 # (shards of both arches run in parallel in one network namespace).
 #
 # Each of JOBS (32) shards gets its own prefix (cp -a of a template made with
@@ -132,7 +132,7 @@ run_one() {
     done
     # Fixed-port servers: one at a time, across shards, arches and runs. Held until the awk below.
     exec {pf}> /tmp/regress-ports.lock
-    case $mod:$unit in webservices:proxy|webservices:channel|winhttp:notification|winhttp:winhttp|wininet:http|httpapi:httpapi)
+    case $mod:$unit in webservices:proxy|webservices:channel|winhttp:notification|winhttp:winhttp|wininet:http|httpapi:httpapi|rpcrt4:server)
         flock $pf;;
     esac
     exe=$build/dlls/$mod/tests/$arch-windows/${mod}_test.exe
