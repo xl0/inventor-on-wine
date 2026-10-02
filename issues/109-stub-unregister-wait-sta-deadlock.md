@@ -1,35 +1,60 @@
-# 109 combase: STA server deadlocks in RpcServerUnregisterIf while a call to the same interface waits for the STA
-Status: open (draft) · Owner: - · Branch: - · Found in: soak #3 (inst/soak/2026-10-01, integ 492d5679270)
+# 109 rpcrt4: RpcServerUnregisterIf(wait) loses the wakeup of a call ending at the same time
+Status: fixed · Owner: worker 109 · Branch: fix/109-stub-unregister (wt/109, on integ b6dab895f3e:
+d43e0242d65 74c47dc99ea) · Found in: soak #3 (inst/soak/2026-10-01, integ 492d5679270)
 
 ## Symptom
-Inventor's DWG export (drawing2 `export DWG`, `Document.SaveAs` .dwg) hangs for good: harness TIMEOUT 120 s.
-Afterwards Inventor's main thread is stuck in the export ("Executing Data Export" in the status bar) and
-every new-document API call fails with E_FAIL (Documents.Add, sketch, SaveAs...), so the soak session is dead.
-Hit twice in 28 suites (iter 4 under host load ~150, iter 27 at load ~8); never in soak #2 (32 suites).
+Inventor's DWG export (drawing2 `export DWG`) hangs for good (harness TIMEOUT 120 s); afterwards every
+new-document API call fails E_FAIL. 2 of 61 suites in soak #3, never in soak #2.
+The translator server DBXBridge.exe (gdb sehbt, inst/soak/2026-10-01/wedge2/sehbt-server-*.txt): STA thread in
+`Rundown_RemRelease -> stub_manager_delete -> rpc_unregister_interface(iid, TRUE) -> RpcServerUnregisterIf`
+waiting; the only RPC worker in `dispatch_rpc` is the worker of that same RemRelease (waiting for the STA to
+finish it), not a second call. Nothing else holds a call on the interface being unregistered.
 
-## Evidence (gdb sehbt of the live processes, inst/soak/2026-10-01/wedge2/)
-- Inventor: main thread + 6 other threads in `DwgTrans.dll -> ClientIdentity_Release -> ifproxy_destroy ->
-  ifproxy_release_public_refs -> RemRelease -> ClientRpcChannelBuffer_SendReceive -> CoWaitForMultipleHandles`;
-  the call's threadpool worker sits in `np_read` waiting for the reply (sehbt.txt).
-- The translator server (DBXBridge.exe, a "ParentProcessIdentity=..." process started per export; the one of the
-  first hang had even survived `kill-inventor` for 3 h) is deadlocked on itself (sehbt-server-*.txt):
-  - STA main thread: `RPCRT4 call_server_func -> Rundown_RemRelease -> stub_manager_int_release ->
-    stub_manager_delete -> stub_manager_delete_ifstub -> rpc_unregister_interface(iid, TRUE) ->
-    RpcServerUnregisterIf` waiting for the in-flight calls of that interface to finish;
-  - RPC worker thread: `RPCRT4_worker_thread -> process_request_packet -> dispatch_rpc` waiting for the same STA
-    thread to run its call.
-  Both servers (iter 4 and iter 27) show exactly this; a healthy later server was idle.
+## Cause (old upstream race, rpcrt4 since 2006)
+RpcServerUnregisterIf reads `cif->CurrentCalls`, then sets `Delete = TRUE`, creates the event and stores
+`CallsCompletedEvent`, all under server_cs. The ending call (`RPCRT4_release_server_interface`) decrements
+CurrentCalls and checks Delete/CallsCompletedEvent without the lock. If the call ends between the read and the
+event store (the CreateEventW server round trip is a wide window), nobody signals the event: the unregistering
+thread waits forever (and writes the event into the sif the call just freed).
+combase unregisters an IID (wait = TRUE) when its last stub goes away. DBXBridge does ~5000 such
+register/unregister cycles per export, so a RemRelease arriving while the reply epilogue of the previous call
+on that IID still runs (the worker decrements CurrentCalls after sending the reply) hits the window now and then.
+Not caused by 087/097/099: the code is unchanged; faster call paths (097 whole-message reads, 086/097 event
+caching, 087 RemRelease on the already-open shared connection) plausibly make the overlap more frequent, not
+proven. The brief's hypothesis (a call queued to the STA for the same IID) can't happen with consistent
+accounting: every marshal registers the IID, so a live stub keeps it registered; only a disconnected object
+(CoDisconnectObject drops its registrations) with a call in progress makes the STA wait for itself (below).
 
-## Cause
-`rpc_unregister_interface(riid, TRUE)` (combase/rpc.c, called from stubmanager.c `stub_manager_delete_ifstub`)
-drops the registration of an IID when the last stub using it goes away and waits for outstanding calls on that
-IID, from the apartment thread that those calls (any object with this IID, not just the dying stub) must be
-dispatched to. Old code (moved from ole32), not part of the recent combase/rpcrt4 changes; exposed by Inventor
-releasing several proxies of the translator from different threads while another thread calls into it.
+## Evidence
+- `tests/unregif_race.c` (raw rpcrt4 server, in-process client; unregister 0-63 us after the call's server
+  routine signals): unfixed Wine hangs within ~30 rounds (4/4 runs); fixed 4x3000 rounds ok; Win11 3000 ok.
+- Inventor with the window widened (debug Sleep(20) between Delete and the event store, Sleep(1) before the
+  call's release): unfixed: drawing2 hangs in run 1, Inventor's own STA in exactly the soak signature
+  (Rundown_RemRelease -> ... -> RpcServerUnregisterIf); fixed: 15/15 drawing2 runs, 2783 waits, no hang.
+- Unwidened, unfixed: 45 drawing2 runs passed (rare race), one benign "has 1 calls, wait 1" seen.
 
-## Ideas
-- Don't wait when running on the thread of an STA that may have calls queued (wait=FALSE, as the non-ifstub path
-  at stubmanager.c:273 already does), or keep the interface registered (never unregister until apartment
-  teardown), or unregister from a non-apartment thread.
-- Repro: out-of-process STA server with two objects of one IID, client calls a method on A while releasing B's
-  last ref (RemRelease dispatched to the STA first). Windows ground truth not checked.
+## Windows ground truth (Win11 VM)
+- RpcServerUnregisterIf(WaitForCallsToComplete) during a call returns once the call ends (unregif_race 3000x).
+- `tests/com_disconnect_wait.c`: STA server, object A's method calls CoDisconnectObject(A) and pumps; the client
+  releases B (same IID, last stub): handled at once (0 ms), A's call returns S_OK, a second call on A fails
+  RPC_E_DISCONNECTED. Wine (even with the rpcrt4 fix): the release hangs (STA waits for its own call).
+
+## Fix (fix/109-stub-unregister)
+- d43e0242d65 rpcrt4: decrement + Delete check + SetEvent under server_cs. Test rpcrt4:rpc
+  test_RpcServerUnregisterIf_wait (300 rounds, unregister in a thread with 30 s timeout; unfixed Wine fails).
+- 74c47dc99ea combase: interfaces stay registered once their first stub is marshaled (no
+  rpc_unregister_interface, no stub_manager_disconnect / `disconnected`); calls to gone stubs fail
+  RPC_E_DISCONNECTED in dispatch_rpc (as Windows). Test ole32:marshal test_release_in_disconnected_call
+  (child process "-disconnect"). Also removes the old UAF where a no-wait unregister (CoDisconnectObject)
+  freed the RPC_SERVER_INTERFACE that in-flight calls' cif->If pointed to.
+  Ceiling: RPCRT4_find_interface scans the registered list per call; it now holds every IID ever marshaled
+  (dozens-hundreds) instead of only live ones.
+- Tests: VM x64+i386 marshal 0 failures, rpcrt4:rpc only the pre-existing I_RpcMapWin32Status failure; Wine
+  x64+i386 ole32 marshal/compobj, rpcrt4 rpc/server, combase roapi pass; regress subset
+  combase|ole32|rpcrt4|oleaut32|actxprxy 64/64 pass.
+- Inventor (inv4, final build): dwgloop 25 DWG exports + 12x drawing2 (12 DWG + 12 DXF + PDF): all PASS.
+
+## Side observations
+- On the unfixed build one dwgloop run failed export DWG 20 with E_FAIL (2.8 s, no hang) and Inventor then
+  failed new documents E_FAIL; not reproduced in 25 exports on the fixed build. Unknown, not investigated.
+- `tools/invscen/dwgloop.cs`: drawing + INVSCEN_N (10) DWG exports.
