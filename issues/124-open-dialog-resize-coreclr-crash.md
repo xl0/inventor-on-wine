@@ -1,5 +1,5 @@
 # 124 Open dialog fails to repaint after Awesome resize; CoreCLR crash captured
-Status: open (crash part fixed on fix/124; dialog repaint part open) · Owner: - · Branch: fix/124 (crash) · Found in: user's laptop, integ d7799da4d5
+Status: open (crash part fixed on fix/124; dialog part: no WM-resize bug found, symptoms = frozen/crashing process, laptop to confirm) · Owner: - · Branch: fix/124 (crash) · Found in: user's laptop, integ d7799da4d5
 
 ## Report and scope
 
@@ -170,3 +170,59 @@ ntdll:exception: Wine x86_64 5598 tests 0 failures, i386 5111 / 0; VM: the new c
 - From the laptop core (optional, to confirm): in frame #10 `context_ex` (rcx at entry, or
   frame #11's context + 0x4d0) and its 24 bytes; expected: an address inside frame #15's stack frame,
   not the handler's `ContextRecord`, with a garbage XState.Offset.
+
+## Dialog repaint / breadcrumbs (worker 124b; no Wine change, branch fix/124b = integ)
+
+**Result: not reproducible as a WM-resize bug; the symptoms are those of a process that no longer runs
+its message loop, and the crash is triggered by the breadcrumb click.** 077 is not involved.
+
+Setup: inv4 on :101 (NVIDIA Xorg, 1920x1080), build/ = d7799da4d5c, awesome 4.3 with x/awesome-rc.lua,
+picom with the user's flags (and without), 96 and 144 DPI, wined3d Vulkan; drags by xdotool.
+- Mod4+right-drag resize of Inventor's Open dialog (grow/shrink, each corner, 20 Hz and ~500 Hz motion,
+  30+ resizes, with a DWG/IDW/IPT preview shown or not), Mod4+left-drag move, border-corner resize
+  (win32u loop): content relaid out and repainted every time, breadcrumbs / list navigation work
+  afterwards. winex11's WM size-move tracking (cursor channel flipped on with gdb) is balanced: 9 begin /
+  9 end on the dialog hwnd. ![ok](attachments/124-mod4-resize-ok.png)
+- Inventor paused (SIGSTOP) before, during or across a drag, resumed later: the dialog catches up to the
+  final size, nothing stays stale.
+- A stopped process gives exactly the reported picture: the WM resizes the X window, nobody repaints;
+  growing shows black padding, shrinking crops the old content (bit gravity keeps the old pixels).
+  ![grow](attachments/124-frozen-process-grow.png) ![shrink](attachments/124-frozen-process-shrink.png)
+- The CoreCLR crash reproduces on the server from this dialog (144 DPI, awesome + picom): select
+  Rim.dwg / Rim.idw / Rim.ipt in C:\t\samples\2022\Models\Parts\Rim a few times (previews), then click
+  the "Parts" breadcrumb: `Fatal error. 0xC0000005`, process gone within ~1 s of the click, in 3 of 3
+  sessions on build/, at the 1st, 3rd and 2nd such click (inst/124b/crashloop.sh, crashrun.sh: "DEAD round 4|8
+  after crumb"; coordinates are for the 144 DPI layout).
+  +seh trace (inst/124b/inventor4.log:77303): write AV at address 8 in jitted code (the NRE), then inside
+  CoreCLR's vectored handler `RtlLocateExtendedFeature2(context_ex, 11, ...)` faults reading
+  context_ex + garbage XState.Offset: the cause found by the crash worker above.
+  With fix/124's ntdll change (34a7e2755b8 applied to wt/124b-build, inv4 switched to it): 40 rounds =
+  10 breadcrumb round trips, no crash, Mod4 resize and breadcrumbs fine afterwards.
+So on the laptop: the breadcrumb click raised the fatal exception; in the GDB run the breakpoint then
+held the process while the 55 GiB core was written, the dialog stayed on screen without a message loop
+("click does nothing", Mod4 resize shows black / cropped content), then Inventor exited. On the server,
+without a debugger, the window is gone ~1 s after the click.
+
+Generic dialogs (tests/filedlg_sizemove.c: modal GetOpenFileName dialog with a disabled owner, logs
+ENTER/EXITSIZEMOVE, WM_SIZE, client size; tests/sizemove_scen.sh with PROBE/TITLE), d7799da4d5c,
+Xvfb, WM moves/resizes, ENTER/EXIT pairs (logs inst/124b/scen/):
+| scenario | awesome | awesome + picom | openbox | openbox + picom |
+|---|---|---|---|---|
+| sizemove_log Mod+drag move / resize | 1/1 / 1/1 | 1/1 / 1/1 | 1/1 / 1/1 | 1/1 / 1/1 |
+| sizemove_log keyboard move / resize | - | - | 1/1 / 1/1 | 1/1 / 1/1 |
+| sizemove_log caption drag / 5 quick drags | 1/1 / 5/5 | 1/1 / 5/5 | 1/1 / 5/5 | 1/1 / - |
+| sizemove_log plain clicks / Mod released first | - | 0/0 / 1/1 | - | - |
+| file dialog Mod+drag move | 1/1 | 1/1 | 1/1 | 1/1 |
+| file dialog Mod+drag resize | 1/1, 11 WM_SIZE, client = X size 606x409 | same | 1/1, 10 WM_SIZE, 637x440 | same |
+| file dialog keyboard resize / 5 quick drags | - / 5/5 | - / 5/5 | 1/1 (589x360) / 5/5 | 1/1 / - |
+picom on Xvfb runs without --vsync (no swap control); on :101 with the user's exact flags.
+
+**To confirm on the laptop** (after fix/124 is merged): the Open dialog with a DWG selected, breadcrumb
+clicks, Mod4 resize. If a dialog still stops repainting: `wine tests/wintext.exe Open` while it is in that
+state; "NOT RESPONDING" = its thread is not pumping (hang/crash in progress), otherwise compare the
+printed Win32 rect with `xwininfo` (a mismatch would be a winex11 state-tracking bug).
+Was the stale dialog seen in the GDB run only, or also in the first run?
+
+Notes: awesome's Mod4+B3 resize sometimes doesn't start right after awesome was restarted with clients
+already mapped (also for xlogo; WM side). The dialog opens 1760x1001 at 144 DPI, wider than a 1080p
+screen less the panel: the reason to resize it with the WM.

@@ -166,7 +166,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   `com_peruser.c`: COM vs per-user classes (CLSID/ProgID/Interface/OleRegGetUserType,
   RegOpenUserClassesRoot); run elevated and non-elevated, modes as argv[1] for fresh processes.
   `dosdev_name.c`: DOS device names in paths (035). `wintext.c` (`wintext.exe [TITLE]`):
-  dump visible top-level windows + children (class, text, rect, pid, styles).
+  dump visible top-level windows + children (class, text, rect, pid, styles); "NOT RESPONDING" = thread not pumping.
   `dragdrop_revoke.c`: RegisterDragDrop/RevokeDragDrop across threads/apartments/processes (034).
   `droptargets.c`: list windows with OLE drop-target props, flag cross-process ones (read-only).
   `ctrlchar_text.c [FONT..|show]`: per-API table of how control chars are drawn/measured
@@ -190,7 +190,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   grab, composited alpha (over own white/black windows), window drag with SendInput (062).
   `sc_move_hittest.c`: SC_MOVE|n from WM_LBUTTONDOWN + SendInput drag, does it move (076).
   `sizemove_log.c` + `sizemove_scen.sh`: window logging ENTER/EXITSIZEMOVE, MOVING, POSCHANGED
-  (top 40 client px = caption); the script drives WM moves/resizes with xdotool (077).
+  (top 40 client px = caption); the script drives WM moves/resizes with xdotool (077; PROBE/TITLE env
+  = another probe). `filedlg_sizemove.c`: modal GetOpenFileName dialog logging the same + WM_SIZE (124).
   `custom_caption.c` (`[max|plain|plainmax] [secs]`): client over the caption via
   WM_NCCALCSIZE, own blue caption strip; prints rects (040, screenshot it).
   `ebrowser_events.c`: ExplorerBrowser host like Inventor's file dialogs: SIGDN names of the folder chain,

@@ -9,15 +9,17 @@
 # move the window from outside; needs another client, an xev is started). Expected 0/0 for the last
 # three apart from win32u's own caption-click pair.
 # MODKEY: super for awesome, alt for openbox.
+# PROBE / TITLE: another probe and its window title, e.g. PROBE="filedlg_sizemove.exe 25" TITLE=filedlg_sizemove
+# (modal common Open dialog, 124; caption / dblclick need sizemove_log's client caption).
 D=$1; OUT=$2; MOD=${3:-super}; SCENS=${4:-"modmove modresize caption"}
 W=$(cd "$(dirname "$0")/.." && pwd)
 export DISPLAY=$D WINEDEBUG=${WINEDEBUG:--all}
 : "${WINEPREFIX:?}" "${WINEBUILD:?}"
-$WINEBUILD/wine $W/tests/sizemove_log.exe 25 200 200 400 300 > $OUT 2>$OUT.err &
+$WINEBUILD/wine $W/tests/${PROBE:-sizemove_log.exe 25 200 200 400 300} > $OUT 2>$OUT.err &
 P=$!
 sleep 4
-WID=$(xdotool search --name '^sizemove_log$' | head -1)
-geo() { X=$(xwininfo -id $WID | awk '/Absolute upper-left X/{print $4}'); Y=$(xwininfo -id $WID | awk '/Absolute upper-left Y/{print $4}'); }; geo
+WID=$(xdotool search --name "^${TITLE:-sizemove_log}\$" | head -1)
+geo() { set -- $(xwininfo -id $WID | awk '/Absolute upper-left X/{x=$4}/Absolute upper-left Y/{y=$4}/Width/{w=$2}/Height/{h=$2}END{print x,y,w,h}'); X=$1 Y=$2 GW=$3 GH=$4; }; geo
 echo "== wid $WID at $X,$Y" >> $OUT.drv
 cx=$((X+200)); cy=$((Y+150))
 for s in $SCENS; do
@@ -28,9 +30,10 @@ for s in $SCENS; do
     for i in $(seq 1 10); do xdotool mousemove $((cx+i*10)) $cy; sleep 0.05; done
     sleep 0.3; xdotool mouseup 1; sleep 0.1; xdotool keyup $MOD; sleep 1 ;;
   modresize)
-    xdotool mousemove $cx $cy; sleep 0.3; xdotool keydown $MOD; sleep 0.1; xdotool mousedown 3; sleep 0.3
-    for i in $(seq 1 10); do xdotool mousemove $((cx+150+i*5)) $((cy+150+i*5)); sleep 0.05; done
-    sleep 0.3; xdotool mouseup 3; sleep 0.1; xdotool keyup $MOD; sleep 1 ;;
+    geo; rx=$((X+GW-30)); ry=$((Y+GH-30)) # near the bottom right corner, +50,+50
+    xdotool mousemove $rx $ry; sleep 0.3; xdotool keydown $MOD; sleep 0.1; xdotool mousedown 3; sleep 0.3
+    for i in $(seq 1 10); do xdotool mousemove $((rx+30+i*5)) $((ry+30+i*5)); sleep 0.05; done
+    sleep 0.3; xdotool mouseup 3; sleep 0.1; xdotool keyup $MOD; sleep 1; geo; echo "x11 size ${GW}x$GH" >> $OUT.drv ;;
   caption)
     geo
     xdotool mousemove $((X+150)) $((Y+20)); sleep 0.3; xdotool mousedown 1; sleep 0.3

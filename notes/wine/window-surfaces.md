@@ -70,6 +70,9 @@
   while it grabs the keyboard or a button is down; the end is seen via XI2 raw button release
   (delivered despite grabs) or FocusIn(NotifyUngrab). openbox sends no client ConfigureNotify
   during a move, only the frame's (host window -> GravityNotify), the synthetic one at the end.
+- A window that the WM resizes while its thread doesn't pump (hang, debugger stop, crash in progress)
+  shows black padding when grown and cropped old content when shrunk (X keeps the old pixels by bit
+  gravity). Tell it from stale Win32 geometry with tests/wintext.exe ("NOT RESPONDING", rect) (124).
 - DCE visible regions are cached per process and invalidated only by that process' own
   window changes. NtUserGetDCEx always refreshes DCs of foreign windows and (fix/065) of
   own windows whose toplevel is foreign (GPU-process children in another app's tree);

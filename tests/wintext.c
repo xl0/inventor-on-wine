@@ -1,6 +1,7 @@
 /* Dump visible top-level windows whose title contains argv[1] (default: all
  * visible) with their child tree: class, text, rect. For reading dialogs whose
- * content doesn't render. Build: x86_64-w64-mingw32-gcc -O2 -o wintext.exe wintext.c */
+ * content doesn't render. Top-level windows whose thread doesn't answer WM_NULL within 1 s are
+ * marked "NOT RESPONDING" (frozen UI vs. stale geometry: compare the rect with xwininfo, 124). Build: x86_64-w64-mingw32-gcc -O2 -o wintext.exe wintext.c */
 #include <windows.h>
 #include <stdio.h>
 
@@ -27,6 +28,7 @@ static BOOL CALLBACK top(HWND h, LPARAM unused)
     if (!IsWindowVisible(h)) return TRUE;
     GetWindowTextA(h, text, sizeof(text));
     if (filter && !strstr(text, filter)) return TRUE;
+    if (!SendMessageTimeoutA(h, WM_NULL, 0, 0, SMTO_ABORTIFHUNG, 1000, NULL)) printf("NOT RESPONDING: ");
     child(h, 0);
     EnumChildWindows(h, child, 1);
     return TRUE;
