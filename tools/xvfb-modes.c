@@ -1,7 +1,8 @@
 /* xvfb-modes WxH...: add RandR modes to the first output of $DISPLAY (an Xvfb) and stay
  * connected: the server frees client-created modes when the client exits, and `xrandr
  * --newmode` can't help, so Wine's tests (ChangeDisplaySettings etc.) would see only one mode.
- * Exits when the X server goes away. Used by regress.sh. */
+ * Prints "ready" once every mode is verified on the output; exits 1 on failure, and when the X
+ * server goes away. Used by regress.sh. */
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <stdio.h>
@@ -12,6 +13,7 @@ int main(int argc, char **argv)
     Display *d = XOpenDisplay(NULL);
     Window root;
     XRRScreenResources *res;
+    XRROutputInfo *out;
     XEvent ev;
     int i, w, h;
 
@@ -30,5 +32,19 @@ int main(int argc, char **argv)
         XRRAddOutputMode(d, res->outputs[0], XRRCreateMode(d, root, &m));
     }
     XSync(d, False);
+    XRRFreeScreenResources(res);
+    res = XRRGetScreenResources(d, root);
+    out = XRRGetOutputInfo(d, res, res->outputs[0]);
+    for (i = 1; i < argc; i++)
+    {
+        int j, found = 0;
+        sscanf(argv[i], "%dx%d", &w, &h);
+        for (j = 0; j < out->nmode; j++)
+            for (int k = 0; k < res->nmode; k++)
+                if (res->modes[k].id == out->modes[j] && res->modes[k].width == w && res->modes[k].height == h) found = 1;
+        if (!found) { fprintf(stderr, "xvfb-modes: %s not on output\n", argv[i]); return 1; }
+    }
+    puts("ready");
+    fflush(stdout);
     for (;;) XNextEvent(d, &ev);
 }

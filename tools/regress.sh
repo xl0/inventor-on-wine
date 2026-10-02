@@ -61,7 +61,7 @@ sweep() {
 
 # Runs "arch module unit [tag]" task lines from stdin on build $1, into dir $2.
 run_units() {
-    local build=$1 out=$2 jobs=$3 tmo=$4 W d s i a dl disps=() src gv gsha
+    local build=$1 out=$2 jobs=$3 tmo=$4 W d s i a hp dl disps=() src gv gsha
     W=$(mktemp -d /dev/shm/regress.XXXXXX)
     trap "set +e; for s in \$(seq 0 $((jobs - 1))); do WINEPREFIX=$W/p\$s $build/server/wineserver -k 2>/dev/null; done; kill \$(jobs -p) 2>/dev/null; wait; sweep $W; rm -rf $W" EXIT
     trap exit INT TERM
@@ -82,9 +82,15 @@ run_units() {
     # Xvfb has one RandR mode; the holder adds more and must stay connected (it dies with Xvfb).
     gcc -O1 -o "$W/xvfb-modes" "$root/tools/xvfb-modes.c" -lX11 -lXrandr
     for d in "${disps[@]}"; do
-        DISPLAY=:$d "$W/xvfb-modes" 640x480 800x600 1024x768 1280x720 1280x1024 1920x1080 {dl}>&- 2>> "$W/modes.log" &
-        for ((i = 0; i < 150; i++)); do DISPLAY=:$d xrandr | grep -q 1920x1080 && break; sleep 0.2; done
-        DISPLAY=:$d xrandr -s 1024x768 || { echo "regress: modes missing on :$d" >&2; cat "$W/modes.log" >&2; exit 1; }
+        for ((a = 0; a < 3; a++)); do  # the holder prints "ready" once the modes are verified
+            : > "$W/ready.$d"
+            DISPLAY=:$d "$W/xvfb-modes" 640x480 800x600 1024x768 1280x720 1280x1024 1920x1080 {dl}>&- > "$W/ready.$d" 2>> "$W/modes.log" &
+            hp=$!
+            for ((i = 0; i < 150; i++)); do grep -q ready "$W/ready.$d" && break; kill -0 $hp 2> /dev/null || break; sleep 0.2; done
+            grep -q ready "$W/ready.$d" && DISPLAY=:$d xrandr -s 1024x768 && continue 2
+            kill $hp 2> /dev/null; echo "regress: modes not ready on :$d (attempt $((a + 1))/3)" >&2
+        done
+        cat "$W/modes.log" >&2; exit 1
     done
     exec {dl}>&-
     mkdir -p "$W/home" "$out"

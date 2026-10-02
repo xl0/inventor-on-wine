@@ -451,8 +451,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `regsvr32 mshtml.dll` for both arches: wineboot ran with mshtml disabled so the classes and the
   text/html MIME handler were missing) and no Mono. Xvfb is 1920x1200 set to 1024x768 with
   extra RandR modes (tools/xvfb-modes.c: holder process; modes die with their client, and
-  `xrandr --newmode` can't attach them on Xvfb; startup waits for xdpyinfo, not the socket, or the holder
-  can fail to connect). Xvfb's built-in 1920x1200 mode has 0 Hz: dxgi 1674/1683 fail constantly.
+  `xrandr --newmode` can't attach them on Xvfb; startup waits for xdpyinfo, not the socket, then for the
+  holder to print "ready" (modes verified on the output), up to 3 attempts per display) Xvfb's built-in 1920x1200 mode has 0 Hz: dxgi 1674/1683 fail constantly.
   Runs hold flock /tmp/regress.lock via `flock -o` (children never inherit it), so concurrent
   invocations queue. Units with fixed localhost ports (webservices proxy/channel,
   winhttp notification/winhttp, wininet:http, httpapi) also serialize on /tmp/regress-ports.lock.
