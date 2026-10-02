@@ -289,6 +289,11 @@ launches; previous device-limit errors do not authorize pausing another device.
   `dotnet X.exe` + X.runtimeconfig.json): NRE in the JIT write barrier, GC suspension of a spinning thread (124, 126).
   `r083/wpf_fallback.cs [png=OUT] [FAMILY..]`: WPF (4.8) text measuring/rendering in missing font families;
   exit 35 = WPF's FailFast for a system without Arial (083).
+  `r125/re_probe.c [tom|bind|wrap|sel]`: rich edit probes for RICHEDIT50W and RichEdit20W: ITextFont on a
+  range (units, Reset modes), CJK font binding per insertion method and EM_SETLANGOPTIONS (+ BMPs),
+  EM_SETTARGETDEVICE line breaks, selections over the final paragraph mark; `r125/clip.c [TEXT]`:
+  CF_UNICODETEXT on the clipboard; `r125/ctl.c TITLE [ID STRING]`: list / select in another process's
+  combo boxes (125; VM outputs in inst/125/).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).

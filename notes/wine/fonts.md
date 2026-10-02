@@ -45,6 +45,8 @@ Checked against integ d7799da4d5c + fix/123 (issues 119, 123); dwrite Arial alia
   and Kana, created with ANSI_CHARSET; override `HKCU\Software\Wine\Uniscribe\Fallback`).
   fix/119: dropped again when it has none of the glyphs the original font lacks, so SSA_LINK (fNoGlyphIndex) uses GDI
   linking. Edit controls use SSA_LINK|SSA_FALLBACK.
+- Callers of ScriptShape with glyph indices get no linking at all (default glyph): riched20 did
+  (fix/125 reshapes such runs with `fNoGlyphIndex`, see richedit.md).
 
 ## DirectWrite
 - dlls/dwrite/analyzer.c `system_fallback_config` hard-codes Noto family names per range
