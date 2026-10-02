@@ -1,5 +1,5 @@
 # 123 CJK font linking only works with Noto Sans CJK installed
-Status: fixed on fix/123 (wt/123, 2 commits on integ d7799da4d5c), not merged; laptop squares still unexplained (needs the probe output) · Owner: issue-123 worker · Found in: user's laptop (squares after 119, 2026-10-02)
+Status: fixed on fix/123 (wt/123, 2 commits on integ d7799da4d5c), not merged; laptop preview boxes/wrapping still unexplained (comparison below; probe output pending) · Owner: issue-123 worker · Found in: user's laptop (squares after 119, 2026-10-02)
 
 119 links Tahoma to "Noto Sans CJK JP/SC/TC/KR" by name. Hosts without those exact families
 (other CJK fonts: WenQuanYi, Droid Sans Fallback, Source Han, IPA, Takao, AR PL, system fonts
@@ -71,3 +71,70 @@ say where they appear.
 Regression-relevant: hosts without Noto CJK now load whatever fontconfig prefers per language on a missing
 glyph (up to 4 faces; Unifont if it is the only one); a few FcFontMatch calls per process start in that case;
 Tahoma links with a Tahoma substitute; the two tests' skip condition.
+
+## Laptop interactive comparison and screenshot (2026-10-02)
+
+Tested in the existing `prefixes/inv` on **wine-11.18-494-gd7799da4d5**:
+119 is included, the two fix/123 commits above are not. Same 144-DPI
+Awesome/NVIDIA/Vulkan/picom setup as [124](124-open-dialog-resize-coreclr-crash.md).
+No font installation, registry change, prefix repair or rebuild was applied
+for this comparison.
+
+### Font availability and result
+
+- Host `fc-list` confirms **Noto Sans CJK SC Regular and Bold**
+  (`/usr/share/fonts/opentype/noto/NotoSansCJK-{Regular,Bold}.ttc`), plus other
+  Noto CJK families, Noto Serif CJK, Droid Sans Fallback and WenQuanYi Zen Hei.
+- Offline inspection of the prefix's HKLM
+  `Software\Microsoft\Windows NT\CurrentVersion\FontSubstitutes` shows **no
+  value named `Tahoma`**. `MS Shell Dlg` and `MS Shell Dlg 2` map to Tahoma.
+  This does not inspect every font-replacement/cache mechanism.
+- The user had not deliberately selected a font when initially seeing boxes;
+  the original/default font name was not recorded.
+- In sketch text's **Format Text** dialog, pasting `中文测试` and explicitly
+  selecting **Noto Sans CJK SC** worked.
+- The user then clarified: with other fonts, Chinese **also rendered in the
+  sketch, but not in the preview**. The other font names were not recorded.
+  Here "preview" refers to the editing/preview area inside Format Text,
+  not a DWG thumbnail or Open-dialog preview.
+
+So the host is not simply missing Noto, the characters survive the paste, and
+the remaining squares depend on the UI rendering path/font selection.
+Do not assume the no-Noto fix alone addresses this report. The preview
+control class/rendering API and the expanded `cjk_link` output are still unknown.
+
+### Additional layout/orientation observations
+
+![Laptop Format Text preview and sketch](attachments/123-laptop-sketch-text-preview.png)
+
+The user supplied this screenshot with **Noto Sans CJK SC**, size **0.120 in**:
+
+1. The last character moves to a new line in the preview: `中文测` then `试`,
+   despite the large visible editor area. Both copies show the same split.
+   Whether this is a real paragraph break, soft wrapping, a text-box width
+   constraint or incorrect text metrics has not been established.
+2. The user describes the sketch text as "upside-down". The screenshot shows
+   rotated text and a rotated **TOP** ViewCube label; camera/sketch/text
+   orientation has not been normalized. This is not yet proof of inverted
+   glyph outlines or a CJK-specific bug.
+3. **After finishing the text and reselecting its area**, the user reports
+   that the preview collapses to tiny, approximately one-pixel dots.
+   Selecting those dots changes the displayed font selection to
+   **Noto Sans Mono CJK** (regional suffix not reported). The text remains
+   selectable/present, but is no longer readable in the preview.
+   This is a subsequent observation, not shown in the screenshot above.
+   It is unknown whether stored font/size data changed, the font selector is
+   merely reporting the selected run, or preview font metrics/state were lost.
+
+Keep these observations separate from the preview's missing glyphs until
+linked. Next checks for the owner: identify the preview control/API and fonts
+that fail; obtain the requested `cjk_link` output; distinguish stored newlines
+from wrapping; compare Latin and Chinese text at the same sketch/view
+orientation and against Windows. Also compare font family, size and text
+formatting before accepting the text versus after reselecting/re-editing it,
+to locate the one-pixel preview regression. Split follow-up issues if needed.
+
+No additional agent-driven tests were run; the user supplied the subsequent
+reselection observation and requested handoff to the main agent.
+The screenshot is the user-provided image,
+with metadata stripped; it contains no sign-in page or email.
