@@ -246,7 +246,13 @@ commits or screenshots). Read-only mode may remain after expiry.
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
   Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
   082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 41a369af983 (wine-11.18-470, PROTOCOL 969): adds the 109 rpcrt4 fix (RpcServerUnregisterIf lost
+- build/ = integ 76edc4302b7 (wine-11.18-476, PROTOCOL 971): adds 109 (combase keeps interfaces registered when stubs
+  go away), 110 (CoDisconnectObject drops the apartment ref once), 107 (pipe I/O on an event-less completion port
+  completes in the dequeuing thread; one-call port wait). inv, inv2 restarted on it. Full regress vs master
+  4e819f054dd: 0 REAL/NEW, 2 FLAKY (mf:mf, user32:input; both pass on rerun/base), 28 crash / 90 fail total.
+  inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0-3.2 s per export. Home page and its WebView2
+  helpers (gpu/renderer/utility) up after 3 min; trial popup is closed by the harness, Assistant pane not opened.
+- Previous: build/ = integ 41a369af983 (wine-11.18-470, PROTOCOL 969): adds the 109 rpcrt4 fix (RpcServerUnregisterIf lost
   wakeup). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757 (0 REAL/NEW/FLAKY;
   27 crash / 90 fail non-pass, same as baseline). inv invscen all: 13/13 PASS; dwgloop N=30: PASS, no hang,
   2.1-2.5 s per export (model+drawing 2.0 s).
