@@ -55,8 +55,10 @@
   With a compositing manager (_NET_WM_CM_Sn owner) the rest is blended. Without one (fix/062)
   pixels below alpha 128 are cut too (they become click-through; the X shape is also the input
   region and ShapeInput / InputOnly children can't reach outside it), the rest is drawn opaque.
-  A surface with no pixel >= 128 keeps the alpha > 0 shape and its outermost X ancestor (WM frame)
-  is XCompositeRedirectWindow(Manual)ed: not drawn, transparent to what is below, input intact.
+  A surface with no pixel >= 128 is "hidden" (input only): alpha > 0 shape, _NET_WM_WINDOW_OPACITY 0
+  (WMs copy it to the frame; hides awesome's border under picom), and without a compositing manager
+  its outermost X ancestor (WM frame) is XCompositeRedirectWindow(Manual)ed: not drawn, transparent
+  to what is below, input intact. XFixes selection events on _NET_WM_CM_Sn (every thread) switch modes.
 - Window surfaces are rounded up to 128 px; the padding starts as opaque white. fix/062 clears it
   on UpdateLayeredWindow and adds it to the clip region (so it isn't taken for a client surface).
 - winex11's surface flush can run with win_data_mutex held by the same thread (WindowPosChanged ->

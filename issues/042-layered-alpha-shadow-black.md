@@ -22,4 +22,4 @@ alpha-0 pixels are cut from the shape, the rest is drawn opaque because nothing 
 a compositing manager. See 062 "Why no fix" for the X11 shape/input trade-off.
 fix/062: without a compositing manager the shadow pixels (alpha < 128) are left out of the X shape, so the
 popup has no shadow instead of a black frame; they are click-through then (Windows hit-tests them).
-tests/layered_splitter.exe's tooltip: shadow pixel 000000 -> the pane colour. Not yet looked at in Inventor.
+tests/layered_splitter.exe's tooltip: shadow pixel 000000 -> the pane colour. With a compositing manager (picom) shadows already blend like on Windows (probe: 00009c = VM). Not yet looked at in Inventor.

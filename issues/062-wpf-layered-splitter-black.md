@@ -1,5 +1,5 @@
 # 062 WPF per-pixel-alpha popup (browser pane splitter) drawn as a black bar
-Status: fixed on fix/062 (eb92c8c23f7), Inventor check by the coordinator pending · Owner: worker-062 · Branch: fix/062 · Found in: UI latency pass (tools/uilat wmdrag)
+Status: fixed on fix/062 (0058ab0721d), Inventor check by the coordinator pending · Owner: worker-062 · Branch: fix/062 · Found in: UI latency pass (tools/uilat wmdrag)
 
 ## Symptom (integ 061fa687382, :98 openbox, no compositing manager)
 In a part document a solid black 5 px vertical bar sits between the Model browser and the
@@ -72,6 +72,19 @@ pixel takes clicks and WindowFromPoint for every alpha >= 1, alpha 0 falls throu
 the plain blend (alpha 3-6 over green c8: 03c903). LWA_ALPHA 128 blends, takes clicks; a colour-key
 hole falls through.
 
+### With a compositing manager (the user's setup: awesome + picom)
+integ d7799da4d5c, Xvfb, awesome (x/awesome-rc.lua) + `picom --config /dev/null --backend glx
+--no-use-damage` (llvmpipe GLX; `--vsync` fails on Xvfb: "Failed to load a swap control extension"):
+the bar's pixels blend exactly like on Windows (03c903; ARGB visual, awesome's frame is depth 32 too;
+shadow 00009c = VM), but awesome draws its 1 px client border (the frame's X border, black
+`border_normal`) around the popup: two black lines 6 px apart, which stay behind during window
+moves. That is the user's bar. 8x zoom: ![border](attachments/062-awesome-picom-border.png)
+Mid Mod4+drag, screen x 396-406 over the green pane: integ `c8 c8 000000 03c903 ... 000000 c8 c8`,
+fix: all 00c800. openbox + picom on integ has no such border (undecorated frame): 03c903.
+Setting _NET_WM_WINDOW_OPACITY 0 on the client hides popup and border under picom (awesome and
+openbox copy the property to their frame); input is unaffected.
+
+### Without one
 X facts (checked on Xvfb, scratch tests): the ShapeInput region is clipped by ShapeBounding, an
 InputOnly child is clipped by its parent's shape, and an InputOnly/extra top-level would have to
 follow the stacking the WM gives the frame. But a window that a client redirects with
@@ -79,50 +92,61 @@ XCompositeRedirectWindow(CompositeRedirectManual) while no compositing manager r
 doesn't clip what is below it (the server treats manually redirected windows as transparent) and
 still gets all input, with its bounding shape as before. One X window, so coordinates, capture,
 cursor and the WM's view are unchanged. With a WM the frame must be redirected instead: openbox's
-frame is black, awesome's has no background (stale pixels).
+frame is black, awesome's has no background (stale pixels) and the border.
 
-Design (winex11 only, when _NET_WM_CM_Sn has no owner at surface creation):
-- Per-pixel alpha is rounded to 1 bit: pixels with alpha < 128 are left out of the X shape, the
-  rest is drawn opaque as before. 128 = the nearest of the two things X can do; WPF's stock drop
-  shadow peaks at alpha 113 (#71000000), so shadows go away completely instead of leaving a rim.
-- A surface without any pixel >= 128 (but some > 0) keeps the old alpha > 0 shape and win32u flags
-  it `shape_hidden`; winex11 then redirects the top-level's outermost X ancestor below the root
-  (WM frame, or the window itself), again on ReparentNotify, and undoes it when a pixel becomes
-  visible / the window stops being layered. The flag travels by a posted driver message
-  (WM_X11DRV_SET_REDIRECTED): the flush can run with the window data locked.
-- win32u: `window_surface.alpha_threshold` (driver knob, 0 = old rule) and `shape_hidden`; the shape
-  of such surfaces is recomputed over the whole surface. Two side fixes it needs: ULW clears the
-  surface padding (surfaces are rounded up to 128 px and start opaque white), and the padding no
-  longer counts as client-surface area (fix/027 forced it opaque in the shape).
-- With a compositing manager nothing changes (ARGB visual, shape = alpha > 0, real blending).
+### Design
+- win32u: `window_surface.alpha_threshold` (winex11: 128) and `shape_hidden` = no pixel of a
+  per-pixel-alpha surface reaches the threshold (client-surface areas count as visible). The shape
+  keeps every alpha > 0 pixel then, as before. `alpha_cut` (winex11: no compositing manager):
+  surfaces that aren't hidden leave pixels below the threshold out of the shape. Shapes of such
+  surfaces are recomputed over the whole surface. Two side fixes it needs: ULW clears the surface
+  padding (surfaces are rounded up to 128 px and start opaque white), and the padding no longer
+  counts as client-surface area (fix/027 forced it opaque in the shape).
+- 128 = 1-bit rounding of alpha, the nearest of the two things X can do alone; WPF's stock drop
+  shadow peaks at alpha 113 (#71000000, from memory of the open-source WPF, not measured), so
+  shadows go away completely instead of leaving a rim.
+- winex11, hidden window (state arrives by a posted WM_X11DRV_SET_HIDDEN: the flush can run with
+  the non-recursive window data mutex held): _NET_WM_WINDOW_OPACITY 0 on the window (kept across
+  UpdateLayeredWindow calls, the constant alpha comes back when a pixel becomes visible), and, when
+  _NET_WM_CM_Sn has no owner, manual redirection of the outermost X ancestor below the root (WM
+  frame, or the window itself), redone on ReparentNotify.
+- Compositing manager changes: every thread selects XFixes selection events for _NET_WM_CM_Sn on
+  the root (clipboard.c's XFixes loading is shared, one handler for both selections). On a change
+  the thread sets alpha_cut of its layered surfaces, re-flushes them and redirects / un-redirects.
+- With a compositing manager windows with visible pixels are untouched (ARGB visual, alpha > 0 shape).
 
-Limits (X can't do better with one window):
-- A window with both visible and faint pixels: the faint ones (0 < alpha < 128: shadows, AA edges)
-  are not drawn and click-through; Windows hit-tests them. layered_alpha.exe: alpha 1/16/64 bands
-  now show the window below and click it. A translucent overlay below 50% inside a window that also
-  has opaque pixels disappears.
+### Limits (X can't do better with one window)
+- No compositor, window with both visible and faint pixels: the faint ones (0 < alpha < 128:
+  shadows, AA edges) are not drawn and click-through; Windows hit-tests them. layered_alpha.exe:
+  alpha 1/16/64 bands show the window below and click it. A translucent overlay below 50% inside a
+  window that also has opaque pixels disappears. (With a compositor: blended and hit-tested.)
+- Hidden windows are fully invisible with a compositor (Windows: 1-2 % visible).
 - awesome doesn't shape its frame: alpha 0 holes of a managed layered window swallow clicks there
   (before and after; openbox and no-WM pass them through).
-- A compositing manager started while a hidden window exists can't redirect the root's children
-  (one manual redirection per window: BadAccess); CM detection is at surface creation only.
+- Compositor start: it can only redirect the root's children once ours are un-redirected (one
+  manual redirection per window, else BadAccess). picom takes the selection before redirecting,
+  so the thread's XFixes event gets there first in the tests (4 starts, no error); a thread that
+  doesn't pump messages would lose that race. Without libXfixes only new surfaces follow.
 - First show: the frame is visible until ReparentNotify is processed (a few ms).
 - UpdateLayeredWindowIndirect with a dirty rect on a fresh surface leaves the padding opaque:
   such a window is never hidden (old look). DPI-scaled surfaces likewise.
 
-Tests (Xvfb, no compositor; tests/layered_splitter.sh drag/move/cycle drives tests/layered_splitter.exe with xdotool):
-| | no WM | openbox | awesome (x/awesome-rc.lua) |
-|---|---|---|---|
-| bar pixels on screen (was 030303) | 00c800 = pane | 00c800 | 00c800 |
-| press on the bar, drag 60 px out of it (capture), release | down 2,100; split 200->257 | same | same |
-| click on the bar's alpha 0 rows | main | main | swallowed by the frame (as before) |
-| tooltip shadow (was 000000) / body | 0000c8 / f0f0f0 | same | same |
-| click on shadow / body | main / tip | same | same |
-| WM move (title drag / Mod4+drag): bar during, after | - | invisible, follows at the end, drag ok | same |
-| hide + show, resize (new surface) | ok | ok | ok (awesome re-places a re-shown window) |
-| _NET_WM_CM_S0 owned (fake owner) | old behaviour | old | - |
-layered_alpha.exe kinds (LWA_ALPHA 128, LWA_COLORKEY + hole, opaque ULW): same as before the fix.
+### Tests (Xvfb; tests/layered_splitter.sh drag/move/cycle drives layered_splitter.exe with xdotool)
+| | no WM | openbox | awesome | openbox + picom | awesome + picom |
+|---|---|---|---|---|---|
+| bar pixels on screen | 00c800 = pane (was 030303) | 00c800 | 00c800, no border | 00c800 (integ 03c903) | 00c800, no border (integ: 03c903 between black lines) |
+| press on the bar, drag 60 px out of it (capture), release | split 200->257 | same | same | same | same |
+| click on the bar's alpha 0 rows | main | main | swallowed by the frame | main | swallowed by the frame |
+| tooltip shadow / body | 0000c8 (was 000000) / f0f0f0 | same | same | 00009c = VM / f0f0f0 | same |
+| click on shadow / body | main / tip | same | same | tip / tip (= Windows) | same |
+| WM move (title drag; awesome Mod4+drag): mid-move, after | - | invisible, follows at the end, drag ok | same | same | same |
+| hide + show, resize (new surface) | hide/show ok | ok | ok (awesome re-places a re-shown window) | ok | ok |
+| picom killed / started while the probe runs | - | - | - | bar invisible, shadow 0000c8 <-> 00009c, drag ok, picom starts | same, border stays invisible |
+layered_alpha.exe under picom: screen fe/ef/bf/7f like the VM, clicks like the VM; `kinds`
+(LWA_ALPHA 128, colour key + hole, opaque ULW) unchanged everywhere (7f0080 under picom).
 layered_child_gpu.exe (colour key + D3D child, lavapipe): child 00ff00. expose_present.exe ok.
 user32:win test_layered_window_alpha (screen under alpha 3 pixels = the window below, mixed and
-all-faint): VM 0 failures; Wine passes, and fails with 030303 on the old path.
+all-faint): VM 0 failures; Wine passes without compositor (old code: 030303) and under openbox+picom.
 awesome's placement rule moves newly mapped managed popups into free screen space (seen with the
 small probe window; Inventor repositions its popups afterwards): the probe re-places the bar.
+The GLX backend ran on Xvfb/llvmpipe; not tried on the NVIDIA Xorg, nor in Inventor.
