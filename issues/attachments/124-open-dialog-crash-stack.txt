@@ -1,0 +1,44 @@
+Issue 124 — sanitized crash-stack excerpt (laptop, 2026-10-02)
+Wine: wine-11.18-494-gd7799da4d5, x86_64 Inventor 2027.1
+.NET 10.0.9 / CoreCLR 10.0.926.27113
+Thread: .NET TP Worker; Wine TID 0x04c4
+Captured at native NtRaiseException with first_chance == 0, before termination.
+Fatal record: code 0xc0000005; flags 0; NumberParameters 0.
+Reported address: 0x6fffc8106fef = coreclr.dll+0x356fef.
+This record is from the fatal reporting path, not necessarily the original fault.
+
+PE stack reconstructed from the thread's Wine syscall frame using .pdata:
+#0  0x6fffffbd07e4 ntdll.dll+0x107e4 NtRaiseException + 20
+#1  0x6fffff39bf63 kernelbase.dll+0x4bf63 RaiseFailFastException + 83
+#2  0x6fffc803f836 coreclr.dll+0x28f836
+#3  0x6fffc807b7c4 coreclr.dll+0x2cb7c4
+#4  0x6fffc807ab4d coreclr.dll+0x2cab4d
+#5  0x6fffc8107011 coreclr.dll+0x357011
+#6  0x6fffffbd0ee9 ntdll.dll+0x10ee9 call_seh_handler + 13
+#7  0x6fffffc10c1f ntdll.dll+0x50c1f call_seh_handlers + 255
+#8  0x6fffffc13680 ntdll.dll+0x53680 dispatch_exception + 1328
+#9  0x6fffffbd0f1a ntdll.dll+0x10f1a KiUserExceptionDispatcher + 42
+#10 0x6fffffbf0130 ntdll.dll+0x30130 RtlLocateExtendedFeature2 + 176
+#11 0x6fffc7eb0ff9 coreclr.dll+0x100ff9
+#12 0x6fffc8060027 coreclr.dll+0x2b0027
+#13 0x6fffc7f87c28 coreclr.dll+0x1d7c28
+#14 0x6fffc7eb38fa coreclr.dll+0x1038fa
+#15 0x6fffc8038397 coreclr.dll+0x288397
+#16 0x6fffc7f87d17 coreclr.dll+0x1d7d17
+#17 0x6fffc7eb4871 coreclr.dll+0x104871
+#18 0x6fffc7eb46ad coreclr.dll+0x1046ad
+#19 0x6fffffbcebf2 ntdll.dll+0xebf2 call_vectored_handler + 18
+#20 0x6fffffc1354d ntdll.dll+0x5354d dispatch_exception + 1021
+#21 0x6fffffbd0f1a ntdll.dll+0x10f1a KiUserExceptionDispatcher + 42
+#22 0x6fff681b0010 ?+0x0
+
+Frame #10 resolves in the matching Wine binary to:
+  dlls/ntdll/exception.c:855, RtlLocateExtendedFeature2
+  if (!(xs->CompactionMask & feature_mask)) return NULL;
+This is a lead for inspecting the nested exception context; its inputs and
+whether the context is valid have NOT yet been established.
+Frame #22 is outside the modules identified by the stack helper.
+
+Only the faulting thread's addresses/module offsets/function names are shared.
+Raw registers, memory, other threads and full logs remain private on the laptop.
+No Microsoft binary was disassembled; unwinding used PE .pdata metadata.
