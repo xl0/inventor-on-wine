@@ -65,3 +65,7 @@
   processes + wineserver to a few cores with nice-19 spinners on the siblings (inst/091/spin.sh), compare
   interleaved, and count requests/frame (inst/091/reqmix.sh) as the deterministic metric. A/B by swapping
   module files: copy + rename, never `cp` over a mapped .so (running processes crash).
+- wined3d CS thread (108): after a queue drain it spins (2000 pauses = 28 us on this Xeon) before an
+  NtWaitForAlertByThreadId wait; with fix/108 the full spin is adaptive (200 pauses while full spins mostly
+  end waiting). Per-thread CS cost: `perf stat -e task-clock,context-switches -t TID` + share of samples in
+  wined3d_cs_run (inst/108/csprof.sh); spin/wake histograms: inst/108/debug.patch (rdtsc, ERR every 5 s).
