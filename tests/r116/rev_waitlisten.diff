@@ -1,0 +1,46 @@
+--- /home/xl0/projects/wine/wt/116/dlls/rpcrt4/rpc_server.c	2026-10-02 02:51:17.399584983 -0500
++++ dlls/rpcrt4/rpc_server.c	2026-10-02 03:50:27.668102478 -0500
+@@ -1654,29 +1654,34 @@
+   WaitForSingleObject( event, INFINITE );
+   TRACE( "done waiting\n" );
+ 
+-  EnterCriticalSection(&listen_cs);
+   /* wait for server threads to finish */
+   while(1)
+   {
+-      if (listen_count)
+-          break;
+-
+       wait_thread = NULL;
+       EnterCriticalSection(&server_cs);
+-      LIST_FOR_EACH_ENTRY(protseq, &protseqs, RpcServerProtseq, entry)
++      EnterCriticalSection(&listen_cs);
++      if (!listen_count)
+       {
+-          if ((wait_thread = protseq->server_thread))
+-              break;
++          LIST_FOR_EACH_ENTRY(protseq, &protseqs, RpcServerProtseq, entry)
++          {
++              if (protseq->server_thread)
++              {
++                  DuplicateHandle(GetCurrentProcess(), protseq->server_thread, GetCurrentProcess(), &wait_thread,
++                                  0, FALSE, DUPLICATE_SAME_ACCESS);
++                  break;
++              }
++          }
+       }
++      LeaveCriticalSection(&listen_cs);
+       LeaveCriticalSection(&server_cs);
+       if (!wait_thread)
+           break;
+ 
+       TRACE("waiting for thread %lu\n", GetThreadId(wait_thread));
+-      LeaveCriticalSection(&listen_cs);
+       WaitForSingleObject(wait_thread, INFINITE);
+-      EnterCriticalSection(&listen_cs);
++      CloseHandle(wait_thread);
+   }
++  EnterCriticalSection(&listen_cs);
+   if (listen_done_event == event)
+   {
+       listen_done_event = NULL;
