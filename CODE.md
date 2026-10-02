@@ -4,26 +4,33 @@ Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
 no reference VM. The server environment and populated prefixes described below
 are not present here.
 
-Latest laptop finding: [124](issues/124-open-dialog-resize-coreclr-crash.md),
-Open-dialog repaint/navigation failure and a captured CoreCLR crash on
-`d7799da4d5`. Inventor is stopped; keep the core private and matching binaries intact.
+Inventor is closed; the last CJK comparison session exited 0. Findings are
+handed to the main agent: [124](issues/124-open-dialog-resize-coreclr-crash.md)
+(Open-dialog resize/navigation failure and captured crash) and
+[125](issues/125-format-text-preview-cjk-richedit.md) (Format Text preview).
+No further local tests are requested. Keep crash data private and preserve
+matching binaries before rebuilding for another test.
 
-**Do not launch Inventor:** Autodesk licensing has hit its device limit.
-Standalone diagnostic probes are allowed; keep the live application stopped.
+**Licensing:** the laptop and server share one active-device seat. Coordinate
+launches; previous device-limit errors do not authorize pausing another device.
 
-- `wine-src/`: partial clone of `xl0/wine`, `integ` at `47e296ffde4d`.
+- `wine-src/`: partial clone of `xl0/wine`, `integ` at `d7799da4d5`.
   Tracks `gh/integ`; `origin` points to WineHQ. No rebase onto newer upstream.
 - `build/`: `../wine-src/configure --enable-archs=i386,x86_64` succeeds with
   GCC/MinGW 13. Only notice: legacy OSS audio unavailable (ALSA/Pulse work).
-  Logs: `configure.out`, `config.log`, `make.log`, `build-resource-usage.txt`.
-  Full build succeeded in 29m14s, peak cgroup memory 6.86 GiB, no swap.
-  Version: `wine-11.18-360-g47e296ffde`.
-- `prefixes/smoke`: local prefix; 32/64-bit `cmd.exe` and the existing
-  `tests/custom_caption.c` GUI probe pass (`build/smoke.log`). User-folder
-  symlinks replaced with prefix-local directories. Mono/Gecko not installed;
-  smoke runs disable them and winemenubuilder. Test wineserver stopped.
-  Local D3D11 Vulkan smoke also passes on desktop `:0` (clear/present/readback,
-  `inst/local/d3d11-vulkan.log`); this does not validate Inventor's viewport.
+  Configuration logs: `configure.out`, `config.log`.
+  Version: `wine-11.18-494-gd7799da4d5`. Latest broad rebuild took 22m52s
+  with the resource limits below.
+  Log/resource report: `build/rebuild-20261002-132901{.log,-resources.txt}`.
+  Issue 084's shell and WinSupport.dll probes pass against the unchanged prefix.
+  32/64-bit console, caption GUI and Vulkan D3D11 present/readback smoke pass,
+  as do the relevant DComp Device3 and D3D11 VideoContext1 interface queries:
+  `build/smoke-d7799da4d5.log`. Cross-process and cross-apartment COM proxy
+  checks also pass in both architectures (`build/qi_remote{32,64}-d7799da4d5.log`).
+  Both local prefixes were stopped before rebuilding.
+- `prefixes/smoke`: isolated user folders, no Mono/Gecko; smoke runs disable
+  them and winemenubuilder. Test wineserver stopped. Graphics probe success
+  does not validate Inventor's viewport or dialog rendering.
 - `prefixes/inv`: native .NET 4.8 (Release 528049, both C# compilers run),
   Windows 11, Gecko 2.47.4 for both architectures, Edge and WebView2
   154.0.4258.37 installed. Browser downloads match the server's pinned hashes;
@@ -40,27 +47,51 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   INSTALLED. Electrical Catalog Browser failed: its CA MSI's
   `AceUnzipZipFiles` action returns 1603; optional add-on rolled back
   ([050](issues/050-electrical-catalog-unzip-msi.md)).
-  Opening documents warns that the Content Center Files path is unavailable:
-  `::{CLSID_MyDocuments}\Inventor\Content Center Files\R2027`.
-  [084](issues/084-content-center-documents-shell-path.md) is confirmed locally:
-  HKLM My Documents CLSID lacks its entire `ShellFolder` key. Both the shell
-  PIDL probe and WinSupport.dll's `GetMyDocumentsDir` return TRUE with the GUID.
-  Evidence: `inst/local/084/`. Registry left unchanged for patch verification;
-  do not run `wineboot -u` before preserving/retesting this reproduction.
-  Main Inventor launch/sign-in not yet verified. Installer was launched on `:0`
-  with `setsid nohup`, nice 10, idle I/O, 14 GiB cap/no swap in
-  `inventor-install.scope`. Uses `WINE_D3D_CONFIG=renderer=vulkan`.
-  Launcher PID: `inst/local/installer.pid`; output: `inst/local/installer.log`.
-  Browser setup log: `inst/local/browser-setup.log`.
+  Inventor has reached sign-in and interactive sketch/document use.
+  DPI is 144; a full prefix restart was needed after changing DPI to restore
+  winecfg layout/input. Restart only when no documents are open.
+  Setup logs: `inst/local/{installer,browser-setup}.log`.
+  Corefonts is installed; Arial files/registration verified, Segoe UI absent.
+  [083](issues/083-wpf-keytip-font-fallback.md) records the earlier .NET 10.0.9
+  WPF key-tip FailFast and installation workaround; exact trigger/fix unverified.
+  [046](issues/046-startup-crash-setwindowsubclass.md) has the distinct old-build
+  subclass crash evidence.
+  [084](issues/084-content-center-documents-shell-path.md) passes both local
+  Documents-path probes without repairing the missing `ShellFolder` key;
+  explicit UI warning verification remains pending.
+  [085](issues/085-trial-popup-stays-white.md) contains the licensing-popup
+  screenshot/log and cursor/GPU fixes now in the build. The captured "having
+  trouble" run reported `ALLOW`, not an explicit device-limit denial.
+  CJK host fonts include Noto Sans/Serif CJK and WenQuanYi; no HKLM
+  FontSubstitutes `Tahoma` value. Explicit Noto Sans CJK SC works in Format Text;
+  other fonts render the sketch but not its preview. Evidence is in
+  [123](issues/123-cjk-fallback-via-fontconfig.md), follow-up work in 125.
   Setup verification uses `wine winecfg -v`, not `HKCU\Software\Wine\Version`
   (winecfg sets NT version keys and removes that override).
+- Launches use `WINE_D3D_CONFIG=renderer=vulkan`, errors-only Wine logging
+  (`-all,err+all,+timestamp,+pid`), and retained
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu`. The latter did not
+  improve lag or eliminate NVIDIA contexts; it is not proven software rendering.
+  `inst/local/current-debug-run` names the private directory containing
+  `inventor.log`, `version.txt`, and `settings.txt`.
+  Issue 124 documents the successful GDB second-chance exception capture and
+  sparse ELF core. In the later CJK run Inventor exited 0, but GDB itself hit
+  `linux-nat.c:1807: resume: Assertion signo == GDB_SIGNAL_0` during shutdown.
+  That debugger failure is not another Inventor crash.
 - Local Xvfb crashes during GLX initialization in NVIDIA EGL/GBM.
   `xvfb-run -a -s '-screen 0 1024x768x24 -nolisten tcp -extension GLX'`
   works for 2D smoke tests; verify with `xdpyinfo` before running Wine.
   The host desktop `DISPLAY=:0` is accessible.
-- Hybrid GPU: with `prime-select on-demand` the X server runs on the iGPU and
-  every NVIDIA frame is copied across, so sketching and window drags lag.
-  `prime-select nvidia` fixes it (user-verified 2026-09-29).
+- Desktop WM is Awesome on X11, now PRIME `nvidia`; GLX reports RTX 3080.
+  Old `/etc/X11/xorg.conf` forced two separate X screens, and local GPU
+  snippets conflicted with PRIME. User resolved this after backing out the
+  overrides; `xdpyinfo` now reports one screen. User-reported desktop lag
+  resolved after the NVIDIA-primary switch; earlier samples implicated
+  Xorg/WebView2 GPU activity, not memory pressure or disk I/O.
+  Picom v10 is running with `--config /dev/null --backend glx --vsync
+  --no-use-damage`. User reports `--no-use-damage` eliminated viewport tearing.
+  Earlier transient resize artifacts cleared on release. The later Open-dialog
+  failure after Awesome Mod+mouse resize is recorded separately in issue 124.
 - Missing dependencies were installed by the user outside the sandbox:
 
   ```sh

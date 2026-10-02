@@ -274,3 +274,24 @@ To check on the laptop: if `{645FF040-...}\ShellFolder` (RecycleBin) and
 Once the fix is in, the laptop needs no repair.
 Inventor re-check: once licensing allows, open a document in the unchanged
 laptop prefix with a build that has the fix.
+
+### Laptop verification of integ 77b5f2b672
+Rebuilt locally as `wine-11.18-398-g77b5f2b672` and reran the same probes
+before the user-requested Inventor restart. No registry repair or `wineboot -u`.
+The live 64-bit My Documents `ShellFolder` key is **still absent**.
+
+- All four `mydocs_path` variants return
+  `SHGetPathFromIDListW 1 C:\users\xl0\Documents`; attributes are `0x7080017f`.
+- `inv_mydocs` returns `GetMyDocumentsDir 1 C:\users\xl0\Documents`.
+- Logs: `inst/local/084/mydocs_path-fixed-77b5f2b672.log`,
+  `inv_mydocs-fixed-77b5f2b672.log`, `registry-after-fixed-probes.log`.
+
+This verifies the fix against the original failing laptop registry state.
+Inventor was then restarted at the user's request; UI warning verification
+remains pending.
+
+The pre-rebuild hive check also found missing `ShellFolder` keys for
+Recycle Bin and Control Panel in both registry views
+(`inst/local/084/pre-rebuild-shellfolder-state.txt`). This supports the
+incomplete shell-folder registration hypothesis, but does not establish which
+folder registration originally failed.

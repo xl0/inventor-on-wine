@@ -1,33 +1,39 @@
-# Current goal: local Inventor setup (no VM)
+# Local workstation: handoff and deferred verification
 
-Reproduce the patched Wine + native Autodesk installer setup on this workstation.
-Keep system Wine untouched; run from `build/` with a separate prefix.
+Keep the working Wine-only setup ready for user-driven testing. Implementation
+and further diagnosis are handed to the main agent. Preserve the private crash
+evidence and matching binaries; keep system Wine and unrelated prefixes untouched.
 The server results below are reference material, not local completion status.
 
 - [ ] Triage [124](issues/124-open-dialog-resize-coreclr-crash.md): Open-dialog
   Awesome-resize repaint/navigation failure and captured CoreCLR crash.
   Keep the symptoms distinct until linked; preserve private evidence and binaries.
 
-**Licensing hold:** do not launch Inventor on this laptop until the Autodesk
-device limit is cleared. Use standalone probes for verification.
+- [x] CJK comparison and screenshot handed off in
+  [123](issues/123-cjk-fallback-via-fontconfig.md).
+- [ ] Main agent to investigate [125](issues/125-format-text-preview-cjk-richedit.md):
+  preview-only boxes, early wrapping and tiny dots after re-editing. Text
+  orientation is not yet distinguished from the camera/sketch orientation.
 
-- [x] Clone `xl0/wine` into `wine-src/`, tracking `gh/integ` (`47e296ffde4d`).
-- [x] Build dependencies installed; new-WoW64 configure passes (only legacy OSS
-  audio unavailable).
-- [x] Local build complete: 8 jobs, nice 15, 12 GiB cap; 29m14s, peak 6.86 GiB,
-  no swap. Separate smoke prefix passes 32/64-bit console and GUI probes.
-- [x] Inventor prefix: native .NET 4.8 (32/64-bit runtime checks), Windows 11,
-  Gecko, isolated user folders. Local Vulkan D3D11 smoke passes.
-- [x] Pinned Edge/WebView2 installed; Autodesk installer launched on the desktop
-  in `prefixes/inv`, using the patched build.
-- [x] Main Inventor + 2027.1 update installed. Electrical Catalog Browser
-  failed in `AceUnzipZipFiles` (MSI 1603);
-  [issue 050](issues/050-electrical-catalog-unzip-msi.md), low priority.
-- [ ] Verify local Inventor launch/sign-in.
-- [x] Confirmed 084 locally: missing HKLM My Documents `ShellFolder` key;
-  both shell and WinSupport.dll probes return the GUID. No repair applied.
-- [ ] Verify the worker's 084 fix using the standalone probes, preserving
-  the broken registry state; Inventor launch remains prohibited.
+**Licensing:** Inventor is closed. Coordinate the shared single-device seat
+before another user-requested launch; no further local test campaign is requested.
+
+- [x] Dedicated Inventor 2027.1 prefix installed, including native .NET 4.8,
+  Gecko, pinned Edge/WebView2 and isolated user folders. Interactive document
+  and sketch use reached.
+- [x] Built `d7799da4d5` with local memory limits; 32/64-bit console, GUI and
+  COM proxy checks, Vulkan readback and DComp/VideoContext1 queries pass.
+- [x] NVIDIA-primary single-X-screen desktop resolved reported lag; picom
+  GLX/VSync with `--no-use-damage` eliminated reported viewport tearing.
+- [x] Verified 084 fix on the laptop's original missing-ShellFolder state:
+  shell and WinSupport.dll probes now return Documents, without registry repair.
+- [ ] When local testing resumes, explicitly verify the Content Center warning,
+  [085](issues/085-trial-popup-stays-white.md)'s popup/cursor fixes and
+  [083](issues/083-wpf-keytip-font-fallback.md)'s ribbon key tips after corefonts.
+  Successful launches alone do not verify those exact cases.
+- [ ] Optional Electrical Catalog Browser remains uninstalled
+  ([050](issues/050-electrical-catalog-unzip-msi.md)); the server's missing-tar
+  workaround has not been applied locally.
 
 # Server plan: Autodesk Inventor on Wine, agent-driven
 
