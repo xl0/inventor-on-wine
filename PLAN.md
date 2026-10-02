@@ -212,7 +212,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 063 manifest threadingModel case-insensitive + defaults (Stress Analysis; Inventor retest pending)
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
   - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
-  - O 066 Design Accelerator part vanishes when next generator starts from ribbon (Windows unchecked)
+  - X 066 Design Accelerator part dropped by the next generator: same on Windows (pending Place)
   - M 068 rpcrt4 NdrStubCall3 → NdrStubCall2 (NDR syntax)
   - M 070 in-process cross-apartment calls run in the caller's actctx (+ MTA calls bypass rpcrt4) — Stress Analysis = VM
   - L 071 cross-process calls into an STA: OLE-window creation context
@@ -279,6 +279,10 @@ commits or screenshots). Read-only mode may remain after expiry.
 - 108 held on fix/108 (wt/108): adaptive CS spin works (spin share 32 → 7 %) but saves only
   0.5–0.8 % of a core per WebView2 GPU process (prefix idle total unchanged) for a heuristic in
   every wined3d user's hot path. Revisit only with a workload where the CS spin matters.
+- VM reference session 2026-10-02 (33438d6): long-session memory/handle growth is Inventor's own
+  (Windows: +3.65/+1.65 GB private, Event/Section grow as fast) → soak growth question closed;
+  cold first part view Windows 6.3 s vs Wine 8–11 s; trial popup content Windows 6.5 s vs Wine ~19 s;
+  066 = Inventor design (closed); 069 blocked (VM lacks Content Center libraries).
 - Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
   spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
 - Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
