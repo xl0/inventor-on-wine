@@ -1,5 +1,5 @@
 # 107 Chromium's Mojo IPC costs ~10 wineserver round trips per message (named pipes + IOCP)
-Status: fixed (awaiting review; partial, see Left) · Owner: 107 worker · Branch: fix/107-mojo-pipe-iocp (wt/107 on integ b6dab895f3e, build wt/107-build) · Found in: 091 (inv3, integ bd4259df723 + fix/091)
+Status: fixed (review addressed; partial, see Left) · Owner: 107 worker · Branch: fix/107-mojo-pipe-iocp (wt/107 on integ 1b02d8257a0, protocol 971, build wt/107-build) · Found in: 091 (inv3, integ bd4259df723 + fix/091)
 
 ## Symptom
 An animating WebView2/Edge page (Assistant spinner, 48 frames/s) makes ~2200 server requests/s in the GPU
@@ -27,6 +27,16 @@ for the completed read interrupts the running reader). Server handler time 26.3 
 Fixed: 6.04: write + select (IOSB of the immediate write), read, get_async_result (dequeuer fetches the
 data), remove_completion 2 (write packet, read packet), select ~1 (blocking wait, now one call).
 Server handler time 13.5 us/message. No signals.
+
+## Review (adversarial, r107.c modes) and changes
+- Port closed (before completion, before CancelIo, or completed but not dequeued): Win11 leaves the IOSB
+  pending forever (0x103, empty buffer, 200 ms later) = fix/107; kept, documented, tested in ntdll:pipe.
+- Dequeue from another process: Win11 fills the issuer's IOSB before GQCS returns (0/20 pending); now the
+  foreign dequeuer waits for the issuer's APC (queue_apc-style waitable APC handle in the reply): 0/20.
+- Issuer process gone before the dequeue: Win11 reports the packet as aborted (995, 0 bytes); now same.
+- A completion wait keeps an unfetched packet (counts as signaled) instead of freeing it on a second
+  satisfaction.
+- All r107 modes (port xproc order select closed gor zero dead stress leak susp) match Win11 / clean.
 
 ## Fixes (fix/107) -- protocol change 969 -> 971
 - `server: Complete named pipe I/O in the thread that dequeues its completion packet.` Pipe asyncs are
