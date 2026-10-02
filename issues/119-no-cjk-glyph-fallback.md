@@ -1,5 +1,5 @@
 # 119 CJK text shows as boxes in Inventor unless the font itself has CJK glyphs (no GDI font fallback)
-Status: fixed on fix/119-cjk-font-link (wt/119), not merged · Owner: issue-119 worker · Found in: 118 environment campaign (inv4, build/ 43790927731)
+Status: fixed on fix/119-cjk-font-link (wt/119), review fixes done, not merged · Owner: issue-119 worker · Found in: 118 environment campaign (inv4, build/ 43790927731)
 
 ## Symptom
 Drawing notes (and the UI edit fields, e.g. Application Options > User name) with Chinese/Japanese
@@ -80,20 +80,26 @@ Gothic's outline, GetGlyphIndices 0xffff); Arial/Times/Courier/Verdana/Calibri d
 Tahoma lfHeight +32: linked advance 26 = Tahoma's em (MS UI Gothic alone at +32: 32). Tahoma with
 SHIFTJIS/HANGEUL charset stays Tahoma. Bitmap bases (MS Sans Serif, System) return no outline at all.
 
-Fix (fix/119-cjk-font-link, 3 commits on integ 43790927731):
-- `win32u: Size linked fonts to the em height of the base font.`
-- `win32u: Link Tahoma to the Noto CJK fonts.` (JP/SC/TC/KR, first by ACP; same names as dwrite's
-  fallback). Only Tahoma: a link on a missing font name makes the name resolve to its first link
-  (Microsoft Sans Serif would become Noto CJK instead of Arial). All fonts fall back to Tahoma's
-  links, so Arial/Segoe UI/MS Gothic/SimSun now show CJK too (Wine differs from Windows for Arial
-  by design of its global fallback; MS Gothic etc. render Latin in their substitute, CJK linked).
-- `gdi32/uniscribe: Don't use a fallback font that lacks the glyphs.`
-- Tests: gdi32 font `test_font_link` (Tahoma -32/+32: linked outline bigger than .notdef, advance =
-  em, GetGlyphIndices 0xffff), usp10 `test_ScriptString_fallback` (SSA_FALLBACK|SSA_LINK widths
-  full-width). Pass on the VM and Wine (x86_64, i386); without the fixes they fail (got widths 24).
-  Skip without MS UI Gothic/SimSun/Noto Sans CJK JP. regress.sh (gdi32 gdiplus usp10 user32 comctl32
-  comdlg32 dwrite riched20 win32u uxtheme mlang d2d1 msftedit riched32 shell32) vs integ: 0 REAL
-  (1 FLAKY d2d1 timeout).
+Fix (fix/119-cjk-font-link, 4 commits on integ 43790927731, after review):
+- `win32u: Size linked fonts to the em height of the base font.` (d8463b27d55)
+- `win32u: Scale linked fonts by the average width of the base font.` (34db3f12129): with lfWidth the
+  child scaled by its own tmAveCharWidth (Noto: ~4x too narrow). Tahoma -32 w8 CJK: Windows 18, now 19.
+- `win32u: Link Tahoma to a Noto CJK font.` (10ae8ca7fea): the first available of Noto Sans CJK
+  JP/SC/TC/KR by ACP (same coverage, ~1 MB per linked face per font instance), only when Tahoma
+  exists (else "Tahoma" would resolve to Noto). A link on a missing font name makes the name resolve to
+  its first link, hence not on Microsoft Sans Serif. All fonts fall back to Tahoma's links, so Arial,
+  Segoe UI, MS Gothic, SimSun etc. show CJK too (Wine's global fallback; Windows Arial shows boxes).
+  Side effect: Tahoma with CHINESEBIG5_CHARSET still maps to another CJK font (the JP face lacks the
+  Big5 code page bit; Windows keeps Tahoma).
+- `gdi32/uniscribe: Don't use a fallback font that lacks the missing glyphs.` (ec0dec3d0cf): with
+  SSA_LINK, drop the SSA_FALLBACK font only if it maps none of the chars the original font lacks.
+- Tests: gdi32 font `test_font_link` (Tahoma -32/+32: linked outline, advance = em, lfWidth scaling,
+  GetGlyphIndices 0xffff), usp10 `test_ScriptString_fallback` (CJK full width; mixed Latin run keeps
+  the fallback: same widths with and without SSA_LINK). Pass on the VM and Wine, x86_64 and i386.
+  regress.sh subset (gdi32 gdiplus usp10 user32 comctl32 comdlg32 dwrite riched20 win32u uxtheme mlang
+  d2d1 msftedit riched32 shell32) vs integ: 0 REAL (1 FLAKY user32:input).
+- Review probes (scratchpad r119/): perf 200 Arial instances + U+FFFD: 227 MB (was 805 MB with 4
+  faces); GetCharWidth32W(0..0xffff) still ~285 ms per instance (base 8 ms; every miss probes the link).
 
 Screenshots (inv4, cjk scenario, default fonts list):
 before ![before](attachments/119-wine-before.png) after ![after](attachments/119-wine-after.png)
