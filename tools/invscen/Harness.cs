@@ -215,10 +215,10 @@ static class H
                 uint pid; GetWindowThreadProcessId(w, out pid);
                 if (!pids.Contains(pid) || !IsWindowVisible(w)) return true;
                 string cls = Text(w, true);
-                // Inventor's splash (860x525 dialog) and the trial welcome popup (class 'webview', any size, closed by Welcome())
+                // Inventor's splash (untitled dialog, 860x525 at 96 DPI, 574x350 at 144; matched by height 60-63% of width, 400-1000 wide) and the trial welcome popup (class 'webview', any size, closed by Welcome())
                 RECT rc; GetWindowRect(w, out rc);
                 int ww = rc.R - rc.L, hh = rc.B - rc.T;
-                if ((cls == "#32770" && ww == 860 && hh == 525) || cls == "webview") return true;
+                if ((cls == "#32770" && Text(w) == "" && ww >= 400 && ww <= 1000 && hh * 100 >= ww * 60 && hh * 100 <= ww * 63) || cls == "webview") return true;
                 // FwUI's untitled 2x2 "hidden modal dlg" while the popup is up (closing it ends Inventor's modal state)
                 if (cls == "#32770" && ww <= 2 && hh <= 2 && Text(w) == "") return true;
                 // Qt tooltip drop-shadow strips (titled 'Inventor', ~19 px high, no children) flash up on every tooltip
