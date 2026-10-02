@@ -1,5 +1,5 @@
 # 062 WPF per-pixel-alpha popup (browser pane splitter) drawn as a black bar
-Status: wontfix (X11 without a compositing manager can't blend; Wine keeps hit-testing right) · Owner: worker-061 · Branch: - · Found in: UI latency pass (tools/uilat wmdrag)
+Status: reopened 2026-10-02 (user: the black bar lagging behind moves is the remaining visible flaw under awesome; try an input-only window) · Owner: worker-061 · Branch: - · Found in: UI latency pass (tools/uilat wmdrag)
 
 ## Symptom (integ 061fa687382, :98 openbox, no compositing manager)
 In a part document a solid black 5 px vertical bar sits between the Model browser and the
@@ -53,3 +53,12 @@ not verified here, no compositor installed on the server).
 - 061: the black trail during drags (fixed there, independent of the bar colour).
 - 042: the same limitation for WPF popup shadows.
 - 077: after WM-driven moves (awesome Mod4+drag) the popups stay at the old screen position.
+
+## Reopened: don't draw nearly transparent layered windows, keep their input
+User feedback (laptop, awesome, no compositor): the bar visibly lags behind window moves. On
+Windows it is ~98 % transparent, so its lag (it only repositions when the move ends, same on
+Windows) is invisible. Idea: without a compositor, for per-pixel-alpha layered windows, draw only
+pixels above an alpha threshold (X Shape bounding region) and keep hit-testing for the remaining
+alpha > 0 pixels with an InputOnly X window (or a ShapeInput region if it is not clipped by the
+bounding shape) so dragging the splitter still resizes the pane. Windows hit-tests layered
+per-pixel-alpha windows where alpha != 0.
