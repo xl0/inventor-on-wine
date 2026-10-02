@@ -171,6 +171,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   big dynamic buffer per iteration, ms/iter (060; vk vs gl vs DXVK: app-local DXVK dlls + d3d11,dxgi=n).
   `cs_spin_bench.c FPS DRAWS SECS [sync|-] [GAP_US]`: D3D11 frame loop for wined3d CS thread costs: fps,
   process/main-thread CPU, sync-readback latency; GAP_US = busy work before each draw (108).
+  `mojo_pingpong.c [N] [SIZE] [skip]`: two processes ping-pong over an overlapped pipe + IOCP like Chromium's Mojo
+  (rt/s, us/rt, CPU/rt); `iocp_deferred.c`: when a port-bound pipe read's IOSB/buffer are written (dequeue) (107).
   `junction_mklink.c DIR`: junction via FSCTL_SET_REPARSE_POINT like AdskLicensingInstHelper,
   then paths/CreateProcess through it (052).
   `hwnd_signext.c [N]`: churn child windows, compare every HWND the app sees for one window (059).
