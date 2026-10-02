@@ -208,6 +208,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `r114/sta_endpoints.c [N]`: N short-lived STAs marshal + get a call; process handles by type (114).
   `r116/listen_restart.c [auto|slow|autoslow]`: listen / AUTOLISTEN register right after
   RpcMgmtStopServerListening (held connection, running call), 5 s timeout per step (116).
+  `r113/io_threads.c [N] [iocp|event|none|done|imm|immwait]`: short-lived threads issuing one pipe read,
+  address space per N/10; `r113/thread_churn.c [CREATORS] [PER] [io]`: threads created without waiting,
+  peak thread count + CreateThread failures; `r113/thread_vm.c [N]`: per-thread address space and
+  create/run costs (113).
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
   `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).
