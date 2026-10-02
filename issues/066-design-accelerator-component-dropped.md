@@ -1,5 +1,5 @@
 # 066 Design Accelerator: generated component vanishes when the next generator starts (unconfirmed vs Windows)
-Status: open (draft, needs Windows check) · Owner: - · Branch: - · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
+Status: not a Wine bug (same on Windows: the shaft is still a pending Place; VM 2026-10-02) · Owner: - · Branch: - · Found in: specialised-environments pass (inv3/:100, integ c036c687c47)
 
 ## Symptom
 Assembly (tools/invscen/frame.cs frame.iam), Design tab:
