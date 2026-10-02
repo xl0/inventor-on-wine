@@ -1,5 +1,5 @@
 # 120 A visible "IPM Content" Chrome window (Unnamed Window, 82x24) at the top-left during Inventor start
-Status: fixed (awaiting review) · Owner: 120 worker · Branch: fix/120 (wt/120, on integ 43790927731) · Found in: 118 environment campaign (inv4 :101, build/ 43790927731)
+Status: fixed (awaiting review) · Owner: 120 worker · Branch: fix/120 (wt/120, 4 commits on integ d22c74b6d6b) · Found in: 118 environment campaign (inv4 :101, build/ 43790927731)
 
 ## Symptom
 About 15-25 s after launching Inventor (cold start), a tiny top-level window with an openbox frame ("Unnam...
@@ -94,3 +94,29 @@ tooltips as benign: Harness.cs skips `Chrome_WidgetWin_*` with WS_EX_TRANSPARENT
   Inventor/Adsk/WebView2 windows: pointer parked at 1030,590 (over the popup): tooltip appears as on
   Windows, `hello` PASS 3/3 (FAIL 3/3 before the harness rule, also with the Wine fix). Pointer at
   1919,1079: no 82x24 window at all, `hello` PASS 2/2.
+
+## Rework after review (same day)
+The review found that show/hide fake moves alone regress two things; the series is now 4 commits:
+1. `win32u: Ignore mouse moves that don't change the position in the menu loop.` Windows menus ignore
+   unchanged-position moves (a popup opened over the cursor highlights nothing, a keyboard selection
+   survives window changes); Wine selected the hovered item. user32:menu test (fails 3 checks without).
+2. `server: Delay and coalesce the cursor position sync after window changes.` Per-desktop 16 ms timeout,
+   one pending; Windows: 15-32 ms latency, 20 show/hides -> 1 move. Immediate moves livelocked apps that
+   change a window on every WM_MOUSEMOVE (2000+ moves/s, no timers). Dropped the caller-process
+   RIDEV_NOLEGACY check in set_cursor_pos (no `current` in a timeout; queue_hardware_message handles it
+   per target). user32:input test_GetMouseMovePointsEx now waits for the pending move first (the history
+   records fake moves; the same flake exists on Windows).
+3. `server: Sync the cursor position when a window is shown or hidden.` + msg tests (show/hide, hover-toggle
+   loop: timers keep firing; without commit 2 the msg unit times out).
+4. `server: Don't mark SetCursorPos mouse moves as pointer input.` (122): extra info 0, win32u skips the
+   mouse-in-pointer conversion for IMO_SYSTEM origin. user32:input test in the EnableMouseInPointer children.
+
+Probes tests/r120/fmm2.c (cases loops lat perf menu combo) and mip.c, outputs in inst/120/ (vm-* / wine-*):
+loops, lat, menu, combo, mip match the VM (Wine loop rate ~32/s vs 30-44/s, 50 ms timers 40 vs 31 in 2 s,
+latency 15-17 ms). `cases` leftovers: Windows also sends a move after moving a hidden top-level window and
+after showing/hiding a message-only window; Wine doesn't (not needed by anything known).
+Tests: VM user32 menu/input/msg/win: no new failures vs the stock test exe (menu 2, input 21 (base 23,
+flaky), msg 5, win 0, all pre-existing); comctl32 tooltips/listview/trackbar 0, toolbar 1 (unchanged test).
+Wine regress user32 win32u comctl32 dinput imm32 uiautomationcore: 0 worse.
+Cold starts on inv3 (rebuilt series): pointer over the popup: `hello` PASS 3/3 (tooltip shows, as on
+Windows); pointer in the corner: PASS 2/2, no 82x24 window. WebView2's fake moves now have extra info 0.

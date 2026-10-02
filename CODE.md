@@ -234,6 +234,9 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `hover_tooltip.c [move] [hook] [poke] [slide=MS]`: Edge app window with an HTML title opened under a
   parked cursor, logs Edge's windows, exit 1 = tooltip shown; `hook` + `hover_tooltip_hook/` (global
   WH_GETMESSAGE hook DLL, `hookhost.exe SECS` for any app) log Edge/WebView2 mouse messages (120).
+  `r120/fmm2.c MODE` (cases loops lat perf menu combo): fake-move rules, latency/coalescing, hover-toggle
+  loops, menu/combo selection under a still cursor; `r120/mip.c [mip]`: extra info / WM_POINTERUPDATE of
+  fake and SetCursorPos moves (120, 122; VM vs Wine outputs in inst/120/).
   `dbg_wow64_order.c [CMDLINE|-inherit|-ntinherit]`: debug events of a DEBUG_PROCESS child in order
   (default syswow64 msinfo32; pid, module names); `-inherit`: debuggee clears ProcessDebugFlags, is its
   child debugged; `-ntinherit`: NtCreateUserProcess with/without NO_DEBUG_INHERIT (105, 106).

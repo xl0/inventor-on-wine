@@ -30,11 +30,11 @@
   (`release_thread_desktop`), unlike Windows.
 - winex11 confines the pointer for ClipCursor only when the X input focus is on a window of the
   calling process (`grab_clipping_window`); otherwise clipping is server-side only.
-- Fake mouse moves (server `update_cursor_pos` -> `set_cursor_pos`): Windows posts WM_MOUSEMOVE
-  (extra info 0) to the window under a still cursor after any window is shown, hidden, moved or
-  resized (not after a no-op SetWindowPos). Wine did it only for moves/resizes of visible windows;
-  fix/120 adds show/hide. Wine's carry extra info 0xff515700 (upstream 094b9f7f109, to keep them out
-  of mouse-in-pointer), which Chromium reads as pen input (122). Chromium shows an HTML title
-  tooltip when a mouse move changes the position relative to its window after the first one it
-  got (window sliding under a still cursor does it on Windows too): tests/hover_tooltip.c,
-  tests/fake_mousemove.c (120).
+- Fake mouse moves (server `update_cursor_pos` -> 16 ms per-desktop timeout -> `set_cursor_pos`): Windows
+  posts WM_MOUSEMOVE (extra info 0, no pointer messages) to the window under a still cursor ~16 ms after
+  any window is shown, hidden, moved or resized (not after a no-op SetWindowPos), one per burst. fix/120
+  matches that (before: immediate, moves/resizes of visible windows only, pen signature 0xff515700).
+  Consumers must ignore unchanged positions like Windows' do: the menu loop (fix/120), Chromium's
+  tooltip controller. A window sliding under a still cursor changes the client position, so Chromium
+  shows HTML title tooltips then, on Windows too. The moves land in the GetMouseMovePointsEx history.
+  Probes: tests/hover_tooltip.c, tests/fake_mousemove.c, tests/r120/ (120, 122).
