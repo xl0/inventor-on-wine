@@ -62,3 +62,10 @@ Per suite (13 scenarios, no samples), handle deltas:
 Tests: ole32:marshal (new test_proxy_call_handles) passes on Win11 VM x64 + i386 and Wine x64 +
 i386; user32:msg ok. regress combase|ole32|oleaut32|rpcrt4|user32|win32u|shell32|msi|urlmon vs
 integ ed241c72d09: 0 REAL, 1 FLAKY (user32:input).
+
+## Soak #3 (2026-10-01, integ 492d5679270, with 086/087 merged)
+Per hour, one session 4.1 h (soak #2 in brackets): Event +747 [+1655], File +42 [+300], Key +87 [+70], Section +963 [+540]
+(11 samples runs against 6; ~320 per samples run [~366]: the Inventor-side saveToMappedFile leak is unchanged).
+End dump: Event 3496, Section 3535, File 330, Key 427, Mutant/Semaphore flat (soak #2 end: 7886 / 2202 / 1492 / 391).
+Remaining Event growth ~750/h is not attributed (handle-attr.py not rerun); Section stays the largest and is app-side.
+Data: inst/soak/2026-10-01/summary.txt, part3/handles-{start,end}.txt.

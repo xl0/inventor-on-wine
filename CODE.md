@@ -421,7 +421,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   `resprobe.c` in the prefix (kernel handles by type, GDI objects, windows; also `dump` = every
   handle's type + name, `threads` = threads per start module, `mods`; runs on the VM too).
   Stub managers/proxies per apartment after odd iterations (`stubs.sh PID`, gdb; stubs.txt).
-  `plot.py OUT`: resources.png, timings.png, trends.txt. Runs 2026-09-28 (067, 072-074), 2026-09-29 (082).
+  `plot.py OUT`: resources.png, timings.png, trends.txt. Runs 2026-09-28 (067, 072-074), 2026-09-29 (082), 2026-10-01 (109; soak.sh can be restarted on a running
+  Inventor with a new OUT, merge the parts by renumbering before plot.py).
   Leak attribution (086): `handle-trace.patch` (debug-only Wine patch: server log of unnamed
   event/section handles + kernelbase creation backtraces) and `handle-attr.py` (live handles by stack);
   see notes/wine/debugging.md. RSS/mapping growth in soaks comes from `samples` iterations only.

@@ -67,3 +67,5 @@ base: stale pooled socket); `st client` 8 threads: 0 errors on all three.
 - Inventor inv4, hello then drawing2 x4 (inst/087/{base,fix}.log, resprobe after each):
   per drawing2 base Event +37..38, File +38..39; fix Event +2..6, File +4..5.
   `run.sh all` on fix: 13/13 PASS.
+
+Soak #3 (2026-10-01, integ 492d5679270): File handles +42/h over a 4.1 h session (soak #2 +300/h): confirmed.

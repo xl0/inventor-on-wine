@@ -20,3 +20,9 @@ events.txt. Not in git.
   the Activate call (sharing violation on samples.ipj or the workspace?).
 - Check the asmcon save path under the active project (box.ipt/plate.ipt in the scenario dir).
 - Unclear whether Wine or Inventor state; Windows unchecked.
+
+## Soak #3 (2026-10-01, integ 492d5679270)
+Not reproduced: one session ran 4.1 h / 33 suites / 11 samples runs, "restore project" (Activate Default.ipj) passed
+every time, including at 3.6 h and 4.1 h (soak #2: failed in the 6th samples run, 3.4 h); asmcon SaveAs stayed green.
+Another session was lost at 2.6 h to 109 (unrelated). Possibly timing-dependent (samples runs now take ~1000 s instead of
+~1500 s); keep open as not reproducible.
