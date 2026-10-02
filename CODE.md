@@ -4,6 +4,10 @@ Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
 no reference VM. The server environment and populated prefixes described below
 are not present here.
 
+Latest laptop finding: [124](issues/124-open-dialog-resize-coreclr-crash.md),
+Open-dialog repaint/navigation failure and a captured CoreCLR crash on
+`d7799da4d5`. Inventor is stopped; keep the core private and matching binaries intact.
+
 **Do not launch Inventor:** Autodesk licensing has hit its device limit.
 Standalone diagnostic probes are allowed; keep the live application stopped.
 

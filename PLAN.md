@@ -4,6 +4,10 @@ Reproduce the patched Wine + native Autodesk installer setup on this workstation
 Keep system Wine untouched; run from `build/` with a separate prefix.
 The server results below are reference material, not local completion status.
 
+- [ ] Triage [124](issues/124-open-dialog-resize-coreclr-crash.md): Open-dialog
+  Awesome-resize repaint/navigation failure and captured CoreCLR crash.
+  Keep the symptoms distinct until linked; preserve private evidence and binaries.
+
 **Licensing hold:** do not launch Inventor on this laptop until the Autodesk
 device limit is cleared. Use standalone probes for verification.
 
