@@ -201,7 +201,10 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   with 300 extra modules (081). `com_cancel.c [sta|mta|psta|pmta]`: COM call cancelled by the message
   filter (slow server in another apartment/process): return time, late reply, CoTestCancel (099).
   `r109/disc_probe.c MODE`: object disconnects itself in a call (newcall double rel relmd remarshal);
-  `r109/stress.c run SECS` (R109_SAFE=0..3): disconnect/release/call stress, AVTRACE on server crashes (109, 110).
+  `r109/stress.c run SECS [SAFE]` (or R109_SAFE=0..4): disconnect/release/call stress, AVTRACE on server
+  crashes (109, 110); 3 = no disconnects, live objects at exit; 4 = also release every objref, live
+  objects after all releases (112). `r112/uninit_pending.c [N [release]]`: STA uninitializes with N calls queued (112);
+  `r112/uninit_race.c [N]` (RACE_NOCALL, RACE_VERBOSE): in-process STA uninit racing a call (112, 114).
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
   `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).

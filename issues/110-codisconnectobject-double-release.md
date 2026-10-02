@@ -53,12 +53,12 @@ until the STA finished the call (also when the client cancelled).
   in its own code).
 
 ## Side observations (not fixed)
-- Wine proxies don't hold a reference during a call: releasing the last ref of a proxy another
+- (fixed in 111/112) Wine proxies don't hold a reference during a call: releasing the last ref of a proxy another
   thread is calling through returns 0 (Windows 1), so the proxy may be torn down under the call (not verified). App
   bug by COM rules, but Windows tolerates it.
-- stress.c "live objects at exit" is thousands on Wine (also unfixed, also R109_SAFE=3 = no
+- (112: STA teardown with queued calls) stress.c "live objects at exit" is thousands on Wine (also unfixed, also R109_SAFE=3 = no
   disconnects), 0 on Windows: server objects leak; not disconnect-related, not investigated.
-- The final release of a disconnected stub manager can happen on an RPC worker thread
+- (112: now on the STA for calls into STAs) The final release of a disconnected stub manager can happen on an RPC worker thread
   (dispatch_rpc), so an STA object's last Release runs off its apartment thread. Pre-existing.
 - A marshal racing the last external release can still put a new ifstub on a manager that is
   being disconnected (objref dead after the marshal returns). Pre-existing, rare.

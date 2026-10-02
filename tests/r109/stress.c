@@ -2,6 +2,8 @@
  * many interfaces; slots of objrefs in shared memory. Server threads keep replacing objects (marshal all IIDs,
  * later CoDisconnectObject or just drop), some objects disconnect themselves inside calls. Client process threads
  * unmarshal random slots, call random interfaces, release. Reports call result histogram.
+ * R109_SAFE / "run SECS SAFE": 1-2 fewer disconnect races, 3 no disconnects (servers uninitialize while clients
+ * still call), 4 no disconnects, objrefs nobody unmarshaled are released, live objects after all releases (112).
  * "bench N": server registers N dummy RPC interfaces, client times IPersist calls. */
 #define COBJMACROS
 #include <windows.h>
@@ -28,7 +30,7 @@ static const struct { const IID *iid; int method; int arg; } ifs[] = {
 #define NCLIENT 8
 
 struct slot { volatile LONG seq; DWORD size[NIF]; BYTE data[NIF][512]; };
-struct shared { volatile LONG stop; LONG calls, objs, selfdisc; struct slot slots[NSLOT]; LONG lock[NSLOT]; };
+struct shared { volatile LONG stop, clients_done, servers_done, counted; LONG calls, objs, selfdisc; struct slot slots[NSLOT]; LONG lock[NSLOT]; };
 static struct shared *sh;
 
 struct obj { IUnknown iface; LONG refs; int selfdisc; };
@@ -67,6 +69,30 @@ static HRESULT WINAPI o_method(IUnknown *i, void *a)
 /* methods without arguments: ILockBytes::Flush (5), IStream::Revert (9), IStorage::Revert (10) */
 static HRESULT WINAPI o_method0(IUnknown *i) { return o_method(i, NULL); }
 
+/* R109_SAFE=4: the objrefs of slot s nobody unmarshaled (slot locked by the caller) */
+static void release_objrefs(unsigned s)
+{
+    unsigned k;
+    for (k = 0; k < NIF; k++)
+    {
+        IStream *st; HRESULT hr;
+        if (!sh->slots[s].size[k]) continue;
+        CreateStreamOnHGlobal(NULL, TRUE, &st);
+        IStream_Write(st, sh->slots[s].data[k], sh->slots[s].size[k], NULL);
+        IStream_Seek(st, (LARGE_INTEGER){{0}}, STREAM_SEEK_SET, NULL);
+        if ((hr = CoReleaseMarshalData(st))) printf("server: CoReleaseMarshalData %#lx\n", hr);
+        IStream_Release(st);
+        sh->slots[s].size[k] = 0;
+    }
+}
+
+static void pump_wait(BOOL sta)
+{
+    MSG msg;
+    if (sta) { while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) DispatchMessageA(&msg); MsgWaitForMultipleObjects(0, NULL, FALSE, 5, QS_ALLINPUT); }
+    else Sleep(5);
+}
+
 static DWORD WINAPI server_thread(void *arg)
 {
     BOOL sta = (INT_PTR)arg < NSTA;
@@ -81,12 +107,13 @@ static DWORD WINAPI server_thread(void *arg)
         s = rand() % NSLOT;
         if (sta) while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
         if (InterlockedCompareExchange(&sh->lock[s], 1, 0)) { if (!sta) Sleep(0); continue; }
-        if (mine[s] && safe != 3 && (sta || !safe) && rand() % 2) CoDisconnectObject(&mine[s]->iface, 0);
+        if (mine[s] && safe < 3 && (sta || !safe) && rand() % 2) CoDisconnectObject(&mine[s]->iface, 0);
         if (mine[s]) { IUnknown_Release(&mine[s]->iface); mine[s] = NULL; }
         if (!sh->slots[s].seq || rand() % 4 == 0)
         {
+            if (safe == 4) release_objrefs(s);
             struct obj *o = HeapAlloc(GetProcessHeap(), 0, sizeof(*o));
-            o->iface.lpVtbl = (void *)vt; o->refs = 1; o->selfdisc = safe != 3 && (sta || !safe) && rand() % 4 == 0;
+            o->iface.lpVtbl = (void *)vt; o->refs = 1; o->selfdisc = safe < 3 && (sta || !safe) && rand() % 4 == 0;
             InterlockedIncrement(&live_objs);
             for (k = 0; k < NIF; k++)
             {
@@ -106,6 +133,21 @@ static DWORD WINAPI server_thread(void *arg)
         }
         InterlockedExchange(&sh->lock[s], 0);
         if (sta) MsgWaitForMultipleObjects(0, NULL, FALSE, rand() % 3, QS_ALLINPUT); else Sleep(rand() % 3);
+    }
+    if (safe == 4)
+    {
+        /* no disconnects: every object must go away once its objrefs and proxies are released */
+        while (!sh->clients_done) pump_wait(sta);
+        for (s = 0; s < NSLOT; s++)
+        {
+            while (InterlockedCompareExchange(&sh->lock[s], 1, 0)) if (sh->lock[s] == 3) goto next; else pump_wait(sta);
+            release_objrefs(s);
+            sh->lock[s] = 3; /* done */
+        next:;
+        }
+        for (s = 0; s < NSLOT; s++) if (mine[s]) { IUnknown_Release(&mine[s]->iface); mine[s] = NULL; }
+        InterlockedIncrement(&sh->servers_done);
+        while (!sh->counted) pump_wait(sta);
     }
     for (s = 0; s < NSLOT; s++) if (mine[s]) { CoDisconnectObject(&mine[s]->iface, 0); IUnknown_Release(&mine[s]->iface); }
     CoUninitialize();
@@ -188,7 +230,7 @@ int main(int argc, char **argv)
     DWORD code;
 
     char name[64];
-    if (argc > 3) sprintf(name, "r109stress %s", argv[3]); else sprintf(name, "r109stress %lu", GetCurrentProcessId());
+    if (argc > 3 && strstr(argv[1], "server")) sprintf(name, "r109stress %s", argv[3]); else sprintf(name, "r109stress %lu", GetCurrentProcessId());
     mapping = CreateFileMappingA(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(*sh), name);
     sh = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(*sh));
     strcat(name, " ready");
@@ -201,8 +243,15 @@ int main(int argc, char **argv)
     if (argc > 1 && !strcmp(argv[1], "server"))
     {
         AddVectoredExceptionHandler(1, veh);
-        safe = getenv("R109_SAFE") ? atoi(getenv("R109_SAFE")) : 0;
+        safe = argc > 4 ? atoi(argv[4]) : 0;
         for (i = 0; i < NSTA + NMTA; i++) th[i] = CreateThread(NULL, 0, server_thread, (void *)(INT_PTR)i, 0, NULL);
+        if (safe == 4)
+        {
+            while (sh->servers_done < NSTA + NMTA) Sleep(10);
+            Sleep(500); /* releases still in flight */
+            printf("server: live objects after all objrefs/proxies were released %ld\n", live_objs);
+            sh->counted = 1;
+        }
         WaitForMultipleObjects(NSTA + NMTA, th, TRUE, INFINITE);
         printf("server: objs %ld, live objects at exit %ld\n", sh->objs, live_objs);
         return 0;
@@ -248,12 +297,15 @@ int main(int argc, char **argv)
         WaitForSingleObject(pi.hProcess, 10000);
         return 0;
     }
-    sprintf(cmd, "\"%s\" server 0 %lu", argv[0], GetCurrentProcessId());
+    /* R109_SAFE (or "run SECS SAFE", for the VM) */
+    sprintf(cmd, "\"%s\" server 0 %lu %d", argv[0], GetCurrentProcessId(),
+            argc > 3 ? atoi(argv[3]) : getenv("R109_SAFE") ? atoi(getenv("R109_SAFE")) : 0);
     CreateProcessA(argv[0], cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
     for (i = 0; i < NCLIENT; i++) th[i] = CreateThread(NULL, 0, client_thread, (void *)(INT_PTR)i, 0, NULL);
     Sleep(secs * 1000);
     sh->stop = 1;
     if (WaitForMultipleObjects(NCLIENT, th, TRUE, 30000)) printf("client threads hang\n");
+    sh->clients_done = 1;
     if (WaitForSingleObject(pi.hProcess, 30000)) printf("server hangs\n");
     GetExitCodeProcess(pi.hProcess, &code);
     printf("server exit %#lx, server calls %ld, objs %ld, selfdisc %ld\n", code, sh->calls, sh->objs, sh->selfdisc);

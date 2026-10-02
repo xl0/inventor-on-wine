@@ -44,8 +44,14 @@
   calls run on a private copy of the RPCOLEMESSAGE in a refcounted `message_state` (caller + call);
   an orphaned call frees its message and closes its event when it completes.
 - Stub manager lifetime (combase, 110): `refs` = one apartment ref (held while connected) + one per
-  lookup/call in progress (dispatch_rpc holds one until the STA finished the call). The apartment ref
+  lookup/call in progress (a call from another process holds it and an apartment ref until
+  `call_done`, on the thread that ran or cancelled it: the STA itself for STA calls, 112). The apartment ref
   goes once, via `stub_manager_disconnect` (CoDisconnectObject or external refs reaching 0), which also
   drops the manager from the object tree; its IPIDs stay callable until the last ref. Windows: calls
   during the disconnected object's running call succeed, later ones RPC_E_DISCONNECTED; marshaling the
   object again gives a new working connection.
+- STA CoUninitialize with calls queued (112, Windows ground truth): they fail RPC_E_DISCONNECTED
+  during CoUninitialize, the method never runs, the stubs are released at once. combase:
+  `rpc_cancel_queued_calls` + `apt->uninitialized` (checked under apt->cs when posting).
+- A call holds its proxy (111, Windows: Release during the call returns 1): client channel
+  GetBuffer AddRefs the proxy manager, FreeBuffer releases it.
