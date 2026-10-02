@@ -253,13 +253,23 @@ commits or screenshots). Read-only mode may remain after expiry.
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
 ## Now (2026-10-02)
-- Reboot recovery done: inv-lic holds 39683; inv, inv2, inv4 up on build/ (inv3 down, for another worker); stale .X100/.X101/.X920 locks
-  from before were harmless. build/ = integ d7799da4d5c (wine-11.18-494, PROTOCOL 971; adds 120/122: menu loop ignores same-position moves,
-  delayed/coalesced fake WM_MOUSEMOVE incl. after show/hide, extra info 0). inv, inv2 restarted on it. Full regress vs master
-  4e819f054dd: 0 worse of 1757. inv invscen all 13/13 PASS, dwgloop N=10 PASS (~3.0 s/export, loadavg 5; was 1.9).
-  UI (xdotool): File menu, Fillet dropdown, browser context menu (Esc closes), ribbon tooltip appear/disappear OK; rubber 104-118 fps
-  lag p50 1.9-4.4 ms, orbit 60 fps. Unclear (no A/B): Modify panel slide-out and some context-menu rows (Visibility, Help Topics)
-  show no hover highlight; the slide-out ignores Escape (closes on outside click). Not yet compared against the previous build.
+- build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971): adds 124 (ntdll RtlLocateExtendedFeature2 leaves the context alone
+  for disabled features: CoreCLR crash), 123 (Tahoma CJK links via fontconfig), 083 (dwrite always has an Arial family), 062 (all-faint
+  per-pixel-alpha layered windows hidden under a compositor; UpdateLayeredWindow alpha only with AC_SRC_ALPHA), 125 (riched20 font
+  linking, ITextFont, WM_CLEAR/WM_CUT; uniscribe no GPOS without glyph indices). inv, inv2, inv3, inv4 restarted on it; inv-lic holds
+  39683. Full regress vs master 4e819f054dd: 0 REAL/NEW, 1 FLAKY (x86_64 user32:input, passes on rerun on both builds).
+  inv: invscen all 13/13 PASS, dwgloop N=10 PASS (~3.2 s/export, loadavg 5), cjk shows real glyphs (Cyrillic, kanji) in all 8 fonts,
+  124 crash repro by hand on :98 at 96 DPI (Open dialog at ...\Parts\Rim, select Rim.dwg/idw/ipt, "Parts" breadcrumb): 12 round
+  trips, no crash; Alt shows key tips, no crash (083).
+  Harness: dialog watcher matches the splash by shape (any DPI); `prefix.sh restart NAME`, called by run.sh after a crash cleanup
+  (the stale licensing-agent state could not be reproduced with SIGKILL of Inventor at 12 s/mid-run/idle: hello reconnects fine;
+  the crash case is untested, so a prefix restart stays the assumed cure).
+- Soak #4 (4.0 h): no crash, no hang, DWG export 32/32; 109 and 082 not reproduced; new 130 (rubber fps degrades with session age).
+- Older: reboot recovery done (inv-lic holds 39683). d7799da4d5c (120/122: menu loop ignores same-position moves, delayed/coalesced
+  fake WM_MOUSEMOVE): 0 worse of 1757, 13/13, dwgloop PASS.
+  UI (xdotool) then: File menu, Fillet dropdown, browser context menu, ribbon tooltip OK; rubber 104-118 fps, orbit 60 fps. Unclear
+  (no A/B): Modify panel slide-out and some context-menu rows (Visibility, Help Topics) show no hover highlight; the slide-out
+  ignores Escape (closes on outside click).
   Older: d22c74b6d6b (119: linked-font sizing, Tahoma->one Noto CJK face, uniscribe fallback) was 0 worse, 13/13, dwgloop PASS (~1.9 s).
 - Older (2026-09-29):
 - Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
