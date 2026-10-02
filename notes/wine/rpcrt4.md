@@ -63,3 +63,7 @@
   the APC spawns the connection. ncacn_ip_tcp still waits on an event array (63-endpoint limit).
   rpcrt4 has no way to remove an endpoint. combase registers one endpoint per process,
   `\pipe\lrpc\\pipe\OLE_<pid>` (pid = oxid >> 32); Windows also keeps one per process.
+- Stop/restart (116): after RpcMgmtStopServerListening a protseq's server thread closes its listeners,
+  then waits for its connections (running calls); `server_exiting` marks that phase. A new start waits
+  for the old thread, then creates a new one. Calls finishing take server_cs: never wait for a server
+  thread while holding it. RpcServerListen after Stop without RpcMgmtWaitServerListen: 1713 (Windows too).

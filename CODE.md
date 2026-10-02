@@ -206,6 +206,8 @@ Standalone diagnostic probes are allowed; keep the live application stopped.
   objects after all releases (112). `r112/uninit_pending.c [N [release]]`: STA uninitializes with N calls queued (112);
   `r112/uninit_race.c [N]` (RACE_NOCALL, RACE_VERBOSE): in-process STA uninit racing a call (112, 114).
   `r114/sta_endpoints.c [N]`: N short-lived STAs marshal + get a call; process handles by type (114).
+  `r116/listen_restart.c [auto|slow|autoslow]`: listen / AUTOLISTEN register right after
+  RpcMgmtStopServerListening (held connection, running call), 5 s timeout per step (116).
   `appcontainer_sid.c`: userenv DeriveAppContainerSidFromAppContainerName vs SHA-256 formula;
   `appcontainer_register.c`: kernelbase AppContainerRegisterSid/Unregister/LookupMoniker + HKCU Mappings key;
   `ac_profile_dir.c`: Chromium's AppContainer profile dir security steps (090, 094).
