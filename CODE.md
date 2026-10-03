@@ -294,6 +294,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   EM_SETTARGETDEVICE line breaks, selections over the final paragraph mark, insertion-point formats; `r125/clip.c [TEXT]`:
   CF_UNICODETEXT on the clipboard; `r125/ctl.c TITLE [ID STRING]`: list / select in another process's
   combo boxes (125; VM outputs in inst/125/).
+  `r141/scf_word.c [word|sel|layout|caret|eop]`: rich edit EM_SETCHARFORMAT(SCF_WORD): characters formatted per caret
+  position / selection, modify + undo, layout and caret right after, format typed after deleting everything (141, 146).
   `r130/xisel.py DISPLAY [N]`: us per XISelectEvents on the root (grows with the windows that have XI2 selections);
   `r130/xiwins.py DISPLAY N hold`: N stand-in XI2 windows (aged-session repro); `r130/xres.py DISPLAY [MIN]`: X resources
   per client pid (X-Resource) (130). `r131/winlist.c [IMAGE] [raw]`: all windows of the session per process/thread/class/
@@ -498,6 +500,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   `openbench`: activates samples.ipj, opens/closes `INVSCEN_OPEN` (;-list) `INVSCEN_N` times and times
   a file-reference walk (per-COM-call cost, 057). `INVSCEN_SYNC=C:\dir`: handshake files around each
   walk (walk.start -> wait walk.go, walk.end -> wait walk.done) to attach strace to one walk (081).
+  `dim141`: drawing + base view of a sample part + one API-made dimension, left open; `INVSCEN_CMD=
+  DrawingDimensionToleranceCtxCmd` opens Edit Dimension on it (use `INVSCEN_DIALOGS=off INVSCEN_UI=1`; 141).
   UI helpers: `INVSCEN_KEEP=1` keeps open docs at connect; `cmd` runs a command by internal
   name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
   transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
