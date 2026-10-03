@@ -269,12 +269,24 @@ commits or screenshots). Read-only mode may remain after expiry.
     (a regress run at load 60-120 would spoil their timing).
   - 131 (Opus worker, wt/131, inv3): our dxgi composition-swapchain hack leaks a hidden top-level
     window per swapchain (~80 per suite in WebView2's GPU process; Windows creates none). Review after.
-  - Inventor-on-Wayland pass (Sonnet worker, inv4, wt/wayland-build, software rendering): drafts 132-139.
-    Full GPU testing would need libxkbregistry-dev and nvidia-drm.modeset=1 (user's call).
+  - 133 (Opus worker, wt/133, inv4): WaitForInputIdle returns as soon as ANY thread of the target
+    waits for messages (one idle event per process). Found on Wayland (driver's clipboard thread →
+    Inventor's DBXBridge start fails → DWG/DXF export), but driver-independent. VM ground truth first.
   - UI pass 2 (Sonnet worker, inv :98, build/): a designer's day by mouse on the current build
     (the first pass was ~100 fixes ago); results in inst/ui2/results.md, drafts 140-159.
     Decision: the free prefixes are better spent finding what still breaks than on the
     low-priority queue (117 is a memory-only win, 113/126 don't affect Inventor).
+- Wayland pass done (Sonnet, inv4, wt/wayland-build at 04293594c50, software rendering): Inventor
+  starts, ribbon/dialogs/menus/tooltips/typing/3D viewport work, invscen 10/13. Blockers, by impact:
+  132 WebView2 content blank (a swapchain made by another process on a window is never shown),
+  134 owned/modal dialogs sink behind their owner (no xdg_toplevel_set_parent),
+  135 cross-process owned popup (trial popup) maps behind the main window and blocks its input,
+  133 (above), 136 activated popups/dialogs are placed by the compositor, not at Win32 coordinates.
+  Decision: 132/134-136 are winewayland feature work (cross-process surfaces, xdg-foreign,
+  positioning) and stay as drafts; X11 is what the user runs. Fix only 133 (core). Ask the user
+  whether Wayland is worth a larger investment.
+- inv4 state artifact: Inventor's user name is a non-ASCII test string (118 campaign), which
+  breaks the export scenario's IGES 80-column check on any build; reset it via the API.
 - Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup
   (white for a while), splitter overlay lag, CJK in Format Text, the Open dialog crash.
 - Held on branches (not merged):
