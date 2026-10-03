@@ -111,3 +111,25 @@ effect in Inventor typing (dialog edit fields, file name box). Crash: none seen.
   text entry, clipboard between Wine processes (not with the host: no zwlr_data_control).
 - An explorer stub window ("Shell_TrayWnd", 166x52) is always visible top-left; DBXBridge/other helper processes each log the three
   `wayland_process_init` capability errors (noise, ~130 lines per Inventor start).
+
+## Other compositors: vmwl (2026-10-03)
+`vmwl/` is a qemu VM (Ubuntu 26.04) where GNOME 50 (mutter 50.1), KDE Plasma 6 (KWin) and sway can be started with
+`vmwl/session.sh gnome|kde|sway`, and the host's `wt/wayland-build` runs inside it (`vmwl/wl.sh`, read-only share at /host);
+screenshots/input by QEMU, same for all. Usage, protocol tables and baselines: `vmwl/README.md`, `vmwl/globals-*.txt`.
+Baseline: 134 (`wl_xowner self`) reproduces on mutter 50 but not on KWin or sway; 132 (`wl_xswap`) reproduces on all three.
+xdg_wm_dialog_v1 exists on mutter 50 and KWin (not sway); xdg-foreign v2 and xdg_activation on all three.
+
+## Host GPU for Wayland / VMs: GBM needs nvidia-drm KMS (checked 2026-10-03, driver 580.178.04)
+- GBM (libgbm, Mesa's buffer API: `gbm_device` from a DRM fd, `gbm_bo` buffers exportable as dma-bufs, `gbm_surface`
+  as an EGL native window) is what Wayland compositors, wlroots' headless backend, Xwayland/GLAMOR and qemu's
+  `egl-headless,rendernode=` use to render on a GPU. Mesa's libgbm picks a backend by DRM driver name:
+  `/usr/lib/x86_64-linux-gnu/gbm/nvidia-drm_gbm.so` for `nvidia-drm`.
+- Here it does not work: `tests/gpu/gbmtest.py /dev/dri/renderD128` → the NVIDIA backend is loaded and fails
+  (`__NV_GBM_TRACE_ENABLED=1`: `nv_common_gbm_create_device failed`), libgbm falls back to Mesa's built-in backend
+  (llvmpipe), buffer creation fails. NVIDIA README ch. 41B: "DRM KMS must be enabled" (ch. 36: `nvidia-drm modeset=1`,
+  off by default). KMS is off on this host: card1-4 have no connectors in /sys/class/drm, DRM_IOCTL_MODE_GETRESOURCES
+  → ENOTSUP (the parameter file itself is root-only). Not a sandbox limit.
+- What does work without KMS: Vulkan, GLX on our headless Xorg servers, and EGL on the device platform
+  (EGL_EXT_platform_device: all four RTX 6000 Ada render) — but no Wayland compositor or qemu path uses that.
+- So GPU-composited Wayland sessions and virgl need `modeset=1` (host-wide module parameter, reboot or module
+  reload); until then Wayland testing is llvmpipe (host mutter 42, vmwl/ guests).
