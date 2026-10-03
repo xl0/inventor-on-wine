@@ -311,7 +311,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   run.sh: a crash in a prefix outside the table no longer restarts `inv`; WAYLAND_DISPLAY set = Wayland run.
   Proposed, not done: golden prefix + `prefix.sh reset` (UI workers leave state behind: user name,
   closed Assistant pane, ribbon split buttons); must keep the live sign-in/licensing state.
-- Host reinstall coming (Ubuntu 26.04, a more minimal base; date open). Decision deferred until it
+- Host reinstall coming (Ubuntu 26.04, a more minimal base; date open). User: nvidia-drm
+  modeset=1 will come with it → then re-run tests/gpu/gbmtest.py, try a GPU-composited headless
+  compositor on the host and virgl/Venus in vmwl/ (notes/wine/wayland.md). Until then Wayland is llvmpipe. Decision deferred until it
   lands: how our host packages (build deps, mingw, Xorg/Xvfb, WMs, qemu, gdb...) get provided.
   User ruled out re-rooting the shared bwrap sandbox. Must survive the reinstall (not in git):
   prefixes/ (sign-in state), login.txt, VM disks, deps/, ~/.claude; keep user name and project path.
