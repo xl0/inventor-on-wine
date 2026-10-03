@@ -296,6 +296,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   combo boxes (125; VM outputs in inst/125/).
   `r141/scf_word.c [word|sel|layout|caret|eop]`: rich edit EM_SETCHARFORMAT(SCF_WORD): characters formatted per caret
   position / selection, modify + undo, layout and caret right after, format typed after deleting everything (141, 146).
+  `r141/rescript.c [class:N] CMD...`: rich edit message scripts (text, sel, cf, undo, map, sweep, tomtext, wbproc...)
+  for Wine and the VM; `r141/fuzz.c SEED STEPS CLASS STYLEHEX [-x acts] [-k keepfile]`: random rich edit messages with
+  a layout-invariant check after each (MEPF_REWRAP assertion; 141 review, drafts 159-161).
   `r130/xisel.py DISPLAY [N]`: us per XISelectEvents on the root (grows with the windows that have XI2 selections);
   `r130/xiwins.py DISPLAY N hold`: N stand-in XI2 windows (aged-session repro); `r130/xres.py DISPLAY [MIN]`: X resources
   per client pid (X-Resource) (130). `r131/winlist.c [IMAGE] [raw]`: all windows of the session per process/thread/class/
