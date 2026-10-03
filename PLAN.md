@@ -343,6 +343,9 @@ commits or screenshots). Read-only mode may remain after expiry.
   113 (32-bit thread churn), 042 (shadows/splitter without a compositor), 069 (blocked: VM lacks
   Content Center libraries), 080, 082 (not reproduced), 096 (DXVK), 103 (vkd3d upstream),
   126 (special user APC), 127-129 (Wayland). Rebase integ when upstream master moves.
+- Later / another session (user, 2026-10-03): an MCP server for Inventor on our Wine setup
+  (run C#/iLogic snippet, view image, inspect tree/parameters, API lookup). Existing third-party
+  ones: ipt-mcp, inventor-mcp, Inventor AI (not audited; don't install into our prefixes unread).
 - Environments: x/prefixes.tsv + tools/prefix.sh status; leases in x/leases; user WM reference
   x/awesome-rc.lua. Worker scratch is capped at ~10 GB (notes/worker.md).
 
