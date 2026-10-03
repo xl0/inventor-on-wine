@@ -305,6 +305,11 @@ launches; previous device-limit errors do not authorize pausing another device.
   `r133/idle.c [-v] [-x EXE] [NAME..]`: WaitForInputIdle scenarios, child threads scripted per scenario (which
   thread / which wait makes a process input idle, later calls, console children; `wine_*` = Wine-only stand-in for a
   driver's clipboard manager thread); the child is a GUI/console-patched copy of the exe (133, 143).
+  `r140/idm.c [N [M]|list]`: table-driven IsDialogMessage / GetNextDlgTabItem / GetNextDlgGroupItem probe (window
+  trees x key messages, message log per case, child process + 3 s watchdog so a hang is a result);
+  `r140/brief.py` (one line per case), `fold.py`, `cmp2.py VM WINE [-v LAYER]` (layered diff); `r140/wtree.c
+  IMAGE|0xHWND|text:T`: focus chain / subtree with styles of another process, sends no messages (140, 148).
+  `isdialogmsg_hidden.c`: 140's first single-case probe.
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
@@ -506,6 +511,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   walk (walk.start -> wait walk.go, walk.end -> wait walk.done) to attach strace to one walk (081).
   `dim141`: drawing + base view of a sample part + one API-made dimension, left open; `INVSCEN_CMD=
   DrawingDimensionToleranceCtxCmd` opens Edit Dimension on it (use `INVSCEN_DIALOGS=off INVSCEN_UI=1`; 141).
+  `r140`: new part + box + iLogic Browser pane, left open (140's repro setup).
   UI helpers: `INVSCEN_KEEP=1` keeps open docs at connect; `cmd` runs a command by internal
   name (`INVSCEN_CMD`, `list:PATTERN`; `INVSCEN_OPEN` opens a doc first), `tx` prints
   transactions + occurrences, `addins` lists add-ins. Inventor's own add-ins run on .NET 10
