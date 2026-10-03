@@ -282,9 +282,11 @@ commits or screenshots). Read-only mode may remain after expiry.
   134 owned/modal dialogs sink behind their owner (no xdg_toplevel_set_parent),
   135 cross-process owned popup (trial popup) maps behind the main window and blocks its input,
   133 (above), 136 activated popups/dialogs are placed by the compositor, not at Win32 coordinates.
-  Decision: 132/134-136 are winewayland feature work (cross-process surfaces, xdg-foreign,
-  positioning) and stay as drafts; X11 is what the user runs. Fix only 133 (core). Ask the user
-  whether Wayland is worth a larger investment.
+  User (2026-10-03): doesn't use Wayland, but would like it to work → second-priority track
+  behind X11. Started: 134/135 fix (Opus worker, wt/134, inv2, owns the Wayland session):
+  xdg_toplevel_set_parent for owned windows, xdg-foreign for cross-process owners; reports on 136.
+  132 is the big one (no cross-process surfaces on Wayland): read-only design study running,
+  fund a fix only after it. 133 is core (above).
 - inv4 state artifact: Inventor's user name is a non-ASCII test string (118 campaign), which
   breaks the export scenario's IGES 80-column check on any build; reset it via the API.
 - Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup
