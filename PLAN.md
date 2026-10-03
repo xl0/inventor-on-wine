@@ -252,17 +252,6 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Paused for reboot (2026-10-02 evening)
-Resume after reboot:
-1. `x/leases`: reset to only inv-lic; `PREFIX_HOLDER=licensing-host tools/prefix.sh lease inv-lic`,
-   `tools/prefix.sh start inv-lic --holder licensing-host` (port 39683), then start inv, inv2,
-   inv3, inv4 as needed (prefix.sh start; it brings up the Xorg displays + VNC).
-2. VM: `setsid nohup vm/run.sh &` (VM Inventor stays closed: one licence seat).
-3. build/ = integ 04293594c50 (clean round: regress 0 REAL/NEW, suite 13/13, 124 repro survived).
-4. Only open worker: 130 (rubber fps degrades over long sessions) — state in its issue file,
-   WIP on fix/130 (wt/130). Restart it from the issue file's "State at pause" section.
-5. Queue: Inventor-on-Wayland pass (software rendering; x/wayland.sh), 117, 121, 113, 042.
-
 ## Now (2026-10-02)
 - build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971): adds 124 (ntdll RtlLocateExtendedFeature2 leaves the context alone
   for disabled features: CoreCLR crash), 123 (Tahoma CJK links via fontconfig), 083 (dwrite always has an Arial family), 062 (all-faint
