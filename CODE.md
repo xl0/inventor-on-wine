@@ -309,6 +309,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   trees x key messages, message log per case, child process + 3 s watchdog so a hang is a result);
   `r140/brief.py` (one line per case), `fold.py`, `cmp2.py VM WINE [-v LAYER]` (layered diff); `r140/wtree.c
   IMAGE|0xHWND|text:T`: focus chain / subtree with styles of another process, sends no messages (140, 148).
+  `r140/self.c`: IsDialogMessage with msg.hwnd = the dialog itself (plain, real, child, DS_CONTROL dialogs).
   `isdialogmsg_hidden.c`: 140's first single-case probe.
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up

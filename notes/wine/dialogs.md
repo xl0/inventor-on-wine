@@ -11,9 +11,13 @@ Windows facts are black-box results of `tests/r140/idm.exe` on Win11 (issue 140;
   WM_CHAR/WM_SYSCHAR = `DIALOG_IsAccelerator`, and when that finds nothing the message is dispatched (Windows eats an
   unmatched WM_CHAR). Differences to Windows: issue 148.
 - `DIALOG_IsAccelerator` walks all windows below hwndDlg in tree order from msg.hwnd, descending into every window that
-  is visible and enabled (Windows: only WS_EX_CONTROLPARENT), until it is back at its start. The start must be
-  reachable by that walk: fix/140 starts at msg.hwnd's outermost hidden/disabled ancestor (before: endless loop when
-  the focus sat in a hidden pane). A match is clicked with BM_CLICK (Windows: WM_COMMAND to the parent, no focus change).
+  is visible and enabled (Windows: only WS_EX_CONTROLPARENT), until it is back at its start. The start need not be
+  reachable (hidden pane with the focus inside, or a WM_GETDLGCODE handler changing the tree): fix/140 ends the walk
+  the second time it wraps at hwndDlg (before: endless loop), and does nothing when msg.hwnd is hwndDlg (before: for
+  a hidden/disabled/childless dialog the walk went on with the dialog's siblings, other top-level windows included).
+  A match is clicked with BM_CLICK (Windows: WM_COMMAND to the parent, no focus change).
+- `GetNextDlgGroupItem` still spins when GetParent() does not lead to hwndDlg (WS_CHILD|WS_POPUP container, hwndDlg
+  = desktop): issue 148.
 - Windows' mnemonic search: start control = msg.hwnd or its ancestor whose parent is the dialog or a control parent;
   pass 1 = that control's group (GetNextDlgGroupItem order), pass 2 = all controls after it until it comes around.
   Each pass gives up after 1024 controls (visible as ~1024 x WM_GETDLGCODE + WM_GETTEXT per control when the start
@@ -25,4 +29,5 @@ Windows facts are black-box results of `tests/r140/idm.exe` on Win11 (issue 140;
   hwnd == focus. WinForms (`Control.SetVisibleCore`) moves the focus itself before hiding, possibly to a child of
   the control being hidden.
 - IsDialogMessage returns TRUE for every key message whose window is hwndDlg or below it on Windows, hidden and
-  disabled windows included.
+  disabled windows included. A WM_CHAR / WM_SYSCHAR whose window is the dialog itself is swallowed without any
+  message or search (only Alt+Space reaches WM_SYSCOMMAND): mnemonics don't work while the dialog has the focus.
