@@ -1,0 +1,298 @@
+diff --git a/dlls/win32u/dce.c b/dlls/win32u/dce.c
+index 88dfdfe9af0..e04d29129a9 100644
+--- a/dlls/win32u/dce.c
++++ b/dlls/win32u/dce.c
+@@ -645,6 +645,7 @@ void window_surface_release( struct window_surface *surface )
+ void window_surface_lock( struct window_surface *surface )
+ {
+     if (surface == &dummy_surface) return;
++    LOCK_HOOK( "window_surface" );
+     pthread_mutex_lock( &surface->mutex );
+ }
+ 
+@@ -785,6 +786,7 @@ void register_window_surface( struct window_surface *old, struct window_surface
+     if (old == &dummy_surface) old = NULL;
+     if (new == &dummy_surface) new = NULL;
+     if (old == new) return;
++    LOCK_HOOK( "window_surfaces_list" );
+     pthread_mutex_lock( &surfaces_lock );
+     if (old) list_remove( &old->entry );
+     if (new) list_add_tail( &window_surfaces, &new->entry );
+@@ -802,6 +804,7 @@ void flush_window_surfaces( BOOL idle )
+     DWORD now;
+     struct window_surface *surface;
+ 
++    LOCK_HOOK( "window_surfaces_list" );
+     pthread_mutex_lock( &surfaces_lock );
+     now = NtGetTickCount();
+     if (idle) last_idle = now;
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index b5566465d77..bd918c15d2c 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -331,8 +331,11 @@ static struct ratio min_ratio( struct ratio x, struct ratio y )
+     return x.num * y.den <= y.num * x.den ? x : y;
+ }
+ 
++void (*win32u_lock_hook)( const char *lock ) = NULL;
++
+ void user_lock(void)
+ {
++    if (user_lock_thread != GetCurrentThreadId()) LOCK_HOOK( "user" );
+     pthread_mutex_lock( &user_mutex );
+     if (!user_lock_rec++) user_lock_thread = GetCurrentThreadId();
+ }
+@@ -2864,6 +2867,7 @@ static UINT64 get_monitor_update_serial(void)
+ 
+ void reset_monitor_update_serial(void)
+ {
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+     monitor_update_serial = 0;
+     pthread_mutex_unlock( &display_lock );
+@@ -2882,6 +2886,7 @@ static BOOL lock_display_devices( BOOL force )
+ 
+     init_display_driver(); /* make sure to load the driver before anything else */
+ 
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+ 
+     serial = get_monitor_update_serial();
+@@ -2937,6 +2942,7 @@ static LONG gamma_serial;
+ BOOL use_default_gamma_ramp(void)
+ {
+     BOOL ret;
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+     ret = !gamma_serial;
+     pthread_mutex_unlock( &display_lock );
+@@ -2947,6 +2953,7 @@ BOOL get_float_gamma_ramp( float *data, LONG *serial )
+ {
+     BOOL ret;
+ 
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+     memcpy( data, gamma_ramp, sizeof(gamma_ramp) );
+     ret = *serial != gamma_serial;
+@@ -2958,6 +2965,7 @@ BOOL get_float_gamma_ramp( float *data, LONG *serial )
+ 
+ BOOL get_global_gamma_ramp( void *data )
+ {
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+     memcpy( data, gamma_ramp_i, sizeof(gamma_ramp_i) );
+     pthread_mutex_unlock( &display_lock );
+@@ -2969,6 +2977,7 @@ BOOL set_global_gamma_ramp( void *data )
+     const WORD *ramp = data;
+     int i;
+ 
++    LOCK_HOOK( "display" );
+     pthread_mutex_lock( &display_lock );
+ 
+     if (!memcmp( gamma_ramp_i, ramp, sizeof(gamma_ramp_i) )) goto done;
+diff --git a/dlls/win32u/window.c b/dlls/win32u/window.c
+index 61ddca58cdb..ec3f28cee7a 100644
+--- a/dlls/win32u/window.c
++++ b/dlls/win32u/window.c
+@@ -322,6 +322,7 @@ void detach_client_surfaces( HWND hwnd )
+ {
+     struct client_surface *surface, *next;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+ 
+     LIST_FOR_EACH_ENTRY_SAFE( surface, next, &client_surfaces, struct client_surface, entry )
+@@ -379,6 +380,7 @@ void update_client_surfaces( HWND hwnd )
+     struct client_surface *surface, *next;
+     UINT count = 0;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+ 
+     LIST_FOR_EACH_ENTRY_SAFE( surface, next, &client_surfaces, struct client_surface, entry )
+@@ -422,6 +424,7 @@ void client_surface_add_ref( struct client_surface *surface )
+ 
+ void client_surface_release( struct client_surface *surface )
+ {
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+     client_surface_release_locked( surface );
+     pthread_mutex_unlock( &surfaces_lock );
+@@ -432,6 +435,7 @@ void client_surface_present( struct client_surface *surface )
+     HDC hdc = 0;
+     HWND hwnd;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+     if ((hwnd = surface->hwnd))
+     {
+@@ -449,6 +453,7 @@ static void present_offscreen_client_surfaces( HWND toplevel )
+     struct client_surface *surface;
+     HDC hdc;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+     LIST_FOR_EACH_ENTRY( surface, &client_surfaces, struct client_surface, entry )
+     {
+@@ -462,6 +467,7 @@ static void present_offscreen_client_surfaces( HWND toplevel )
+ 
+ void client_surface_update( struct client_surface *surface )
+ {
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+     if (surface->hwnd) client_surface_update_locked( surface );
+     pthread_mutex_unlock( &surfaces_lock );
+@@ -471,6 +477,7 @@ BOOL client_surface_get_size( struct client_surface *surface, SIZE *virtual_size
+ {
+     BOOL updated;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+ 
+     virtual_size->cx = max( 1, surface->virtual_rect.right - surface->virtual_rect.left );
+@@ -489,6 +496,7 @@ void use_window_client_surface( struct client_surface *surface, BOOL use )
+ {
+     TRACE( "surface %s, use %u\n", debugstr_client_surface( surface ), use );
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+ 
+     if (!surface->hwnd)
+@@ -513,6 +521,7 @@ struct client_surface *get_unused_client_surface( HWND hwnd, int format, BOOL ra
+ {
+     struct client_surface *surface;
+ 
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+ 
+     LIST_FOR_EACH_ENTRY( surface, &unused_surfaces, struct client_surface, entry )
+@@ -536,6 +545,7 @@ BOOL is_client_surface_window( struct client_surface *surface, HWND hwnd )
+     BOOL ret;
+ 
+     if (!surface) return FALSE;
++    LOCK_HOOK( "client_surfaces" );
+     pthread_mutex_lock( &surfaces_lock );
+     if (hwnd) ret = surface->hwnd == hwnd;
+     else ret = surface->hwnd != NULL;
+diff --git a/dlls/winewayland.drv/waylanddrv.h b/dlls/winewayland.drv/waylanddrv.h
+index 6c8ff43aa8d..9a4c891b5c2 100644
+--- a/dlls/winewayland.drv/waylanddrv.h
++++ b/dlls/winewayland.drv/waylanddrv.h
+@@ -53,6 +53,14 @@
+ 
+ #include "unixlib.h"
+ 
++/* DEBUG 157: lock order checks */
++extern void dbg_lock_acquired(void *lock, const char *name);
++extern void dbg_lock_released(void *lock);
++static inline int dbg_mutex_lock(pthread_mutex_t *m, const char *name) { int r = pthread_mutex_lock(m); dbg_lock_acquired(m, name); return r; }
++static inline int dbg_mutex_unlock(pthread_mutex_t *m) { dbg_lock_released(m); return pthread_mutex_unlock(m); }
++#define pthread_mutex_lock(m) dbg_mutex_lock(m, #m)
++#define pthread_mutex_unlock(m) dbg_mutex_unlock(m)
++
+ /* We only use 4 byte formats. */
+ #define WINEWAYLAND_BYTES_PER_PIXEL 4
+ 
+diff --git a/dlls/winewayland.drv/waylanddrv_main.c b/dlls/winewayland.drv/waylanddrv_main.c
+index 275a3907f92..03ae44e8ab7 100644
+--- a/dlls/winewayland.drv/waylanddrv_main.c
++++ b/dlls/winewayland.drv/waylanddrv_main.c
+@@ -32,6 +32,75 @@
+ 
+ char *process_name = NULL;
+ 
++/* DEBUG 157: lock order checks */
++#undef pthread_mutex_lock
++#undef pthread_mutex_unlock
++#include <execinfo.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <sys/syscall.h>
++
++static __thread struct { void *lock; const char *name; } dbg_held[32];
++static __thread int dbg_held_count;
++static pthread_mutex_t dbg_mutex = PTHREAD_MUTEX_INITIALIZER;
++static struct { const char *a, *b; void *pc[6]; } dbg_pairs[1024];
++static int dbg_pair_count;
++
++static void dbg_record(const char *a, const char *b)
++{
++    void *bt[24];
++    int i, n = backtrace(bt, ARRAY_SIZE(bt));
++    void *pc[6] = {0};
++
++    for (i = 0; i < 6 && i + 2 < n; i++) pc[i] = bt[i + 2];
++    pthread_mutex_lock(&dbg_mutex);
++    for (i = 0; i < dbg_pair_count; i++)
++        if (dbg_pairs[i].a == a && dbg_pairs[i].b == b && !memcmp(dbg_pairs[i].pc, pc, sizeof(pc))) break;
++    if (i == dbg_pair_count && dbg_pair_count < ARRAY_SIZE(dbg_pairs))
++    {
++        dbg_pairs[i].a = a; dbg_pairs[i].b = b; memcpy(dbg_pairs[i].pc, pc, sizeof(pc));
++        dbg_pair_count++;
++        fprintf(stderr, "LOCKORDER %s pid %d tid %ld: %s -> %s\n", process_name ? process_name : "?", getpid(), syscall(SYS_gettid), a, b);
++        fflush(stderr);
++        backtrace_symbols_fd(bt + 2, n - 2, 2);
++        fprintf(stderr, "LOCKORDER end\n");
++        fflush(stderr);
++    }
++    pthread_mutex_unlock(&dbg_mutex);
++}
++
++void dbg_lock_acquired(void *lock, const char *name)
++{
++    int i;
++    for (i = 0; i < dbg_held_count; i++) if (dbg_held[i].lock == lock) break;
++    if (i == dbg_held_count) /* not a recursive acquisition */
++        for (i = 0; i < dbg_held_count; i++) dbg_record(dbg_held[i].name, name);
++    if (dbg_held_count < ARRAY_SIZE(dbg_held))
++    {
++        dbg_held[dbg_held_count].lock = lock;
++        dbg_held[dbg_held_count].name = name;
++    }
++    dbg_held_count++;
++}
++
++void dbg_lock_released(void *lock)
++{
++    int i;
++    for (i = min(dbg_held_count, (int)ARRAY_SIZE(dbg_held)) - 1; i >= 0; i--) if (dbg_held[i].lock == lock) break;
++    if (i < 0) { fprintf(stderr, "LOCKORDER bad release %p\n", lock); return; }
++    memmove(&dbg_held[i], &dbg_held[i + 1], (min(dbg_held_count, (int)ARRAY_SIZE(dbg_held)) - i - 1) * sizeof(dbg_held[0]));
++    dbg_held_count--;
++}
++
++static void dbg_win32u_lock(const char *name)
++{
++    static const char *names[] = {"user", "display", "client_surfaces", "window_surfaces_list", "window_surface"};
++    static const char *full[] = {"win32u:user", "win32u:display", "win32u:client_surfaces", "win32u:window_surfaces_list", "win32u:window_surface"};
++    int i, j;
++    for (j = 0; j < ARRAY_SIZE(names); j++) if (!strcmp(names[j], name)) break;
++    for (i = 0; i < dbg_held_count && i < ARRAY_SIZE(dbg_held); i++) dbg_record(dbg_held[i].name, full[j]);
++}
++
+ static const struct user_driver_funcs waylanddrv_funcs =
+ {
+     .pClipboardWindowProc = WAYLAND_ClipboardWindowProc,
+@@ -92,6 +161,7 @@ static NTSTATUS waylanddrv_unix_init(void *arg)
+     /* Set the user driver functions now so that they are available during
+      * our initialization. We clear them on error. */
+     __wine_set_user_driver(&waylanddrv_funcs, WINE_GDI_DRIVER_VERSION);
++    win32u_lock_hook = dbg_win32u_lock;
+ 
+     wayland_init_process_name();
+ 
+diff --git a/include/wine/gdi_driver.h b/include/wine/gdi_driver.h
+index a33c3307fc5..8cb36fc5d31 100644
+--- a/include/wine/gdi_driver.h
++++ b/include/wine/gdi_driver.h
+@@ -445,6 +445,10 @@ struct user_driver_funcs
+     void    (*pThreadDetach)(void);
+ };
+ 
++/* DEBUG 157: lock order checks */
++W32KAPI extern void (*win32u_lock_hook)( const char *lock );
++#define LOCK_HOOK(name) do { if (win32u_lock_hook) win32u_lock_hook( name ); } while (0)
++
+ W32KAPI void __wine_set_user_driver( const struct user_driver_funcs *funcs, UINT version );
+ 
+ #endif /* __WINE_WINE_GDI_DRIVER_H */
