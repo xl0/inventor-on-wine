@@ -252,6 +252,27 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
+## Paused for a reboot (2026-10-03) — resume from here
+State (workers were told to stop and checkpoint; their final state is in the issue files' "State at pause"):
+- wine-src `integ` (local, NOT pushed) = 232278be38e: 04293594c50 (= build/, = gh/integ + 130 d18a5dcd1ef
+  which IS pushed) + 131 (3 commits) + 140 (4) + 133 (3). All reviewed. Verification round was running
+  in `build-next/` (see below); don't push or rebuild build/ before it is clean.
+- Ready to cherry-pick onto integ after the round: fix/134 (6 commits, 5d59ae5fddf, winewayland only).
+- In rework: fix/141 (riched20; commits 1-2 fine, commit 3 being replaced by the minimal rule + undo fix).
+- Just started: fix/157 (winewayland lock-order deadlock, tests in vmwl/), fix/132 (M0 unknowns, then
+  cross-process surfaces design A) — both based on fix/134.
+After the reboot:
+1. Everything is down. `tools/prefix.sh start inv` (and inv2, inv3, inv4) brings up Xorg, VNC and
+   the prefix; all on build/. inv-lic is NOT needed any more (152): don't start it.
+   Windows VM: `vm/run.sh` (Inventor there only with the host's Inventors stopped). Linux VM: `vmwl/run.sh`.
+2. Resume the verification round where its report says it stopped (build-next/, regress results under
+   deps/regress/ or inst/round/), then: push integ, rebuild build/ (taskset), restart prefixes.
+3. Resume the workers (SendMessage to the same agents keeps their context; else new workers from
+   the issue files): 141 rework → cherry-pick → riched20 subset + drawing-dimension repro;
+   134 → cherry-pick; 157; 132 M0/M1. Each new fix: independent Opus review before merge.
+4. Open questions for the user: Inventor in the Linux VM (separate device + seat juggling, or not at
+   all); retire prefixes/inv-lic; MCP server later; host packages after the 26.04 reinstall.
+
 ## Now (2026-10-03)
 - build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971), pushed to gh. Last full round clean:
   regress vs master 4e819f054dd 0 REAL/NEW (1 FLAKY, x86_64 user32:input); invscen all 13/13;
