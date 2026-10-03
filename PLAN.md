@@ -273,7 +273,10 @@ commits or screenshots). Read-only mode may remain after expiry.
     and a thread sitting in WaitForInputIdle itself. No protocol change. Not yet confirmed on Wayland
     (`tests/r133/idle.exe main_getmsg helper_win_getmsg`, then drawing2/sheetmetal). Remaining Windows
     differences (PeekMessage loops count as idle, later calls track one thread, +500 ms timeout) → draft 143.
-  - Reviews (independent Opus) and follow-ups, all on integ d18a5dcd1ef, merge round when all are back:
+  - Verification round running (Sonnet): integ 232278be38e = 130 + 131 + 140 + 133 built in
+    build-next/, full regress vs master and vs 04293594c50, suite + dwgloop + per-fix checks on inv.
+    integ is not pushed and build/ not rebuilt until it is clean. 141 and 134 follow when reviewed.
+  - Reviews (independent Opus) and follow-ups:
     131 window-less composition swapchains: reviewed, follow-ups done (explicit
       WINED3D_SWAPCHAIN_WINDOWLESS flag, so d3d8/d3d9 NULL-window swapchains are as before; Windows
       parity for 5 calls) → on integ eb8829b9fe1 (not pushed until the round is complete).
@@ -283,8 +286,10 @@ commits or screenshots). Read-only mode may remain after expiry.
       window in its thread: keys dropped) + smaller items; VM verified (above). Worker applying;
       drafts 156 (minimize desync), 157 (user lock vs win_data_mutex deadlock, hangs 4 of 7 in a
       show/hide stress on integ too — serious), 158 (stale owner handle after thread exit).
-    133: "merge after fixes" — WaitForInputIdle skipped the surface flush (regression), test
-      robustness; Wayland case verified by the reviewer (+69 ms → +1590 ms). Worker applying.
+    133: review follow-ups done (surface flush before the wait, test robustness, QS_SMRESULT case)
+      → on integ. Wayland case verified by the reviewer (+69 ms → +1590 ms). One i386 user32:win
+      run of 16 had an extra failure (win.c:12747, cross-thread destroy order); frequency is being
+      measured on both builds in the round.
     140: reworked after review → on integ: the accelerator search ends when it wraps a second time
       (3 lines; every case that returned is unchanged; 0 hangs of 1785 probe cases, Windows hangs in 25)
       + no search when the message window is the dialog (Windows sends nothing; Wine clicked buttons
