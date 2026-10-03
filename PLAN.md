@@ -258,7 +258,11 @@ State (workers were told to stop and checkpoint; their final state is in the iss
   which IS pushed) + 131 (3 commits) + 140 (4) + 133 (3). All reviewed. Verification round was running
   in `build-next/` (see below); don't push or rebuild build/ before it is clean.
 - Ready to cherry-pick onto integ after the round: fix/134 (6 commits, 5d59ae5fddf, winewayland only).
-- In rework: fix/141 (riched20; commits 1-2 fine, commit 3 being replaced by the minimal rule + undo fix).
+- fix/141 rework finished (4 commits, tip 467f5b54e5d on d18a5dcd1ef; old version kept as fix/141-v1):
+  wrap, caret update, undo of the final paragraph mark, SCF_WORD in front of a paragraph mark formats
+  the mark. VM tests, regress units, fuzz, Inventor (3 of 3, no assertion) done by the worker. Not a
+  regression of ours (re-checked: master's DLL really was loaded). To do: coordinator reads the two
+  new small commits, then cherry-pick after the round. Drafts 159-161 filed.
 - Just started: fix/157 (winewayland lock-order deadlock, tests in vmwl/), fix/132 (M0 unknowns, then
   cross-process surfaces design A) — both based on fix/134.
 After the reboot:
