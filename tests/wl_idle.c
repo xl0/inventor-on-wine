@@ -1,6 +1,7 @@
 /* WaitForInputIdle on a GUI child that is busy for 1.5 s before pumping messages.
  * Windows: waits ~1500 ms. Result is written to C:\wl_idle.txt (GUI subsystem, no console).
- * "wl_idle.exe thread": the child additionally starts a helper thread that runs a message loop at once. */
+ * "wl_idle.exe thread": the child additionally starts a helper thread that runs a message loop at once;
+ * Windows 11 then returns at once (~10 ms): a message wait of any thread counts (issue 133, tests/r133/idle.c). */
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,8 +21,9 @@ int main(int argc, char **argv)
         CreateWindowA("static", "idle child", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 0, 200, 100, NULL, NULL, NULL, NULL);
         if (argc > 2) CloseHandle(CreateThread(NULL, 0, helper, NULL, 0, NULL));
         Sleep(1500); /* busy initialisation, no message pumping */
-        end = GetTickCount() + 3000;
-        while (GetTickCount() < end) while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) DispatchMessageA(&msg), Sleep(1);
+        /* GetMessage: Wine never treats a PeekMessage polling loop as idle (issue 143) */
+        end = SetTimer(NULL, 0, 3000, NULL);
+        while (GetMessageA(&msg, NULL, 0, 0) && !(msg.message == WM_TIMER && msg.wParam == end)) DispatchMessageA(&msg);
         return 0;
     }
     else
@@ -31,7 +33,7 @@ int main(int argc, char **argv)
         CreateProcessA(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
         t0 = GetTickCount();
         r = WaitForInputIdle(pi.hProcess, 10000);
-        { char b[100]; sprintf(b, "WaitForInputIdle = %lu after %lu ms (expect ~1500)\n", r, GetTickCount() - t0); HANDLE f = CreateFileA("C:\\wl_idle.txt", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL); DWORD n; WriteFile(f, b, strlen(b), &n, NULL); CloseHandle(f); }
+        { char b[100]; sprintf(b, "WaitForInputIdle = %lu after %lu ms (expect %s)\n", r, GetTickCount() - t0, argc > 1 ? "< 200" : "~1500"); HANDLE f = CreateFileA("C:\\wl_idle.txt", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL); DWORD n; WriteFile(f, b, strlen(b), &n, NULL); CloseHandle(f); }
         WaitForSingleObject(pi.hProcess, 6000);
     }
     return 0;

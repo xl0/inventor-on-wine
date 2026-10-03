@@ -38,3 +38,11 @@
   tooltip controller. A window sliding under a still cursor changes the client position, so Chromium
   shows HTML title tooltips then, on Windows too. The moves land in the GetMouseMovePointsEx history.
   Probes: tests/hover_tooltip.c, tests/fake_mousemove.c, tests/r120/ (120, 122).
+- WaitForInputIdle (133, 143; probe tests/r133/idle.c): Windows 11 and Wine both make a process input idle when ANY
+  thread waits for messages (GetMessage, MsgWait, WaitMessage; not a SendMessage reply wait, not WaitForInputIdle
+  itself), console subsystem processes fail with WAIT_FAILED. Wine: one manual-reset event per process
+  (server `process->idle_event`, GUI subsystem only), set client-side in `win32u/message.c:wait_objects`, never reset;
+  each thread gets its handle with the queue handle at its first wait. So every Wine-internal thread that pumps
+  messages inside an application makes it idle early: fix/133 exempts threads that run a clipboard manager window
+  (`NtUserClipboardWindowProc` -> `disable_thread_input_idle`); a new internal pumping thread needs the same.
+  user32:msg's WaitForInputIdle tests only test anything since fix/133 (GUI-subsystem copy of the test exe).

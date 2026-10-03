@@ -302,6 +302,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   parent, hidden too; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
   `r131/comp_probe.c`: what a composition swapchain (D3D11, D3D12) answers to the window-related calls and invalid
   descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
+  `r133/idle.c [-v] [-x EXE] [NAME..]`: WaitForInputIdle scenarios, child threads scripted per scenario (which
+  thread / which wait makes a process input idle, later calls, console children; `wine_*` = Wine-only stand-in for a
+  driver's clipboard manager thread); the child is a GUI/console-patched copy of the exe (133, 143).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
