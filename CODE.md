@@ -294,6 +294,10 @@ launches; previous device-limit errors do not authorize pausing another device.
   EM_SETTARGETDEVICE line breaks, selections over the final paragraph mark, insertion-point formats; `r125/clip.c [TEXT]`:
   CF_UNICODETEXT on the clipboard; `r125/ctl.c TITLE [ID STRING]`: list / select in another process's
   combo boxes (125; VM outputs in inst/125/).
+  `r130/xisel.py DISPLAY [N]`: us per XISelectEvents on the root (grows with the windows that have XI2 selections);
+  `r130/xiwins.py DISPLAY N hold`: N stand-in XI2 windows (aged-session repro); `r130/xres.py DISPLAY [MIN]`: X resources
+  per client pid (X-Resource) (130). `r131/winlist.c [IMAGE] [raw]`: all windows of the session per process/thread/class/
+  parent, hidden too; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).

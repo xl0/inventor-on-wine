@@ -75,3 +75,18 @@
   window) for seconds per call; fix/085b posts it (SWP_ASYNCWINDOWPOS). Any synchronous send to another
   process's window is a hang/latency risk: look for it first when a helper process's UI thread stalls
   (gdb sehbt shows it parked in an NtUser* syscall with no callback frames).
+- X server costs that scale with the window tree (130): XISelectEvents on the *root* window makes Xorg recompute the
+  deliverable XI masks of every window (RecalculateDeviceDeliverableEvents -> xi2mask_merge): ~6.5 us per window that
+  has XI2 selections, of any client (every Wine whole window selects touch events): 25 us on an empty Xvfb, 0.5 ms with
+  one fresh Inventor on the display, 1.5 ms after a suite + samples, 7 ms with 1000 more windows
+  (tests/r130/xisel.py DISPLAY; stand-in windows: tests/r130/xiwins.py DISPLAY N hold). Never change a root XI2
+  selection per event/frame; a selection on a non-root window only recomputes its subtree. winex11 root selections:
+  thread init (DeviceChanged), rawinput enable/disable (RawMotion), ClipCursor start/stop (ButtonPress), WM size-move
+  (RawButtonRelease, only during a WM grab since fix/130).
+- With a reparenting WM (openbox) every move+resize of a managed window gives two ConfigureNotify: the real one first,
+  mapped with the old frame position ("mismatch config"), then the synthetic one. window_update_client_config() reports
+  the first as a WM change, so code hooked there (wm_size_move_begin) runs per SetWindowPos of e.g. Inventor's
+  dynamic-input popup: keep it to cheap checks.
+- Xorg profiling: `uilat.py --perf Xorg` (perf record -g -p); Xorg is stripped, map hot addresses to the nearest
+  `nm -D` symbol + objdump (xi2mask_merge has no symbol: the |= loop over two mask arrays after input_option_new).
+  X requests per client/op: `uilat.py --record`; X resources per client: tests/r130/xres.py DISPLAY [MIN].
