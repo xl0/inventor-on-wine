@@ -297,8 +297,15 @@ commits or screenshots). Read-only mode may remain after expiry.
       Not re-reviewed: the rework is the reviewer's own tested variant, diff read by the coordinator.
       One Inventor start of four died in .NET startup right after the build switch (not investigated;
       watch for it in the merge round). Remaining Windows differences → draft 148.
-    141 (riched20 EM_SETCHARFORMAT SCF_WORD: not a regression, upstream bug since 2019; 3 commits):
-      in review.
+    141 (riched20 EM_SETCHARFORMAT SCF_WORD; upstream bug since 2019 per the worker — being
+      re-checked, the reviewer found that a DLL dropped next to the exe is not what gets loaded):
+      review: commits 1 (wrap) and 2 (caret) fine; commit 3 (word selection rewrite) hangs with an
+      EDIT-style word-break proc, pushes an undo item undo can't apply, and moves RichEdit20W apps away
+      from riched20.dll's behaviour at word end. Decision: replace commit 3 by the minimal rule
+      Inventor needs (caret in front of a paragraph mark formats the mark) + the undo.c one-liner;
+      no word-logic rewrite. Worker applying; drafts 159 (ITextRange::SetText never wraps → same
+      assertion), 160 (numbered paragraphs: AV in paint), 161 (undo stack assertion). Not on integ
+      yet (wine-src must not move under the running verification round).
 - UI pass 2 done (Sonnet, inv, build/ 04293594c50, about half of the areas; inst/ui2/results.md):
   nothing regressed vs the first pass; picking, viewport, ViewCube, breadcrumbs (041), file clicks
   (043) now work; 042 shadow still there. New: 140, 141 (above), 142 (low: stale pixels in the
