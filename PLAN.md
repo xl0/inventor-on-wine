@@ -287,6 +287,16 @@ commits or screenshots). Read-only mode may remain after expiry.
   xdg_toplevel_set_parent for owned windows, xdg-foreign for cross-process owners; reports on 136.
   132 is the big one (no cross-process surfaces on Wayland): read-only design study running,
   fund a fix only after it. 133 is core (above).
+- Wayland VM (`vmwl/`, Sonnet worker building it): Ubuntu LTS guest with GNOME, KDE, sway;
+  probes on current compositors. User approved (2026-10-03) Inventor in it through the HOST's
+  licensing service (guest 127.0.0.1:39683 → host via qemu user net), prefix copied from inv4.
+  Declined: cracked/pirated Inventor (skews the licensing/WebView2 paths we test, untrusted binaries).
+- Harness: full regress runs pin themselves to CPUs 20-59,80-119 (REGRESS_CPUS) and builds use the
+  same taskset, so merge rounds no longer wait for UI/timing workers. Next merge round is batched:
+  130 (on integ) + 131 + 133 after their reviews, built and regressed in `build-next/`, then build/.
+  run.sh: a crash in a prefix outside the table no longer restarts `inv`; WAYLAND_DISPLAY set = Wayland run.
+  Proposed, not done: golden prefix + `prefix.sh reset` (UI workers leave state behind: user name,
+  closed Assistant pane, ribbon split buttons); must keep the live sign-in/licensing state.
 - inv4 state artifact: Inventor's user name is a non-ASCII test string (118 campaign), which
   breaks the export scenario's IGES 80-column check on any build; reset it via the API.
 - Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup

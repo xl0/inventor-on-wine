@@ -26,7 +26,8 @@ relevant `notes/wine/*.md` first.
 - Resources you don't own unless your brief says so: display :98,
   `prefixes/`, `build/`, the Autodesk installers. Never launch Inventor or click
   in the VM (Inventor is installed there; launching starts the 30-day trial).
-  No package installs. Share the CPU: `make -j40`.
+  No package installs. Share the CPU: `taskset -c 20-59,80-119 make -j40` (CPUs 0-19 and their
+  hyperthreads 60-79 stay free for Inventor/UI timing; full regress runs pin themselves the same way).
 - Launch long-running Wine apps with `setsid nohup ... &`.
 - The issue file is your memory: keep Status / findings current so another
   worker can resume from it. Put reusable, non-obvious Wine knowledge in

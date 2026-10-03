@@ -4,6 +4,7 @@
 #   INV=inv3 run.sh hello); an explicit WINE_BUILD still overrides its build.
 #   Without INV: WINE_BUILD (default build/), INV_PREFIX, DISPLAY, DRI_PRIME pick the
 #   setup (default prefixes/inv, :98, pci-0000_ca_00_0).
+#   With WAYLAND_DISPLAY set the run is on Wayland: DISPLAY is dropped (also the table's).
 #   Everything of another prefix P (SCENARIO/, bin/, results/, inventor.log) goes to inst/invscen/P/.
 # Builds tools/invscen/{Harness,SCENARIO}.cs with the prefix's .NET 4.8 csc
 # (Inventor interop types embedded, /link) and runs it against the Inventor
@@ -19,6 +20,8 @@
 set -e
 cd "$(dirname "$0")/../.."
 if [ -n "${INV:-}" ]; then B0=${WINE_BUILD:-}; eval "$(tools/prefix.sh env "$INV")"; WINE_BUILD=${B0:-$WINE_BUILD}; fi
+# Wayland run (eval "$(x/wayland.sh env)" first): no X display, Wine falls back to winewayland.drv
+W11=1; [ -z "${WAYLAND_DISPLAY:-}" ] || { W11=; unset DISPLAY; }
 W=${WINE_BUILD:-build}  # Wine build dir to run under
 VM=; [ "$1" = --vm ] && VM=1 && shift
 S=${1:?usage: $0 [--vm] SCENARIO|all}
@@ -32,6 +35,7 @@ if [ "$S" = all ]; then
 	L=$D/results; [ -n "$VM" ] && L=inst/invscen/ref
 	mkdir -p $L
 	WP=$(realpath ${INV_PREFIX:-prefixes/inv})
+	N=${INV:-}; [ -n "$N" ] || [ "$WP" != "$PWD/prefixes/inv" ] || N=inv  # table name, empty for a prefix outside x/prefixes.tsv
 	for s in $SUITE; do
 		echo "== $s" >&2
 		# A crashed Inventor (issue 034) lingers in winedbg --auto + CER dialog and
@@ -44,10 +48,11 @@ if [ "$S" = all ]; then
 				for q in $(ps -eo pid,args | awk '$2 !~ /^(awk|sh|bash|\/bin\/sh)$/ && /Inventor\.exe|winedbg|senddmp\.exe|Autodesk CER.dialog/ { print $1 }'); do
 					if tr '\0' '\n' </proc/$q/environ 2>/dev/null | grep -qx "WINEPREFIX=$WP"; then kill -9 $q 2>/dev/null || true; fi
 				done
-				tools/prefix.sh kill-inventor "${INV:-inv}" >&2 || true # helpers (licensing agents, WebView2)
+				[ -n "$N" ] || break
+				tools/prefix.sh kill-inventor "$N" >&2 || true # helpers (licensing agents, WebView2)
 				# the licensing service keeps a stale agent whose invisible popup blocks the next connect
 				# (300 s timeout); killing the agents is not enough, only a prefix restart clears it
-				tools/prefix.sh restart "${INV:-inv}" >&2 || echo "prefix restart failed" >&2
+				tools/prefix.sh restart "$N" >&2 || echo "prefix restart failed" >&2
 				sleep 5; break
 			fi
 		done
@@ -77,7 +82,8 @@ if [ "$S" = all ]; then
 	done
 	exit 0
 fi
-export WINEPREFIX=$(realpath $P) DISPLAY=${DISPLAY:-:98} \
+[ -z "$W11" ] || export DISPLAY=${DISPLAY:-:98}
+export WINEPREFIX=$(realpath $P) \
 	DRI_PRIME=${DRI_PRIME:-pci-0000_ca_00_0} WINE_D3D_CONFIG=${WINE_D3D_CONFIG:-renderer=vulkan} WINEDEBUG=${WINEDEBUG:--all}
 # Exe named scen-S.exe: a bare cmd.exe/... next to the harness would shadow system tools (AeDebug runs `cmd /c winedbg`)
 B=$D/bin O=$D/$S L=$D/inventor.log X=$B/scen-$S.exe

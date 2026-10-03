@@ -284,7 +284,8 @@ cmd_compare() {
 if [ "${1:-}" != unit ] && [ -z "${RG_LOCKED:-}" ]; then
     export RG_LOCKED=1
     flock -n /tmp/regress.lock true || echo "regress: waiting for another run (/tmp/regress.lock)" >&2
-    exec flock -o /tmp/regress.lock "$0" "$@"
+    # keep 20 cores (and their hyperthreads 60-79) free for interactive and timing work
+    exec taskset -c "${REGRESS_CPUS:-20-59,80-119}" flock -o /tmp/regress.lock "$0" "$@"
 fi
 
 case ${1:-} in
