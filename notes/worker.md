@@ -98,11 +98,11 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Disk is shared and finite (one 3.7 TB volume; /tmp lives on it). Keep scratch prefixes and
   copies under ~10 GB total: reuse prefixes instead of copying one per run, delete finished ones
   by explicit path, and never copy inv* prefixes (38 GB each) for scratch work.
-  Delete only with `tools/rmscratch.sh PATH...` (explicit paths below inst/, wt/, /tmp, /var/tmp,
-  /dev/shm; refuses everything else, protected builds and git worktrees), never with a raw `rm` in a
-  command line: Claude Code stops for a confirmation on `rm` with globs, on paths outside the project
-  and inside `sh -c`/`bash -c`, even in bypass mode, and a background worker then hangs until the
-  user answers. Worktrees: `git worktree remove`.
+  Delete with `/home/xl0/projects/wine/tools/del [-rf] PATH...` (globs are fine), never with a raw
+  `rm` in a command line or in `sh -c`: Claude Code stops for a confirmation on `rm` with globs or
+  paths it can't resolve, even in bypass mode, and a background worker then hangs until the user
+  answers. `del` removes anything below the project or /tmp, /var/tmp, /dev/shm except the protected
+  set (prefixes/, VM disks, sources, shared and frozen builds, docs, tools). Worktrees: `git worktree remove`.
 - Own prefix: `WINEPREFIX=$PWD/wt/NNN-prefix WINEDLLOVERRIDES="mscoree,mshtml="
   wt/NNN-build/wine wineboot -u` (own prefix = own wineserver).
 - Conformance test on Wine: `wt/NNN-build/wine
