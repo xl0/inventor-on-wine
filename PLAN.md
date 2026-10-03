@@ -269,9 +269,12 @@ commits or screenshots). Read-only mode may remain after expiry.
     (a regress run at load 60-120 would spoil their timing).
   - 131 (Opus worker, wt/131, inv3): our dxgi composition-swapchain hack leaks a hidden top-level
     window per swapchain (~80 per suite in WebView2's GPU process; Windows creates none). Review after.
-  - 133 (Opus worker, wt/133, inv4): WaitForInputIdle returns as soon as ANY thread of the target
-    waits for messages (one idle event per process). Found on Wayland (driver's clipboard thread →
-    Inventor's DBXBridge start fails → DWG/DXF export), but driver-independent. VM ground truth first.
+  - 133 fixed on fix/133 (3 commits), in review. My premise was wrong: on Windows 11 a process is
+    input idle as soon as ANY thread waits for messages (as on Wine). The real bugs: two Wine-internal
+    waits set the idle event — the clipboard manager thread (winewayland's per-process one, explorer's)
+    and a thread sitting in WaitForInputIdle itself. No protocol change. Not yet confirmed on Wayland
+    (`tests/r133/idle.exe main_getmsg helper_win_getmsg`, then drawing2/sheetmetal). Remaining Windows
+    differences (PeekMessage loops count as idle, later calls track one thread, +500 ms timeout) → draft 143.
   - 141 (Opus worker, wt/141, inv): riched20 assertion (caret.c:232, MEPF_REWRAP) when a drawing
     dimension is placed; endless assertion box, session lost. Possibly a regression of our 125
     riched20 commits → first priority; the user's laptop build has it.
@@ -290,7 +293,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   132 WebView2 content blank (a swapchain made by another process on a window is never shown),
   134 owned/modal dialogs sink behind their owner (no xdg_toplevel_set_parent),
   135 cross-process owned popup (trial popup) maps behind the main window and blocks its input,
-  133 (above), 136 activated popups/dialogs are placed by the compositor, not at Win32 coordinates.
+  133 (DWG/DXF export: WaitForInputIdle returns at once, above), 136 activated popups/dialogs are placed by the compositor, not at Win32 coordinates.
   User (2026-10-03): doesn't use Wayland, but would like it to work → second-priority track
   behind X11. Started: 134/135 fix (Opus worker, wt/134, inv2, owns the Wayland session):
   xdg_toplevel_set_parent for owned windows, xdg-foreign for cross-process owners; reports on 136.
