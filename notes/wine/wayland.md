@@ -52,8 +52,11 @@ test keep using the X displays.
 ## Compositor globals (mutter 42)
 Missing: zwlr_data_control (clipboard limited), xdg_toplevel_icon, wp_fractional_scale,
 wp_alpha_modifier, cursor_shape, pointer_warp (-> SendInput/SetCursorPos mouse moves cannot warp the host
-pointer). Present: linux_dmabuf, viewporter, relative-pointer, pointer-constraints, text-input-v3,
-xdg-wm-base/zxdg_shell_v6.
+pointer), xdg_wm_dialog_v1 (mutter 47+), xdg-foreign v2 (mutter 44+). Present: linux_dmabuf, viewporter,
+relative-pointer, pointer-constraints, text-input-v3, xdg-wm-base v4/zxdg_shell_v6, xdg-foreign **v1 only**
+(zxdg_exporter_v1/zxdg_importer_v1), gtk_shell1 v5 (GTK-private; its set_modal is what makes a mutter 42
+window a modal dialog), xdg_activation_v1. Dump: `WINEDEBUG=+waylanddrv` prints `interface=... version=...`
+per global (no wayland-info here).
 
 ## Test results (wt/wayland-build, fresh prefix; X column = same build, Xvfb with no WM, so noisy)
 | test | wayland | X (Xvfb) |
@@ -81,6 +84,33 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 - Source FIXMEs worth knowing: wayland_keyboard.c (modifier state sync with XKB, foreground update,
   WM_INPUTLANGCHANGEREQUEST wParam), wayland_pointer.c:842 dpi scaling of rects.
 
+## Owned windows (134, 135; branch fix/134, not on integ yet)
+- Same process: an owned managed window gets `xdg_toplevel.set_parent(owner's toplevel)`. window.c keeps the owner
+  root per window (`wayland_win_data.owner`, taken at WindowPosChanged) and what the compositor was told
+  (`wayland_surface.parent_hwnd`). Rules from xdg-shell / wlroots: only a *mapped* toplevel (first buffer committed) can be
+  a parent, an unmapped one counts as NULL (wlroots really drops it; mutter keeps it); when a parent unmaps wlroots
+  re-parents to the grandparent, mutter 42 leaves non-modal children pointing at the dead window, so the driver sends `set_parent(NULL)` itself; a loop is a fatal
+  `invalid_parent` on wlroots (mutter only logs "would create a loop" in shell.log). Hence: parent set at the owned window's
+  WindowPosChanged if the owner is mapped, else when the owner maps (`wayland_surface_mapped` -> `update_owned_toplevels`);
+  a stale link that would close a loop is unset first.
+- Owner changes via SetWindowLongPtr(GWLP_HWNDPARENT) reach no driver entry (same on X11: WM_TRANSIENT_FOR follows at the
+  next style/pos update): the parent follows at the owned window's next WindowPosChanged.
+- Other process: the owner's process exports each mapped toplevel (xdg-foreign v2, else v1) and publishes the handle on the
+  window: property `__wine_wayland_exported_handle` = global atom whose name is the handle; a second property *named* by the
+  handle holds the atom reference, so wineserver frees it with the window (plain NtAddAtom would leak one of ~16k atoms per
+  window of a killed process). The owned window's process reads it (NtUserGetProp + NtQueryInformationAtom), imports and
+  calls `set_parent_of`; it re-reads only when it has no live import (`destroyed` event = owner unmapped). mutter 42 handles
+  are 32 random printable ASCII chars (spaces, quotes, `#`...; atom names are case-insensitive, fine for random handles),
+  wlroots uses 36-char tokens.
+  Not covered: nothing tells the owned window's process when a foreign owner maps later, it retries at its next
+  WindowPosChanged (win32u moves owned popups with their owner, which was enough in the probe and for Inventor's trial popup:
+  first owned by the splash window, then by the main window, imported 65 ms after the main window's handle appeared).
+- mutter 42 does not centre a child toplevel on its parent (place.c centres only DIALOG/MODAL_DIALOG types, a Wayland
+  window only becomes one through gtk_shell1.set_modal): dialogs still land near the top-left (136).
+- Keyboard focus: mutter focuses the clicked surface even if the Win32 window is disabled (owner of a modal dialog). fix/134
+  keeps the thread's active window as foreground then (like winex11's FocusIn), so typing keeps going to the dialog.
+- `tests/wl_xowner.sh` (WINE_BUILD=...): all wl_xowner cases with pixel checks; 26 PASS on fix/134, `self` fails on integ.
+
 ## Inventor 2027 under Wayland (wine-src 04293594c50, prefix inv4, 2026-10-03)
 Result: starts in ~15-20 s to an idle main window, ribbon/dialogs/menus/tooltips/3D viewport (wined3d GL on llvmpipe) work;
 `invscen all` 10/13 (drawing2 DWG + sheetmetal DXF fail: 133; export IGES fails on X too). Blockers: WebView2 content blank
@@ -92,22 +122,26 @@ effect in Inventor typing (dialog edit fields, file name box). Crash: none seen.
   `WINE_D3D_CONFIG=renderer=gl wt/wayland-build/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe'` (vulkan
   has no WSI here). Switching a prefix between X and Wayland needs only stop + `wineboot -u` with the other env (no prefix update).
   `tools/prefix.sh start` always uses build/ + DISPLAY. Back: `x/wayland.sh stop; tools/prefix.sh start inv4`.
-- Harness without editing it: run.sh does `export DISPLAY=${DISPLAY:-:98}` and its `all` mode runs `prefix.sh restart ${INV:-inv}`
-  after a crash (would restart prefix `inv`!), so run scenarios one by one: `WINE_BUILD=<dir with a `wine` wrapper that does
-  "unset DISPLAY; exec wt/wayland-build/wine \"$@\"">`, `INV_PREFIX=<symlink to prefixes/inv4>` (output goes to
-  inst/invscen/<symlink name>), `WINE_D3D_CONFIG=renderer=gl`, then `tools/invscen/run.sh SCEN`. The dialog-screenshot hook
-  (INVSCEN_SHOT -> x/shot.sh) does not work on Wayland (waits 30 s per dialog).
-- The trial popup (AdskLicensingAgent `webview` window) is invisible and modal: close it with WM_CLOSE (`tests/wl_winctl.exe HWND close`);
+- Harness: run.sh drops DISPLAY itself when WAYLAND_DISPLAY is set, so with the Wayland env:
+  `INV_PREFIX=prefixes/inv2 WINE_BUILD=wt/134-build WINE_D3D_CONFIG=renderer=gl tools/invscen/run.sh SCEN` (verified: hello, part,
+  drawing, view; output in inst/invscen/inv2). Run scenarios one by one: `all` restarts prefix `${INV:-inv}` after a crash.
+  Never pipe `wine wineboot -u` (or any wine command that starts the prefix) into `tail`: the services inherit the pipe and
+  the pipeline never ends. The dialog-screenshot hook (INVSCEN_SHOT -> x/shot.sh) does not work on Wayland (waits 30 s per dialog).
+- With `renderer=gl` Inventor shows a "DirectX 12 is not supported or installed on this PC" box when Application Options is
+  opened the first time (OK is harmless).
+- The trial popup (AdskLicensingAgent `webview` window) is invisible and modal on integ (135; on fix/134 it is above the main
+  window, content still blank: 132): close it with WM_CLOSE (`tests/wl_winctl.exe HWND close`);
   the harness already does. Find windows with `tests/wl_winlist.exe` (all visible top-levels: hwnd, rect, owner), `tests/wl_wintree.exe
   [exe-substring]` (with children, hidden too). Wine rects of toplevels are NOT screen positions here (mutter places them).
-- Probes: wl_xswap (cross-process swapchain, 132), wl_idle (WaitForInputIdle, 133), wl_xowner (owned windows z-order, 134/135),
+- Probes: wl_xswap (cross-process swapchain, 132), wl_idle (WaitForInputIdle, 133), wl_xowner + wl_xowner.sh (owned windows z-order, 134/135),
   wl_childswap (same-process child/layered/popup swapchain; works), wl_winctl (close/hide/show/top/move a window by HWND).
 - Input quirks of x/wshot.sh: `click` before any `move` hits (0,0) = the Activities hot corner; `rel` motion while a button is held does not
   drag, use absolute `move` steps; orbit = `keydown Shift_L; down 2; move...; up 2; keyup Shift_L` (F4 does not orbit on X either);
   `type` drops non-ASCII (mutter: "No keycode found for keyval", harness limit, not Wine); Super_L does not open the overview.
   Screenshots of Inventor show the account name top right: crop before keeping.
 - Observed fine on Wayland: window resize/move by the compositor (Wine sees the new size), maximize/restore (maximized main window
-  is 1920x1048 at (-4,-4): mutter keeps the 32 px panel), menus/context menus/Marking Menu/tooltips at the pointer (subsurfaces),
+  is 1920x1048 at (-4,-4): mutter keeps the 32 px panel), menus/context menus/Marking Menu/tooltips at the pointer (subsurfaces;
+  but a tooltip over the 3D viewport is drawn under it: 145),
   text entry, clipboard between Wine processes (not with the host: no zwlr_data_control).
 - An explorer stub window ("Shell_TrayWnd", 166x52) is always visible top-left; DBXBridge/other helper processes each log the three
   `wayland_process_init` capability errors (noise, ~130 lines per Inventor start).
