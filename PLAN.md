@@ -276,16 +276,25 @@ commits or screenshots). Read-only mode may remain after expiry.
   - Verification round running (Sonnet): integ 232278be38e = 130 + 131 + 140 + 133 built in
     build-next/, full regress vs master and vs 04293594c50, suite + dwgloop + per-fix checks on inv.
     integ is not pushed and build/ not rebuilt until it is clean. 141 and 134 follow when reviewed.
+  - Wayland track, two Opus workers on top of fix/134:
+    157 (wt/157, tests in vmwl/): lock-order deadlock user lock ↔ win_data_mutex — two threads
+      showing/hiding windows hang 4 of 7 runs on integ; the blocker for real use.
+    132 M0+M1 (wt/132, host session, inv2): unknowns first (does the GPU process block in
+      eglSwapBuffers on a never-mapped surface; why its hardware path dies), then design A, GL path:
+      renderer reads back into a shared section, owner attaches it to a proxy subsurface.
   - Reviews (independent Opus) and follow-ups:
     131 window-less composition swapchains: reviewed, follow-ups done (explicit
       WINED3D_SWAPCHAIN_WINDOWLESS flag, so d3d8/d3d9 NULL-window swapchains are as before; Windows
       parity for 5 calls) → on integ eb8829b9fe1 (not pushed until the round is complete).
       Drafts: 149 (Present(1) doesn't pace on these), 150 (Vulkan crash after the window of a
       swapchain is destroyed), 151 (FLIP_DISCARD composition buffers read back black).
-    134/135: review found a regression in the foreground commit (disabled window with no active
-      window in its thread: keys dropped) + smaller items; VM verified (above). Worker applying;
-      drafts 156 (minimize desync), 157 (user lock vs win_data_mutex deadlock, hangs 4 of 7 in a
-      show/hide stress on integ too — serious), 158 (stale owner handle after thread exit).
+    134/135: review follow-ups done on fix/134 (5d59ae5fddf, rebased onto integ 0b77b17a942):
+      foreground fallback (owner's last active popup → thread's active window → the window),
+      no redundant set_parent(nil), foreign owner decided by process id, cross-process loop guard.
+      wl_xowner 28/28 on mutter 42, Inventor dialogs and trial popup stay above, typing reaches the
+      dialog. To be cherry-picked onto integ once the verification round is done (winewayland only).
+      Remains: keys to a dialog in another thread/process than its disabled owner; stale-import loop;
+      owned windows of a minimized owner invisible (156); 158 (stale owner handle after thread exit).
     133: review follow-ups done (surface flush before the wait, test robustness, QS_SMRESULT case)
       → on integ. Wayland case verified by the reviewer (+69 ms → +1590 ms). One i386 user32:win
       run of 16 had an extra failure (win.c:12747, cross-thread destroy order); frequency is being
