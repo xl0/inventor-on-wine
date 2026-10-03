@@ -272,10 +272,19 @@ commits or screenshots). Read-only mode may remain after expiry.
   - 133 (Opus worker, wt/133, inv4): WaitForInputIdle returns as soon as ANY thread of the target
     waits for messages (one idle event per process). Found on Wayland (driver's clipboard thread →
     Inventor's DBXBridge start fails → DWG/DXF export), but driver-independent. VM ground truth first.
-  - UI pass 2 (Sonnet worker, inv :98, build/): a designer's day by mouse on the current build
-    (the first pass was ~100 fixes ago); results in inst/ui2/results.md, drafts 140-159.
-    Decision: the free prefixes are better spent finding what still breaks than on the
-    low-priority queue (117 is a memory-only win, 113/126 don't affect Inventor).
+  - 141 (Opus worker, wt/141, inv): riched20 assertion (caret.c:232, MEPF_REWRAP) when a drawing
+    dimension is placed; endless assertion box, session lost. Possibly a regression of our 125
+    riched20 commits → first priority; the user's laptop build has it.
+  - 140 (Opus worker, wt/140, prefix when one frees): Inventor spins in IsDialogMessageW on the first
+    key press after a docked pane (iLogic Browser) is closed; DIALOG_IsAccelerator never terminates
+    under a hidden container (probe tests/isdialogmsg_hidden.c). VM ground truth first.
+- UI pass 2 done (Sonnet, inv, build/ 04293594c50, about half of the areas; inst/ui2/results.md):
+  nothing regressed vs the first pass; picking, viewport, ViewCube, breadcrumbs (041), file clicks
+  (043) now work; 042 shadow still there. New: 140, 141 (above), 142 (low: stale pixels in the
+  Render Output dialog's top strip). Not covered yet: pattern/section/measure, interference, .ipn,
+  section/detail views, balloons, parts list, print preview, docking/floating/splitters, tile/cascade,
+  Frame Generator, Tube & Pipe, Cable & Harness, Weldment, Stress Analysis, Add-In Manager,
+  Customize, Styles editor, Content Center, Pack and Go → UI pass 3 when a prefix is free.
 - Wayland pass done (Sonnet, inv4, wt/wayland-build at 04293594c50, software rendering): Inventor
   starts, ribbon/dialogs/menus/tooltips/typing/3D viewport work, invscen 10/13. Blockers, by impact:
   132 WebView2 content blank (a swapchain made by another process on a window is never shown),
