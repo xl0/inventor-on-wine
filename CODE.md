@@ -303,6 +303,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
 - `x/wayland.sh start|stop|env`, `x/wshot.sh` (screenshot + input), `x/winj.py`: headless mutter Wayland
   session for winewayland.drv tests; build in `wt/wayland-build` (build/ lacks the driver). See notes/wine/wayland.md.
+  Inventor pass on Wayland: issues 132-136; probes `tests/wl_{winlist,wintree,winctl,xswap,xowner,childswap,idle}.c` (window
+  listing/control, cross-process swapchain, owner z-order, WaitForInputIdle).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
   inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`

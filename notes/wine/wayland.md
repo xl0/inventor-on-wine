@@ -72,7 +72,7 @@ xdg-wm-base/zxdg_shell_v6.
 | opengl32:opengl | HANG in glReadPixels (issue 127); X finishes in 1.3 s | 30 failures (Xvfb) |
 | DXVK d3d11_present.exe | device on RTX 6000 ok, page fault at swapchain (NVIDIA WSI, see GPU) | |
 
-Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectangles).
+Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectangles); Inventor pass (below): 132-136.
 
 ## Behaviour seen
 - Window placement is the compositor's (requests at 100,100 end up centred); Wine only learns the size.
@@ -80,3 +80,34 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 - Keyboard layout becomes 0xE0010409 once the window is focused (IME layout), see 128.
 - Source FIXMEs worth knowing: wayland_keyboard.c (modifier state sync with XKB, foreground update,
   WM_INPUTLANGCHANGEREQUEST wParam), wayland_pointer.c:842 dpi scaling of rects.
+
+## Inventor 2027 under Wayland (wine-src 04293594c50, prefix inv4, 2026-10-03)
+Result: starts in ~15-20 s to an idle main window, ribbon/dialogs/menus/tooltips/3D viewport (wined3d GL on llvmpipe) work;
+`invscen all` 10/13 (drawing2 DWG + sheetmetal DXF fail: 133; export IGES fails on X too). Blockers: WebView2 content blank
+(132: Home page, Assistant pane, trial popup), modal dialogs fall behind their owner on a click (134), the trial popup is
+stacked behind the main window and blocks it (135), toplevel popups placed by mutter (136). 128 (extra 0xE5) had no visible
+effect in Inventor typing (dialog edit fields, file name box). Crash: none seen. FPS not measured (orbit tracks input).
+- Run it: `PREFIX_HOLDER=x tools/prefix.sh lease inv4 x; tools/prefix.sh stop inv4 --holder x`, then with the Wayland env
+  (`eval "$(x/wayland.sh env)"`, DISPLAY unset, `WINEPREFIX=$PWD/prefixes/inv4`) `wt/wayland-build/wine wineboot -u` and
+  `WINE_D3D_CONFIG=renderer=gl wt/wayland-build/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe'` (vulkan
+  has no WSI here). Switching a prefix between X and Wayland needs only stop + `wineboot -u` with the other env (no prefix update).
+  `tools/prefix.sh start` always uses build/ + DISPLAY. Back: `x/wayland.sh stop; tools/prefix.sh start inv4`.
+- Harness without editing it: run.sh does `export DISPLAY=${DISPLAY:-:98}` and its `all` mode runs `prefix.sh restart ${INV:-inv}`
+  after a crash (would restart prefix `inv`!), so run scenarios one by one: `WINE_BUILD=<dir with a `wine` wrapper that does
+  "unset DISPLAY; exec wt/wayland-build/wine \"$@\"">`, `INV_PREFIX=<symlink to prefixes/inv4>` (output goes to
+  inst/invscen/<symlink name>), `WINE_D3D_CONFIG=renderer=gl`, then `tools/invscen/run.sh SCEN`. The dialog-screenshot hook
+  (INVSCEN_SHOT -> x/shot.sh) does not work on Wayland (waits 30 s per dialog).
+- The trial popup (AdskLicensingAgent `webview` window) is invisible and modal: close it with WM_CLOSE (`tests/wl_winctl.exe HWND close`);
+  the harness already does. Find windows with `tests/wl_winlist.exe` (all visible top-levels: hwnd, rect, owner), `tests/wl_wintree.exe
+  [exe-substring]` (with children, hidden too). Wine rects of toplevels are NOT screen positions here (mutter places them).
+- Probes: wl_xswap (cross-process swapchain, 132), wl_idle (WaitForInputIdle, 133), wl_xowner (owned windows z-order, 134/135),
+  wl_childswap (same-process child/layered/popup swapchain; works), wl_winctl (close/hide/show/top/move a window by HWND).
+- Input quirks of x/wshot.sh: `click` before any `move` hits (0,0) = the Activities hot corner; `rel` motion while a button is held does not
+  drag, use absolute `move` steps; orbit = `keydown Shift_L; down 2; move...; up 2; keyup Shift_L` (F4 does not orbit on X either);
+  `type` drops non-ASCII (mutter: "No keycode found for keyval", harness limit, not Wine); Super_L does not open the overview.
+  Screenshots of Inventor show the account name top right: crop before keeping.
+- Observed fine on Wayland: window resize/move by the compositor (Wine sees the new size), maximize/restore (maximized main window
+  is 1920x1048 at (-4,-4): mutter keeps the 32 px panel), menus/context menus/Marking Menu/tooltips at the pointer (subsurfaces),
+  text entry, clipboard between Wine processes (not with the host: no zwlr_data_control).
+- An explorer stub window ("Shell_TrayWnd", 166x52) is always visible top-left; DBXBridge/other helper processes each log the three
+  `wayland_process_init` capability errors (noise, ~130 lines per Inventor start).
