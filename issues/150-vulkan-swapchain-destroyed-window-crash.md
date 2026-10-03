@@ -12,7 +12,7 @@ Windows: Present returns S_OK, no crash (inst/131-review/probe2-win.txt). The GL
 "swapchain_blit_gdi Failed to blit".
 
 ## Repro
-`WINE_D3D_CONFIG=renderer=vulkan wine inst/131-review/probe2.exe deadwin` (source probe2.c next to it; on Xvfb with
+`WINE_D3D_CONFIG=renderer=vulkan wine tests/r131/review_rotation.exe deadwin` (source tests/r131/review_rotation.c, next to it; on Xvfb with
 `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json`). Outputs: inst/131-review/probe2dw-base-renderer_vulkan.txt
 (integ), same on fix/131 de75813d2f7.
 

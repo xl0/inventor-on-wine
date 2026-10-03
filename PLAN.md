@@ -274,14 +274,21 @@ commits or screenshots). Read-only mode may remain after expiry.
     (`tests/r133/idle.exe main_getmsg helper_win_getmsg`, then drawing2/sheetmetal). Remaining Windows
     differences (PeekMessage loops count as idle, later calls track one thread, +500 ms timeout) → draft 143.
   - Reviews (independent Opus) and follow-ups, all on integ d18a5dcd1ef, merge round when all are back:
-    131 window-less composition swapchains: "merge as is"; worker adds a set_window guard / explicit
-      flag, Windows parity for 5 calls, drafts 149 (Present(1) doesn't pace), 150, 151 (older bugs).
+    131 window-less composition swapchains: reviewed, follow-ups done (explicit
+      WINED3D_SWAPCHAIN_WINDOWLESS flag, so d3d8/d3d9 NULL-window swapchains are as before; Windows
+      parity for 5 calls) → on integ eb8829b9fe1 (not pushed until the round is complete).
+      Drafts: 149 (Present(1) doesn't pace on these), 150 (Vulkan crash after the window of a
+      swapchain is destroyed), 151 (FLIP_DISCARD composition buffers read back black).
+    134/135: review found a regression in the foreground commit (disabled window with no active
+      window in its thread: keys dropped) + smaller items; VM verified (above). Worker applying;
+      drafts 156 (minimize desync), 157 (user lock vs win_data_mutex deadlock, hangs 4 of 7 in a
+      show/hide stress on integ too — serious), 158 (stale owner handle after thread exit).
     133: "merge after fixes" — WaitForInputIdle skipped the surface flush (regression), test
       robustness; Wayland case verified by the reviewer (+69 ms → +1590 ms). Worker applying.
     140: reworked to the bound only (stop after one round; 3 lines, no change to cases that
       returned, closer to Windows than the start-point rule) + msg.hwnd == hwndDlg fix. Worker applying.
     141 (riched20 EM_SETCHARFORMAT SCF_WORD: not a regression, upstream bug since 2019; 3 commits):
-      in review. 134/135 (winewayland owned windows, 6 commits): in review.
+      in review.
 - UI pass 2 done (Sonnet, inv, build/ 04293594c50, about half of the areas; inst/ui2/results.md):
   nothing regressed vs the first pass; picking, viewport, ViewCube, breadcrumbs (041), file clicks
   (043) now work; 042 shadow still there. New: 140, 141 (above), 142 (low: stale pixels in the

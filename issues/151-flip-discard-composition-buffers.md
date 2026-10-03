@@ -9,7 +9,7 @@ FLIP_SEQUENTIAL is fine (reviewer's probe2: 0 mismatches with the Vulkan rendere
 FLIP_SEQUENTIAL for their root surface, so Inventor is not affected.
 
 ## Repro
-`PROBE_DISCARD=1 wine inst/131-review/probe2.exe` (source probe2.c next to it): 54 mismatches with the Vulkan
+`PROBE_DISCARD=1 wine tests/r131/review_rotation.exe` (source tests/r131/review_rotation.c, next to it): 54 mismatches with the Vulkan
 renderer, 58 with GL, on integ and on fix/131 alike (inst/131-review/probe2dis-*.txt), e.g.
 `MISMATCH discard 2 bufs frame 1 buffer 1: got ff000000, expected ff306038`.
 No Windows comparison is possible through the API: there GetBuffer(n > 0) fails with DXGI_ERROR_INVALID_CALL on a

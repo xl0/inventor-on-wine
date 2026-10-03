@@ -8,7 +8,7 @@ WebView2/Chromium does not (it has its own vsync source: its two swapchains pres
 131), so nothing in Inventor shows it.
 
 ## Numbers
-`inst/131-review/probe1.exe pace` (source next to it; presents in 2 s per swap-chain flags / sync interval):
+`tests/r131/review_parity.exe pace` (source tests/r131/review_parity.c; presents in 2 s per swap-chain flags / sync interval):
 | | Win11 (WARP) | fix/131 GL | fix/131 Vulkan (lavapipe) | integ GL | integ Vulkan |
 |---|---|---|---|---|---|
 | d3d11, interval 1 | 128 | 225805 | 213971 | 2252 | 3891 |
