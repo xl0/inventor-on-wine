@@ -218,7 +218,7 @@ commits or screenshots). Read-only mode may remain after expiry.
   - M 059 user handle generation wraps at 0x7ffe like Windows (bit-31 HWNDs broke MFC → SaveAs E_FAIL, 058 crash)
   - M 060 wined3d-vk: reuse retired large buffers (sketch 47.7 → 4.9 ms, = DXVK)
   - M 061 re-present offscreen client surfaces on expose (black drag trail 67% → 0%)
-  - X 062 WPF splitter popup black without a compositor: alpha 3-6, X can't blend (wontfix)
+  - M 062 WPF splitter popup: hidden under a compositor (all-faint layered windows); black without one (X can't blend, wontfix)
   - M 063 manifest threadingModel case-insensitive + defaults (Stress Analysis; Inventor retest pending)
   - M 064 GetWindowsAccountDomainSid non-account SIDs → 1257 (Content Center; Inventor retest pending)
   - M 065 win32u DC region recompute for cross-process child windows (stale Assistant image)
@@ -235,11 +235,11 @@ commits or screenshots). Read-only mode may remain after expiry.
   - O 074 Inventor crash after 4 h soak, CLR exception in place-occurrences (draft; not in soak #2)
   - O 082 soak: DesignProject.Activate E_FAIL after 3.4 h, then SaveAs E_INVALIDARG (draft)
   - M 076 SC_MOVE with any hittest low bits moves the window (caption drag under awesome did nothing)
-  - O 077 WM-initiated moves send no WM_ENTERSIZEMOVE/EXITSIZEMOVE (stale splitters after Mod4+drag)
-  - O 078 first present of a new offscreen client surface never reaches the screen
+  - M 077 WM-initiated moves send WM_ENTERSIZEMOVE/EXITSIZEMOVE (stale splitters after Mod4+drag); follow-up 130
+  - M 078 first present of a new offscreen client surface never reached the screen
   - L 079 awesome: restoring a maximized window leaves X maximized (seen once)
   - L 080 WindowFromPoint ignores per-pixel alpha of layered windows
-  - O 081 ~500 wineserver requests per COM call (hooks, registry, FreeLibrary, GetProp): 9 ms vs 2 ms
+  - M 081 ~500 wineserver requests per COM call (hooks, registry, FreeLibrary, GetProp): 9 ms vs 2 ms
   - M 056 COM server exceptions → RPC_E_SERVERFAULT (combase channel + rpcrt4 stub)
   - X 003 installer "hang" (harness artifact)
   - Pending chores:
@@ -268,6 +268,10 @@ commits or screenshots). Read-only mode may remain after expiry.
     The WebView2 hidden-window leak gets its own draft (131).
   - Inventor-on-Wayland pass (Sonnet worker, inv4, wt/wayland-build, software rendering): drafts 132-139.
     Full GPU testing would need libxkbregistry-dev and nvidia-drm.modeset=1 (user's call).
+  - UI pass 2 (Sonnet worker, inv :98, build/): a designer's day by mouse on the current build
+    (the first pass was ~100 fixes ago); results in inst/ui2/results.md, drafts 140-159.
+    Decision: the free prefixes are better spent finding what still breaks than on the
+    low-priority queue (117 is a memory-only win, 113/126 don't affect Inventor).
 - Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup
   (white for a while), splitter overlay lag, CJK in Format Text, the Open dialog crash.
 - Held on branches (not merged):
