@@ -285,8 +285,13 @@ commits or screenshots). Read-only mode may remain after expiry.
       show/hide stress on integ too — serious), 158 (stale owner handle after thread exit).
     133: "merge after fixes" — WaitForInputIdle skipped the surface flush (regression), test
       robustness; Wayland case verified by the reviewer (+69 ms → +1590 ms). Worker applying.
-    140: reworked to the bound only (stop after one round; 3 lines, no change to cases that
-      returned, closer to Windows than the start-point rule) + msg.hwnd == hwndDlg fix. Worker applying.
+    140: reworked after review → on integ: the accelerator search ends when it wraps a second time
+      (3 lines; every case that returned is unchanged; 0 hangs of 1785 probe cases, Windows hangs in 25)
+      + no search when the message window is the dialog (Windows sends nothing; Wine clicked buttons
+      of the dialog's sibling) + tests (pass on the VM). Inventor repro 3 of 3 without a hang.
+      Not re-reviewed: the rework is the reviewer's own tested variant, diff read by the coordinator.
+      One Inventor start of four died in .NET startup right after the build switch (not investigated;
+      watch for it in the merge round). Remaining Windows differences → draft 148.
     141 (riched20 EM_SETCHARFORMAT SCF_WORD: not a regression, upstream bug since 2019; 3 commits):
       in review.
 - UI pass 2 done (Sonnet, inv, build/ 04293594c50, about half of the areas; inst/ui2/results.md):
