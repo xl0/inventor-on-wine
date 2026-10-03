@@ -1,5 +1,5 @@
 # 131 Composition swapchains leak a hidden top-level window each (WebView2 GPU process)
-Status: fixed (awaiting review) · Owner: worker-131 · Branch: fix/131 (8915c5c5274, wt/131 on integ d18a5dcd1ef) · Found in: 130 (soak #4 rubber fps), inv3/inv2 2026-10-02/03
+Status: fixed (reviewed: merge, follow-ups done) · Owner: worker-131 · Branch: fix/131 (de75813d2f7, wt/131 on integ d18a5dcd1ef) · Found in: 130 (soak #4 rubber fps), inv3/inv2 2026-10-02/03
 
 ## Symptom
 The GPU process of Inventor's WebView2 (Home page / in-app browser, `--user-data-dir=...Inventor 2027\WebBrowser`)
@@ -55,9 +55,10 @@ it is what made 130's cost grow with session age, and it grows the X window tree
 | SetFullscreenState(TRUE / FALSE) | DXGI_ERROR_INVALID_CALL | same |
 | Present, ResizeBuffers(320x240) | S_OK | same |
 | create with 0x0, DXGI_SWAP_EFFECT_DISCARD, DXGI_SCALING_NONE, NULL desc / device | DXGI_ERROR_INVALID_CALL | same (old hack: accepted; NULL desc crashed) |
-| ResizeTarget | DXGI_ERROR_INVALID_CALL | S_OK (no-op), left |
-| GetFullscreenDesc | DXGI_ERROR_INVALID_CALL | S_OK, Windowed TRUE, left |
-| ResizeBuffers(0x0) | E_INVALIDARG | d3d11 0x8876086c + wined3d ERR "Failed to get client rect", d3d12 DXGI_ERROR_INVALID_CALL, left |
+| create with DXGI_ALPHA_MODE_STRAIGHT; with GDI_COMPATIBLE on D3D12 (D3D11: S_OK) | DXGI_ERROR_INVALID_CALL | same |
+| ResizeTarget | DXGI_ERROR_INVALID_CALL | same |
+| GetFullscreenDesc | DXGI_ERROR_INVALID_CALL, desc untouched | same |
+| ResizeBuffers with a zero width or height | E_INVALIDARG, buffers untouched | same |
 | GetDesc1 AlphaMode | PREMULTIPLIED | d3d11 IGNORE (old FIXME), d3d12 same as Windows |
 `tests/r131/comp_threads.exe` (create on a thread that exits, use + release on main; create on main, release on
 another thread; back buffer held past the swapchain and released on another thread): Win11 no process window at
@@ -72,18 +73,30 @@ same-thread case; the other cases matter for the software path, other apps and t
 
 ## Fix (fix/131)
 No window at all, as on Windows; the lifetime problem and the thread question disappear with it.
-- `db0185a25ca wined3d: Support swapchains without a window.` A swapchain whose window is NULL gets no DC, no
+- `26df690ccda wined3d: Add WINED3D_SWAPCHAIN_WINDOWLESS.` A swapchain created with that flag gets no DC, no
   Vulkan surface/swapchain and no state registration (the Alt+Enter WH_GETMESSAGE hook the hidden window put on
   CrGpuMain); Present loads back buffer 0 into the draw binding and rotates the buffers, nothing else (GL and
-  Vulkan). A GL context that switches to such a swapchain keeps the drawable it has (context_gl.c, one condition):
-  it renders to FBOs anyway, so no backup window and no wglMakeCurrent per swapchain switch.
-- `e7e60511eaf dxgi: Don't create a window for composition swapchains.` CreateSwapChainForHwnd's body became
+  Vulkan); wined3d_swapchain_set_window() leaves it alone. A GL context that switches to such a swapchain keeps
+  the drawable it has (context_gl.c, one condition): it renders to FBOs anyway, so no backup window and no
+  wglMakeCurrent per swapchain switch.
+- `4d61f5c6ad0 dxgi: Don't create a window for composition swapchains.` CreateSwapChainForHwnd's body became
   `dxgi_factory_create_swapchain()` (window may be NULL); CreateSwapChainForComposition validates like Windows
-  and passes NULL. d3d11 and d3d12 swapchains: GetHwnd / SetFullscreenState / GetContainingOutput fail as on
-  Windows without a window. d3d12: no Vulkan surface/swapchain, the present op only releases the frame latency
+  and passes NULL; wined3d_swapchain_desc_from_dxgi() sets the windowless flag for a NULL window (kept across
+  ResizeBuffers, hidden from GetDesc). d3d11 and d3d12 swapchains without a window: GetHwnd / GetFullscreenDesc /
+  SetFullscreenState / ResizeTarget / GetContainingOutput / ResizeBuffers(0) fail as on Windows before anything
+  window-related runs. d3d12: no Vulkan surface/swapchain, the present op only releases the frame latency
   semaphore.
-- `8915c5c5274 dxgi/tests: Test composition swapchains.` (d3d10 + d3d12: thread window count, the calls in the
-  table that match, invalid descriptions). Passes on the VM and on Wine, both arches.
+- `de75813d2f7 dxgi/tests: Test composition swapchains.` (d3d10 + d3d12: thread window count, every call of the
+  table, invalid descriptions). Passes on the VM and on Wine, both arches.
+
+Changed after the review (the reviewed version was db0185a25ca / e7e60511eaf / 8915c5c5274):
+- Explicit flag instead of "window == NULL": a handful of lines more (the define, set + strip in dxgi/utils.c,
+  keep in d3d11 ResizeBuffers, the set_window guard) and the wined3d conditions only change their predicate. A d3d8/d3d9
+  swapchain created without any window behaves exactly as on integ again, and set_window() cannot give a
+  windowless swapchain the screen DC (it returns at once; on a NULL/NULL d3d9 swapchain it does what integ did).
+- Parity for the window-less calls that used to reach wined3d with a NULL window (ResizeTarget, GetFullscreenDesc,
+  ResizeBuffers with a zero size) and for two creation cases (straight alpha; GDI-compatible on D3D12), tests for
+  each.
 
 What needed the HWND before: wined3d for the DC (GL context drawable, GDI fallback), the Vulkan surface, the
 default destination rectangle and the fullscreen/Alt+Enter state; dxgi's d3d12 swapchain for its Vulkan surface;
@@ -102,7 +115,7 @@ renderer; integ: 2 -> 7 -> 12 process windows and "Failed to blit" errors once t
 thread gone before use and release; last DXGI reference dropped while a buffer is held, buffer released on
 another thread (wined3d swapchain destroyed there); creation failure (nothing was created). No window in any.
 
-## Verification
+## Verification (reviewed version; suite, samples and pacing were not repeated after the follow-ups)
 - comp_windows.exe: `before 1, 10 composition swapchains 1, released 1; GetHwnd 0x887a0001 hwnd 0`, exit 0 (GL on
   Xvfb/llvmpipe and Vulkan on lavapipe). The 1 is the calling thread's "DXGI device window" (upstream: one hidden
   static per DXGI factory with a d3d10/11 device, destroyed with the factory; Windows has none).
@@ -132,15 +145,36 @@ another thread (wined3d swapchain destroyed there); creation failure (nothing wa
   software path's calls) prints the same on both.
 - asmbig 3x: fix 28.8 / 28.7 / 19.5 s, integ 28.0 / 25.8 / 21.8 s (the bimodal COM step of 088, not this).
 
+## Verification of the final commits (after the review follow-ups)
+- comp_windows.exe `before 1, ... 1, released 1; GetHwnd 0x887a0001 hwnd 0` and comp_threads.exe `failures 0`, exit 0
+  with GL and with lavapipe Vulkan (x86_64; i386 builds of comp_probe / comp_threads under Vulkan: same output,
+  exit 0). comp_probe: no err line left (the wined3d "Failed to get client rect" ERR is gone).
+- dxgi test: VM 14654 tests, the usual 58 display-mode failures (one x86_64 run 73 and one i386 run 40 with
+  fullscreen / window-message lines 4085-4100, 6688, 6915: other users of the VM desktop), 0 in the new test in
+  all four runs. Wine, plain Xvfb: GL x86_64 14966 / i386 14846 and Vulkan x86_64 14970, 62 display-mode failures
+  each as before, 0 in the new test, no "Failed to blit" / "GDI present"; i386 + Vulkan still dies at dxgi.c:5613
+  before the test (both builds).
+- Regress, same 51 units vs build/: 0 worse; dxgi 16335 tests (+76 over integ), the same 2 failures.
+- Reviewer's probe2 (buffer contents across presents, mixed with a window swapchain, reader thread): Vulkan 0
+  failures, GL 4 (window readback on Xvfb, same on integ); `draw` mode the same.
+- prefixes/inv on the fix: hello 2/2, part 11/11, asm 10/10, drawing 8/8; "Static" 3 -> 3, GPU X windows 27 -> 27;
+  Home and the Assistant pane render (inst/131/final2-home.png); Inventor closed with its close button, exit log
+  as before, no Crashpad dump; inv back on build/.
+
 ## Limits / left
 - GL: a context created first for a window-less swapchain (not the case for d3d10/11, whose device has the
   implicit swapchain on the DXGI device window) still takes wined3d's backup window, as for the desktop window.
 - The new dxgi test counts the calling thread's windows; with the wined3d command stream disabled (csmt=0) and GL
   that backup window, if ever needed, would be the caller's.
-- wined3d treats every swapchain without a window this way, so a d3d8/d3d9 windowed device created with neither
-  a focus nor a device window (invalid on Windows) now presents nowhere instead of GDI-blitting onto the desktop
-  DC (GL) or failing to create (Vulkan).
-- ResizeTarget, GetFullscreenDesc, ResizeBuffers(0x0) and d3d11 GetDesc1().AlphaMode differ from Windows (table).
+- Present with a sync interval >= 1 does not wait on a window-less swapchain: nothing is presented, so nothing
+  paces it ([149](149-composition-swapchain-present-not-vblank-paced.md); Win11 128 presents / 2 s, fix ~220000,
+  integ 2000-4000 from the blit cost). Chromium paces itself (49 fps before and after, above).
+- d3d11 GetDesc1().AlphaMode is IGNORE (old FIXME); other creation checks of Windows are not done (1 or 17
+  buffers, multisampling, sRGB / YUV formats: inst/131-review/probe1-win.txt), nor the E_NOTIMPL stubs
+  (SetSourceSize, SetMatrixTransform, GetRestrictToOutput, ...).
+- Reviewer's finds that predate the branch: [150](150-vulkan-swapchain-destroyed-window-crash.md) (Vulkan
+  swapchain of a destroyed window: recreate fails, crash at destroy), [151](151-flip-discard-composition-buffers.md)
+  (FLIP_DISCARD composition swapchains read back black).
 - d3d12 composition swapchains are created and rotate, but dcomp cannot show them (it needs IDXGISurface buffers).
 - The live software path (browser-side DCompositionCreateDevice(NULL) + GetDC swapchain) was not driven in
   Inventor, only its API sequence in the probe and the dcomp tests.

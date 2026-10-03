@@ -11,8 +11,8 @@
   GetDCEx(target hwnd). Composition swapchains came from a dxgi HACK:
   CreateSwapChainForComposition = CreateSwapChainForHwnd on a hidden popup that was
   never destroyed (131). fix/131: they have no window, as on Windows (GetHwnd fails;
-  Win11 table in issue 131): wined3d swapchain with a NULL window = no DC, no Vulkan
-  surface, Present only rotates the buffers. The compositor needs just GetBuffer +
+  Win11 table in issue 131): wined3d swapchain with WINED3D_SWAPCHAIN_WINDOWLESS = no DC,
+  no Vulkan surface, Present only rotates the buffers and never waits for vblank (149). The compositor needs just GetBuffer +
   GetLastPresentCount. WebView2's GPU process creates and releases them on CrGpuMain,
   a new one per root-surface resize/hide/show.
 - GDI can't reach a window whose top-level window belongs to another process
