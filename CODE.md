@@ -297,7 +297,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   `r130/xisel.py DISPLAY [N]`: us per XISelectEvents on the root (grows with the windows that have XI2 selections);
   `r130/xiwins.py DISPLAY N hold`: N stand-in XI2 windows (aged-session repro); `r130/xres.py DISPLAY [MIN]`: X resources
   per client pid (X-Resource) (130). `r131/winlist.c [IMAGE] [raw]`: all windows of the session per process/thread/class/
-  parent, hidden too; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131).
+  parent, hidden too; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
+  `r131/comp_probe.c`: what a composition swapchain (D3D11, D3D12) answers to the window-related calls and invalid
+  descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
   `loader_dllmain/` (`loader_dllmain.exe MODE|all`, DLL build lines in dm.c): which loader calls
   of thread B wait while thread A sits in a DllMain (048, 092); `stress.c`: threads load/free/look up
   and call DLLs (refcount/lookup races show as crashes or modules left loaded) (092).
