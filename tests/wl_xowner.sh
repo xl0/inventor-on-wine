@@ -70,3 +70,10 @@ ck x-1 B.green $FULL_B; clickc; ck x-2 B.green $FULL_B; clickc; ck x-3 B.green $
 echo "== cross-process, owner hidden and shown again"
 start xha owner hide; sleep 3; start xhb $(hwnd xha); sleep 4
 ck xh-1 B.green $FULL_B; sleep 7; ck xh-2 B.green $FULL_B B.green; sleep 4; ck xh-3 B.green $FULL_B; clickc; ck xh-4 B.green $FULL_B; fin xha xhb
+
+echo "== cross-process owner loop: A owned by B, B owned by a child window of A (legal Win32, must not loop the toplevels)"
+l0=$(grep -c "would create a loop" /tmp/wl-xdg/shell.log)
+start la owner loop; sleep 4; start lb $(hwnd la) child; sleep 9; ck loop-1 B.green $FULL_B
+l1=$(grep -c "would create a loop" /tmp/wl-xdg/shell.log)
+[ "$l0" = "$l1" ] && echo "PASS loop-1: no parent loop in the compositor log" || echo "FAIL loop-1: mutter logged $((l1 - l0)) parent loop(s)"
+fin la lb

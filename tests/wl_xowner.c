@@ -1,8 +1,11 @@
 /* Wayland: an owned window must stay above its owner (Win32 semantics), same process (134) or another one (135).
  * Windows are solid colours so a screenshot can be checked: A red, A2 yellow, B green, C blue; A covers most of
  * the screen so the compositor has to overlap them. STEP = ms between steps (default 4000); "step N: ..." lines go to stdout.
- * wl_xowner.exe [owner [hide]]  process A: main window, prints "owner=HWND"; `hide`: hides, then re-shows it
- * wl_xowner.exe HWND [STEP]     process B: WS_POPUP window owned by A's window
+ * wl_xowner.exe [owner [hide|loop]]  process A: main window, prints "owner=HWND"; `hide`: hides, then re-shows it;
+ *                               `loop`: once B exists, A's owner := B (with `HWND child`: a legal Win32 owner loop
+ *                               A > B > child of A, which must not become a parent loop of the toplevels)
+ * wl_xowner.exe HWND [STEP|child]  process B: WS_POPUP window owned by A's window (`child`: by A's child window,
+ *                               set with SetWindowLongPtr, CreateWindow would take A itself)
  * wl_xowner.exe self [STEP]     A plus a modal-style owned popup B (A disabled)
  * wl_xowner.exe chain [STEP]    A owns B owns C
  * wl_xowner.exe late [STEP]     B (owner A still hidden) is shown first, then A
@@ -61,6 +64,16 @@ int main(int argc, char **argv)
             ShowWindow(a, SW_HIDE); step("A hidden");
             ShowWindow(a, SW_SHOW); step("A shown again");
         }
+        if (argc > 2 && !strcmp(argv[2], "loop"))
+        {
+            CreateWindowExA(0, "static", "child of A", WS_CHILD | WS_VISIBLE, 10, 10, 100, 30, a, NULL, NULL, NULL);
+            while (!(b = FindWindowA(NULL, "B owned popup (must be above A)"))) pump(100);
+            pump(step_ms / 2);
+            SetWindowLongPtrA(a, GWLP_HWNDPARENT, (LONG_PTR)b);
+            SetWindowPos(a, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+            printf("GW_OWNER(A)=%p b=%p GW_OWNER(B)=%p err=%lu\n", GetWindow(a, GW_OWNER), b, GetWindow(b, GW_OWNER), GetLastError());
+            step("A owned by B");
+        }
         pump(60000);
     }
     else if (!strcmp(mode, "self"))
@@ -117,7 +130,13 @@ int main(int argc, char **argv)
     else
     {
         HWND owner = (HWND)(ULONG_PTR)strtoull(mode, NULL, 16);
-        b = mk("B owned popup (must be above A)", GREEN, POPUP, 300, 300, 400, 300, owner);
+        if (argc > 2 && !strcmp(argv[2], "child"))
+        {
+            b = mk("B owned popup (must be above A)", GREEN, POPUP, 300, 300, 400, 300, NULL);
+            SetWindowLongPtrA(b, GWLP_HWNDPARENT, (LONG_PTR)GetWindow(owner, GW_CHILD));
+            SetWindowPos(b, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        else b = mk("B owned popup (must be above A)", GREEN, POPUP, 300, 300, 400, 300, owner);
         printf("popup=%p owner=%p GW_OWNER=%p\n", b, owner, GetWindow(b, GW_OWNER)); fflush(stdout);
         pump(60000);
     }

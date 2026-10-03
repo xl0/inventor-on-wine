@@ -93,6 +93,11 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
   `invalid_parent` on wlroots (mutter only logs "would create a loop" in shell.log). Hence: parent set at the owned window's
   WindowPosChanged if the owner is mapped, else when the owner maps (`wayland_surface_mapped` -> `update_owned_toplevels`);
   a stale link that would close a loop is unset first.
+- "A stale link" is the only loop source in one process. Across processes (parents set elsewhere are invisible) the driver
+  also walks GA_ROOT(GW_OWNER) from a foreign owner and does not import it if the chain comes back to the window: owners are
+  mapped to their root window, so "A owned by B, B owned by a child of A" is legal Win32 and a toplevel loop. On wlroots the
+  `invalid_parent` error for a foreign loop is posted on the parent's toplevel = kills the *owner's* process connection.
+  Still open: stale imports in two processes (135).
 - Owner changes via SetWindowLongPtr(GWLP_HWNDPARENT) reach no driver entry (same on X11: WM_TRANSIENT_FOR follows at the
   next style/pos update): the parent follows at the owned window's next WindowPosChanged.
 - Other process: the owner's process exports each mapped toplevel (xdg-foreign v2, else v1) and publishes the handle on the
@@ -108,8 +113,17 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 - mutter 42 does not centre a child toplevel on its parent (place.c centres only DIALOG/MODAL_DIALOG types, a Wayland
   window only becomes one through gtk_shell1.set_modal): dialogs still land near the top-left (136).
 - Keyboard focus: mutter focuses the clicked surface even if the Win32 window is disabled (owner of a modal dialog). fix/134
-  keeps the thread's active window as foreground then (like winex11's FocusIn), so typing keeps going to the dialog.
-- `tests/wl_xowner.sh` (WINE_BUILD=...): all wl_xowner cases with pixel checks; 26 PASS on fix/134, `self` fails on integ.
+  then makes its last active popup (visible, enabled) foreground, else the thread's active window, else the window itself,
+  so typing keeps going to a same-thread dialog. A dialog in another thread/process becomes foreground but gets no keys: the
+  driver sends keys for the compositor-focused (disabled) window.
+- "Other process" is decided by pid, not by "no win_data in this process": an in-process owner can lose its win_data while
+  owned windows live on (thread exit without DestroyWindow; the server even keeps the dead owner handle, 158).
+- Under win_data_mutex only plain server requests are safe; anything taking win32u's user lock (GetWindowLong, window text,
+  GW_OWNER...) can deadlock against a surface flush (157, already present on integ: `rv rapid 300`).
+- mutter hides the children of a minimized parent; the driver's minimize state desyncs from the compositor (156), so an owned
+  window shown while its owner is "minimized" stays invisible.
+- `tests/wl_xowner.sh` (WINE_BUILD=...): all wl_xowner cases with pixel checks; 28 PASS on fix/134, `self` fails on integ.
+  Current compositors (GNOME 50, KDE, sway; xdg-foreign v2): vmwl/results-134.md. Review probes: inst/134-review/rv.c.
 
 ## Inventor 2027 under Wayland (wine-src 04293594c50, prefix inv4, 2026-10-03)
 Result: starts in ~15-20 s to an idle main window, ribbon/dialogs/menus/tooltips/3D viewport (wined3d GL on llvmpipe) work;
