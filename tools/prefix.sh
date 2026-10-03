@@ -25,13 +25,19 @@ lease_holder() { awk -v n="$1" '$1 == n { print $2 }' $L 2>/dev/null || true; }
 lease_line() { awk -v n="$1" '$1 == n { print $2, $3 }' $L 2>/dev/null || true; }
 check_lease() { local h; h=$(lease_holder "$N"); [ -z "$h" ] || [ "$h" = "$HOLDER" ] || die "$N is leased to $h (use --holder $h)"; }
 
-# wineserver pid of the loaded prefix: its cwd is the server dir /tmp/.wine-UID/server-<dev>-<inode of prefix dir>
+# wineserver pid of the loaded prefix: the holder of the lock file in its server dir
+# /tmp/.wine-UID/server-<dev>-<inode of prefix dir>. /proc/locks, cmdline and comm stay readable for
+# processes started from an earlier sandbox instance (another user namespace); cwd, exe, environ and
+# fds do not, so such a prefix shows up with hidden processes until it is restarted from this sandbox.
 server_pid() {
-	local d p; d=$(printf '/tmp/.wine-%d/server-%s-%x' $UID "$(stat -c %D "$WP")" "$(stat -c %i "$WP")")
-	for p in $(pgrep -x wineserver || true); do
-		if [ "$(readlink /proc/$p/cwd 2>/dev/null)" = "$d" ]; then echo $p; return; fi
+	local d i p; d=$(printf '/tmp/.wine-%d/server-%s-%x' $UID "$(stat -c %D "$WP")" "$(stat -c %i "$WP")")
+	i=$(stat -c %i "$d/lock" 2>/dev/null) || return 0
+	for p in $(awk -v i=":$i\$" '$6 ~ i { print $5 }' /proc/locks); do
+		if [ "$(cat /proc/$p/comm 2>/dev/null)" = wineserver ]; then echo $p; return; fi
 	done
 }
+server_exe() { tr '\0' '\n' </proc/$1/cmdline 2>/dev/null | head -1; }
+hidden() { ! : 2>/dev/null </proc/$1/environ; }
 # processes with this WINEPREFIX in their environ, minus our ancestors and shells
 prefix_pids() {
 	local anc=" " p=$$ f
@@ -52,7 +58,8 @@ inv_pids() { # prints "PID image" lines
 		case ${c%.exe} in Inventor|AdskLicensingAgent|msedgewebview2|InventorViewCompute|DwgTrans*|ADPClientService) echo $p $c;; esac
 	done
 }
-port_pid() { ss -ltnpH "sport = :$PORT" | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2 || true; }
+# "?" when something listens but its owner is hidden (other sandbox)
+port_pid() { local o; o=$(ss -ltnpH "sport = :$PORT"); [ -n "$o" ] || return 0; grep -o 'pid=[0-9]*' <<<"$o" | head -1 | cut -d= -f2 | grep . || echo '?'; }
 
 emit() { if [ -n "$DEFAULTS" ]; then printf ': "${%s:=%q}"; export %s\n' $1 "$2" $1; else printf 'export %s=%q\n' $1 "$2"; fi; }
 
@@ -61,12 +68,16 @@ status() {
 	local sp exe b pp procs comm p l
 	sp=$(server_pid); pp=$(port_pid); l=$(lease_line $N)
 	if [ -n "$sp" ]; then
-		exe=$(readlink /proc/$sp/exe 2>/dev/null) || exe=?
-		b=${exe%/server/wineserver}; b=${b#$ROOT/}
+		exe=$(server_exe $sp); b=${exe%/server/wineserver}; b=${b#$ROOT/}
 		procs=; for p in $(prefix_pids); do
 			comm=$(cat /proc/$p/comm 2>/dev/null) || continue
 			case $comm in Inventor.exe|AdskLicensing*) procs+=" $comm:$p";; esac
 		done
+		if hidden $sp; then
+			case $ROLE in licens*) comm="leave it running";; *) comm="restart to manage";; esac
+			printf '%-8s %-5s up   wineserver %s build=%s  other sandbox: processes hidden, %s  lease=%s\n' $N $DISP $sp "$b" "$comm" "${l:--}"
+			return
+		fi
 		printf '%-8s %-5s up   wineserver %s build=%s  n=%d  port=%s  lease=%s\n' $N $DISP $sp "$b" "$(prefix_pids | wc -l)" \
 			"$([ "$pp" = "$sp" ] && echo HELD || echo -)" "${l:--}"
 		[ -z "$procs" ] || echo "         $procs"
@@ -93,8 +104,7 @@ stop) load ${A[0]:?NAME}; check_lease; sp=$(server_pid)
 	[ -z "$sp" ] || [ "$(port_pid)" != "$sp" ] || [ -n "$FORCE" ] || die "$N holds the licensing port $PORT; --force to stop it (running Inventors lose licensing)"
 	case $ROLE in licens*) [ -n "$FORCE" ] || die "$N is the licensing host; --force";; esac
 	if [ -n "$sp" ]; then
-		exe=$(readlink /proc/$sp/exe 2>/dev/null) || exe=$BUILD/server/wineserver
-		WINEPREFIX=$WP $exe -k || true
+		WINEPREFIX=$WP "$(server_exe $sp)" -k || true
 		for _ in $(seq 50); do [ -d /proc/$sp ] || break; sleep 0.2; done
 	fi
 	left=$(prefix_pids); if [ -n "$left" ]; then echo "killing leftovers: $left"; kill $left 2>/dev/null || true; sleep 2; kill -9 $left 2>/dev/null || true; fi ;;
@@ -102,6 +112,7 @@ restart) load ${A[0]:?NAME}  # clears state the services keep after a crashed In
 	set -- ${A[0]} ${HOLDER:+--holder $HOLDER} ${FORCE:+--force}
 	"$0" stop "$@"; "$0" start "$@" ;;
 kill-inventor) load ${A[0]:?NAME}; check_lease
+	sp=$(server_pid); [ -z "$sp" ] || ! hidden $sp || die "$N runs from another sandbox: its processes are hidden; restart it"
 	k=$(inv_pids)
 	if [ -n "$ORPH" ] && grep -q ' Inventor.exe$' <<<"$k"; then echo "$N: Inventor running, nothing to do"; exit 0; fi
 	[ -n "$k" ] || { echo "$N: nothing to kill"; exit 0; }

@@ -252,99 +252,48 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Now (2026-10-02)
-- build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971): adds 124 (ntdll RtlLocateExtendedFeature2 leaves the context alone
-  for disabled features: CoreCLR crash), 123 (Tahoma CJK links via fontconfig), 083 (dwrite always has an Arial family), 062 (all-faint
-  per-pixel-alpha layered windows hidden under a compositor; UpdateLayeredWindow alpha only with AC_SRC_ALPHA), 125 (riched20 font
-  linking, ITextFont, WM_CLEAR/WM_CUT; uniscribe no GPOS without glyph indices). inv, inv2, inv3, inv4 restarted on it; inv-lic holds
-  39683. Full regress vs master 4e819f054dd: 0 REAL/NEW, 1 FLAKY (x86_64 user32:input, passes on rerun on both builds).
-  inv: invscen all 13/13 PASS, dwgloop N=10 PASS (~3.2 s/export, loadavg 5), cjk shows real glyphs (Cyrillic, kanji) in all 8 fonts,
-  124 crash repro by hand on :98 at 96 DPI (Open dialog at ...\Parts\Rim, select Rim.dwg/idw/ipt, "Parts" breadcrumb): 12 round
-  trips, no crash; Alt shows key tips, no crash (083).
-  Harness: dialog watcher matches the splash by shape (any DPI); `prefix.sh restart NAME`, called by run.sh after a crash cleanup
-  (the stale licensing-agent state could not be reproduced with SIGKILL of Inventor at 12 s/mid-run/idle: hello reconnects fine;
-  the crash case is untested, so a prefix restart stays the assumed cure).
-- Soak #4 (4.0 h): no crash, no hang, DWG export 32/32; 109 and 082 not reproduced; new 130 (rubber fps degrades with session age).
-- Older: reboot recovery done (inv-lic holds 39683). d7799da4d5c (120/122: menu loop ignores same-position moves, delayed/coalesced
-  fake WM_MOUSEMOVE): 0 worse of 1757, 13/13, dwgloop PASS.
-  UI (xdotool) then: File menu, Fillet dropdown, browser context menu, ribbon tooltip OK; rubber 104-118 fps, orbit 60 fps. Unclear
-  (no A/B): Modify panel slide-out and some context-menu rows (Visibility, Help Topics) show no hover highlight; the slide-out
-  ignores Escape (closes on outside click).
-  Older: d22c74b6d6b (119: linked-font sizing, Tahoma->one Noto CJK face, uniscribe fallback) was 0 worse, 13/13, dwgloop PASS (~1.9 s).
-- Older (2026-09-29):
-- Soak #2 done (4798e83): no crash (074 not seen), stubs/keys/mutants flat, suite time flat.
-  Still growing: RSS +2.8 GB/h, unnamed events ~200/suite + sections (next leak, no issue yet);
-  082 project Activate E_FAIL → asmcon SaveAs E_INVALIDARG after 3.4 h. build/ free to rebuild.
-- build/ = integ 43790927731 (wine-11.18-486, PROTOCOL 971): adds 106 (NO_DEBUG_INHERIT with inherited debugger), rpcrt4 tcp
-  close fix, 116 (rpcrt4 listen restart, RpcMgmtWaitServerListen lock order/done event), 085b (winex11 doesn't wait for another
-  process's owner when making it managed; ntdll skips protection bytes of whole cleared directories). inv, inv2 restarted on it.
-  Full regress vs master 4e819f054dd: 0 REAL/NEW, 2 FLAKY (i386 mfmediaengine, i386 oleaut32:typelib; both pass on rerun),
-  30 crash / 90 fail total. inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0 s per export. Trial popup shows
-  content 7.3 s after launch on inv (shell+spinner at 6.4 s; was 14-17.7 s before 085b).
-- Previous: build/ = integ 7e8ed9554cb (wine-11.18-480, PROTOCOL 971): adds 112 (STA uninit/thread exit fails queued calls; in-process
-  calls check the target apartment window; proxy kept referenced during calls), 114 (rpcrt4 pipe listens complete via APC;
-  combase one RPC endpoint per process). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757
-  (0 REAL/NEW/FLAKY; 28 crash / 90 fail non-pass). inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0-3.3 s per
-  export. Issue 115 (release proxy to dead STA) no longer hangs: fixed by 112.
-- Previous: build/ = integ 76edc4302b7 (wine-11.18-476, PROTOCOL 971): adds 109 (combase keeps interfaces registered when stubs
-  go away), 110 (CoDisconnectObject drops the apartment ref once), 107 (pipe I/O on an event-less completion port
-  completes in the dequeuing thread; one-call port wait). inv, inv2 restarted on it. Full regress vs master
-  4e819f054dd: 0 REAL/NEW, 2 FLAKY (mf:mf, user32:input; both pass on rerun/base), 28 crash / 90 fail total.
-  inv invscen all: 13/13 PASS; dwgloop N=20: PASS, no hang, 2.0-3.2 s per export. Home page and its WebView2
-  helpers (gpu/renderer/utility) up after 3 min; trial popup is closed by the harness, Assistant pane not opened.
-- Previous: build/ = integ 41a369af983 (wine-11.18-470, PROTOCOL 969): adds the 109 rpcrt4 fix (RpcServerUnregisterIf lost
-  wakeup). inv, inv2 restarted on it. Full regress vs master 4e819f054dd: 0 worse of 1757 (0 REAL/NEW/FLAKY;
-  27 crash / 90 fail non-pass, same as baseline). inv invscen all: 13/13 PASS; dwgloop N=30: PASS, no hang,
-  2.1-2.5 s per export (model+drawing 2.0 s).
-- Previous: build/ = integ b6dab895f3e (wine-11.18-469, PROTOCOL 969): adds 099 (COM cancel/refcounted calls), 104, 105,
-  095 (lowbox tokens), 077, 091 (Xft read once) over 492d5679270. inv, inv2, inv4 restarted on it
-  (inv3/inv4 workers now run their own builds).
-  Full regress vs master 4e819f054dd (new template): 0 REAL / 0 NEW, 3 FLAKY (mf:mf, ntoskrnl, quartz:filtergraph;
-  baseline fails them too). Non-pass: 27 crash / 92 fail on build.
-  inv full invscen suite: 13/13 PASS (load ~18). samples: 464 PASS, 2 FAIL (Speedometer rebuild/reopen
-  volume, 055 known); dialog watcher now ignores Qt tooltip drop-shadow windows (0 DIALOG lines).
-  A/B on inv vs 2cfee5f132e (interleaved A,B x3, medians): place 200 occurrences round 1 20.1 -> 8.5 s
-  (all 9 rounds 19.3 -> 7.7; A3 ran slow, host noise); docbench first part 9.8 -> 11.3 s (B slower in 3/3
-  pairs, 098 claimed a gain; the place scenario's first part 11.1 -> 10.5 s), first asm 2.3 -> 2.4,
-  first drawing 2.4 -> 2.4, warm part/asm/drw 1.1/1.2/0.9 -> 1.05/1.05/0.9. Open: first-part gain not reproduced.
-- Licensing host = prefixes/inv-lic (frozen wt/lic-build), port 39683 verified; inv2 is an ordinary test prefix.
-- Licence: ONE active device (server, VM, laptop each count); VM Inventor needs server Inventors stopped.
-- 089 A/B on inv (rounding on vs WINE_TIMER_RESOLUTION=0, 4 interleaved suite runs): warm sums
-  134.0 vs 132.7 s — no slowdown; the inv-vs-inv4 gap is prefix/GPU/host load.
-- 048 closed as an Inventor lock-order race (DllMain → .NET, same on Windows with same timing);
-  harness now waits out the trial popup before the first document (0/40 hangs). Follow-up 092
-  (Wine loader lookups wait for other threads' DllMain; Windows doesn't) — worker on inv3.
-- Perf method: single suite sums are noise (126–188 s on builds with no hot-path change, host
-  load 3–13). Perf claims need interleaved A/B on one prefix (as for 089); for stable numbers pin
-  cores and keep sibling hyperthreads busy (088: C6 exit latency).
-  Check /proc/loadavg < ~25 before and during an A/B (a regress run pushes it to 60–120 and
-  produced a phantom 097/098 slowdown; clean bisect: first part 9.8 → 9.3 → 7.95 s).
-- 2026-10-01: disk hit 108 GB free (/tmp filled by per-run prefix copies, 17 stale worktree
-  builds). Pruned merged worktrees/builds (branches kept) and finished scratch dirs → 312 GB;
-  worker.md now caps scratch at ~10 GB.
-- 091 held on fix/091 (wt/091): cross-process geometry/visible-region caches + server change
-  counter (protocol 970). Micro-bench 9 µs → 0.2 µs per query, but no measured idle-CPU gain
-  (Assistant unchanged, Edge −8 %) and broad correctness surface — revisit if a workload needs it.
-  Real per-frame cost: 107 (Mojo pipe/IOCP round trips ~75 % of requests), 108 (wined3d CS spin).
-- 108 held on fix/108 (wt/108): adaptive CS spin works (spin share 32 → 7 %) but saves only
-  0.5–0.8 % of a core per WebView2 GPU process (prefix idle total unchanged) for a heuristic in
-  every wined3d user's hot path. Revisit only with a workload where the CS spin matters.
-- VM reference session 2026-10-02 (33438d6): long-session memory/handle growth is Inventor's own
-  (Windows: +3.65/+1.65 GB private, Event/Section grow as fast) → soak growth question closed;
-  cold first part view Windows 6.3 s vs Wine 8–11 s; trial popup content Windows 6.5 s vs Wine ~19 s;
-  066 = Inventor design (closed); 069 blocked (VM lacks Content Center libraries).
-- Harness: killing Inventor by PID leaves AdskLicensingAgent + WebView2 children running (one
-  spun at 46 % + wineserver load); add a helper that kills Inventor with its descendants.
-- Decisions (user delegated 2026-09-30): 089 Windows per-process timer resolution, default on,
-  WINE_TIMER_RESOLUTION override (merged, f720de9f520); 048 investigated in Wine first (turned out
-  app-side); every fix gets an adversarial review before merge.
-- Queue: event-handle leak; 082 (project Activate E_FAIL);
-  laptop recheck of 084/085 + "having trouble" popup (seat contention?);
-  081 (COM call round trips; biggest remaining perf gap), 078, 077;
-  picom check for 062/042 (if user installs picom); 066/069 need VM clicks;
-  074 only if soak #2 reproduces it.
-- Environments: x/prefixes.tsv + tools/prefix.sh status; leases in x/leases.
-  User WM reference: x/awesome-rc.lua. VM Inventor stuck at "Device limit reached".
+## Now (2026-10-03)
+- build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971), pushed to gh. Last full round clean:
+  regress vs master 4e819f054dd 0 REAL/NEW (1 FLAKY, x86_64 user32:input); invscen all 13/13;
+  dwgloop N=10 PASS; CJK glyphs in all 8 fonts; 124 Open-dialog crash repro survives 12 rounds.
+- Prefixes: inv, inv2, inv4 on build/; inv3 down; inv-lic (frozen wt/lic-build) holds 39683.
+  Claude Code was relaunched 2026-10-03 in a new sandbox: inv-lic's processes are hidden from
+  /proc (other user namespace) but work; leave it running. prefix.sh now finds servers via /proc/locks.
+- In progress:
+  - 130 (worker, wt/130): rubber-band fps drops ~108 → 40-50 over a session. Cause: 077's
+    wm_size_move_begin() toggles the XInput2 raw button-release selection on the root on every WM
+    config change; Xorg recomputes masks for all windows, and WebView2's GPU process leaks ~3 hidden
+    top-levels per document. Fix: select only during a WM grab. Remaining: aged-session check,
+    size-move table (awesome/openbox, ± picom), tests, regress subset, review, merge.
+    The WebView2 hidden-window leak gets its own draft (131).
+  - Inventor-on-Wayland pass (Sonnet worker, inv4, wt/wayland-build, software rendering): drafts 132-139.
+    Full GPU testing would need libxkbregistry-dev and nvidia-drm.modeset=1 (user's call).
+- Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup
+  (white for a while), splitter overlay lag, CJK in Format Text, the Open dialog crash.
+- Held on branches (not merged):
+  091 cross-process geometry caches (protocol 970; no measured gain, broad surface);
+  108 wined3d CS adaptive spin (0.5-0.8 % of a core); 092 lock-free GetProcAddress (widens the
+  Inventor 048 race); 105 optional ProcessDebugFlags setter.
+- Not Wine bugs (closed): 048 (Inventor lock-order race; harness waits out the trial popup), 066,
+  long-session memory/handle growth (Windows grows as much), long-path SaveAs, Format Text wrap.
+- Wine vs Windows VM: place 200 occurrences 7.7 vs 7.3 s; cold first part view ~8 vs 6.3 s;
+  trial popup content ~7 vs 6.5 s; AdskIdentityManager idle CPU ~3.5 vs 4 %.
+- Soaks: #4 (4.0 h, d7799da4d5c) no crash, no hang, DWG export 32/32; only finding was 130.
+- Perf method: single suite sums are noise. Claims need interleaved A/B on one prefix with
+  /proc/loadavg < ~25 (a regress run pushes it to 60-120); for stable numbers pin cores and keep
+  sibling hyperthreads busy (088: C6 exit latency).
+- Licence: ONE active device (server, VM, laptop each count). VM Inventor needs the server's
+  Inventors stopped. Never click Pause product.
+- Decisions (user delegated 2026-09-30): every non-trivial fix gets an independent adversarial
+  review before merge; Sonnet for UI/test/chore workers, Opus for fixes and reviews;
+  089 per-process timer resolution on by default (WINE_TIMER_RESOLUTION overrides);
+  062 scoped to compositor-only; merged worktrees/builds are pruned, branches kept (last: 2026-10-03).
+- Queue (low priority): 117 (msedge.dll image sharing), 121 (HiDPI layout; VM can't do 150 %),
+  113 (32-bit thread churn), 042 (shadows/splitter without a compositor), 069 (blocked: VM lacks
+  Content Center libraries), 080, 082 (not reproduced), 096 (DXVK), 103 (vkd3d upstream),
+  126 (special user APC), 127-129 (Wayland). Rebase integ when upstream master moves.
+- Environments: x/prefixes.tsv + tools/prefix.sh status; leases in x/leases; user WM reference
+  x/awesome-rc.lua. Worker scratch is capped at ~10 GB (notes/worker.md).
 
 ## Process (agreed with user)
 Coordinator drives Inventor, files issues, spawns one worker per issue

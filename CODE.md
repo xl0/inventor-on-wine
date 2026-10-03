@@ -304,7 +304,10 @@ launches; previous device-limit errors do not authorize pausing another device.
   inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
   (kill-inventor: Inventor.exe + helpers by image name, since Wine processes all have Linux ppid 1;
   spares services) works from it (status: wineserver/build/procs/port holder/lease; servers are mapped to
-  prefixes by the server socket dir inode). `x/leases` (git-ignored, flock'd) records who
+  prefixes by the holder of the server dir's lock file in /proc/locks). After Claude Code is
+  relaunched, processes from the old sandbox are in another user namespace: signals and sockets work,
+  but /proc/PID/{cwd,exe,environ,fd} don't, so status shows them as "other sandbox" and gdb/strace
+  can't attach — restart test prefixes (not inv-lic) to manage them again. `x/leases` (git-ignored, flock'd) records who
   uses a prefix; start/stop refuse on someone else's lease. `INV=inv3 tools/invscen/run.sh S`
   uses the table. `x/start.sh N BUS` = headless NVIDIA Xorg (needs DRI_PRIME=pci-0000_<bus>_00_0
   so Vulkan picks the GPU that owns the screen), `x/vnc.sh N`, `x/shot.sh out.png N`.
