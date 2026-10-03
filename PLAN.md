@@ -256,7 +256,7 @@ commits or screenshots). Read-only mode may remain after expiry.
 - build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971), pushed to gh. Last full round clean:
   regress vs master 4e819f054dd 0 REAL/NEW (1 FLAKY, x86_64 user32:input); invscen all 13/13;
   dwgloop N=10 PASS; CJK glyphs in all 8 fonts; 124 Open-dialog crash repro survives 12 rounds.
-- Prefixes: inv, inv2, inv4 on build/; inv3 down; inv-lic (frozen wt/lic-build) holds 39683.
+- Prefixes: inv, inv2, inv3, inv4 on build/; inv-lic (frozen wt/lic-build) is unused (152).
   Claude Code was relaunched 2026-10-03 in a new sandbox: inv-lic's processes are hidden from
   /proc (other user namespace) but work; leave it running. prefix.sh now finds servers via /proc/locks.
 - In progress:
@@ -321,13 +321,20 @@ commits or screenshots). Read-only mode may remain after expiry.
   built. Baseline: notepad fine on all three; 132 reproduces on all three; 134 only on GNOME/KDE.
   fix/134 verified there: no FAIL on GNOME and KDE (unfixed: 17/16), cross-process goes through
   xdg-foreign v2, no protocol errors incl. wlroots' strict cases (sway's one chain-3 FAIL predates it).
-  Inventor in the VM (user-approved, via the HOST's licensing service) is NOT working yet:
-  - the forward to 39683 was never used: the guest prefix's own AdskLicensingService served Inventor
-    from the copied cached licence. No prompt appeared; host licensing still works (hello on inv4).
-    Our notes on who serves whom may be wrong. No further guest launches until routing is real.
-  - Inventor crashes ~7 s after the licence checkout (GNOME and sway). Unknown whether it is the
-    26.04 userland, the VM or winewayland — matters for the coming host reinstall.
-  Worker (Opus, owns vmwl/ and inv4): licensing discovery + routing, then the crash; drafts 152-155.
+  Inventor in the VM (issue 152): not run there since; two findings.
+  - Licensing: every prefix is served by its OWN AdskLicensingService (port in the service's .data
+    file); nothing has used inv-lic's 39683 since 09-29 → inv-lic is not needed (left running; retire
+    with the user's OK). The device id is computed client-side from the disk serial, the machine
+    UUID (Unix machine-id) and the user name: all host prefixes are one device, the guest is another.
+    Routing the guest to a host service can't change that. The first VM worker's 5 guest launches
+    registered a second device (cached licence, no prompt); host licensing still works.
+    Open, user's call: guest as a separate device with host Inventors stopped (as for the Windows VM),
+    or not at all. Not doing: cloning the host's machine-id/disk serial into the guest.
+  - The "crash" was a launch error, same on the host: WINEDLLOVERRIDES="mscoree,mshtml=" (meant for
+    wineboot) was exported to Inventor → CLR exception in the main frame's WM_CREATE → NULL deref at
+    CommonUI.dll+0x60b90. Not 26.04, not the VM, not winewayland. run.sh now refuses that env.
+    Whether Inventor runs on the 26.04 userland is still untested; Wine probes do
+    (d3d11 on Wayland/Xwayland, GL and lavapipe). Only winedmo.so (ffmpeg 4 sonames) can't load there.
   virgl (`GL=1`): guest reports "virgl" but every Wine process hangs at start; not investigated.
   Declined: cracked/pirated Inventor (skews the licensing/WebView2 paths we test, untrusted binaries).
 - Harness: full regress runs pin themselves to CPUs 20-59,80-119 (REGRESS_CPUS) and builds use the

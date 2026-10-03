@@ -152,6 +152,10 @@ effect in Inventor typing (dialog edit fields, file name box). Crash: none seen.
 screenshots/input by QEMU, same for all. Usage, protocol tables and baselines: `vmwl/README.md`, `vmwl/globals-*.txt`.
 Baseline: 134 (`wl_xowner self`) reproduces on mutter 50 but not on KWin or sway; 132 (`wl_xswap`) reproduces on all three.
 xdg_wm_dialog_v1 exists on mutter 50 and KWin (not sway); xdg-foreign v2 and xdg_activation on all three.
+Inventor has not run there: the one attempt crashed because of the launch environment (mscoree override, not Wayland or
+26.04), and a guest start is a second licensing device, so it waits for the user's decision (issue 152, `vmwl/README.md`).
+On 26.04 (Mesa 26.0.8 llvmpipe/lavapipe, LLVM 21) `d3d11_present` works under winewayland and under winex11 on Xwayland,
+with the GL and the Vulkan renderer; of the 22.04 build's unix libs only winedmo.so (ffmpeg 4 sonames) cannot load there.
 
 ## Host GPU for Wayland / VMs: GBM needs nvidia-drm KMS (checked 2026-10-03, driver 580.178.04)
 - GBM (libgbm, Mesa's buffer API: `gbm_device` from a DRM fd, `gbm_bo` buffers exportable as dma-bufs, `gbm_surface`

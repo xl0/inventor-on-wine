@@ -2,13 +2,13 @@
 # Prefix/display/GPU/build setup from x/prefixes.tsv; leases in x/leases (git-ignored).
 # Usage: tools/prefix.sh status [NAME]            wineserver, build, procs, licensing port, lease
 #        tools/prefix.sh env NAME [--defaults]    export lines for eval (--defaults: only unset vars)
-#        tools/prefix.sh start|stop|restart NAME  [--holder H] [--force (stop the licensing host)]
+#        tools/prefix.sh start|stop|restart NAME  [--holder H] [--force (a prefix with a licens* role)]
 #        tools/prefix.sh kill-inventor NAME       [--holder H] [--orphans (helpers only, and only if no Inventor.exe runs)]
 #        tools/prefix.sh lease NAME [HOLDER] | release NAME [HOLDER]     [--force]
 # HOLDER defaults to $PREFIX_HOLDER. start/stop refuse on a prefix leased to another holder.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ROOT=$PWD T=x/prefixes.tsv L=x/leases PORT=39683
+ROOT=$PWD T=x/prefixes.tsv L=x/leases
 HOLDER=${PREFIX_HOLDER:-} ORPH= FORCE= DEFAULTS= A=()
 cmd=${1:?usage: $0 status|env|start|stop|lease|release [NAME]}; shift
 while [ $# -gt 0 ]; do case $1 in
@@ -58,15 +58,12 @@ inv_pids() { # prints "PID image" lines
 		case ${c%.exe} in Inventor|AdskLicensingAgent|msedgewebview2|InventorViewCompute|DwgTrans*|ADPClientService) echo $p $c;; esac
 	done
 }
-# "?" when something listens but its owner is hidden (other sandbox)
-port_pid() { local o; o=$(ss -ltnpH "sport = :$PORT"); [ -n "$o" ] || return 0; grep -o 'pid=[0-9]*' <<<"$o" | head -1 | cut -d= -f2 | grep . || echo '?'; }
-
 emit() { if [ -n "$DEFAULTS" ]; then printf ': "${%s:=%q}"; export %s\n' $1 "$2" $1; else printf 'export %s=%q\n' $1 "$2"; fi; }
 
 status() {
 	load $1
-	local sp exe b pp procs comm p l
-	sp=$(server_pid); pp=$(port_pid); l=$(lease_line $N)
+	local sp exe b procs comm p l
+	sp=$(server_pid); l=$(lease_line $N)
 	if [ -n "$sp" ]; then
 		exe=$(server_exe $sp); b=${exe%/server/wineserver}; b=${b#$ROOT/}
 		procs=; for p in $(prefix_pids); do
@@ -78,8 +75,7 @@ status() {
 			printf '%-8s %-5s up   wineserver %s build=%s  other sandbox: processes hidden, %s  lease=%s\n' $N $DISP $sp "$b" "$comm" "${l:--}"
 			return
 		fi
-		printf '%-8s %-5s up   wineserver %s build=%s  n=%d  port=%s  lease=%s\n' $N $DISP $sp "$b" "$(prefix_pids | wc -l)" \
-			"$([ "$pp" = "$sp" ] && echo HELD || echo -)" "${l:--}"
+		printf '%-8s %-5s up   wineserver %s build=%s  n=%d  lease=%s\n' $N $DISP $sp "$b" "$(prefix_pids | wc -l)" "${l:--}"
 		[ -z "$procs" ] || echo "         $procs"
 	else
 		printf '%-8s %-5s down %-45s  lease=%s\n' $N $DISP "(build=${BUILD#$ROOT/})" "${l:--}"
@@ -87,8 +83,7 @@ status() {
 }
 
 case $cmd in
-status) if [ ${#A[@]} -gt 0 ]; then for n in "${A[@]}"; do status $n; done; else for n in $(awk -F'\t' '!/^#/ { print $1 }' $T); do status $n; done; fi
-	echo "licensing port $PORT: pid $(port_pid)" ;;
+status) if [ ${#A[@]} -gt 0 ]; then for n in "${A[@]}"; do status $n; done; else for n in $(awk -F'\t' '!/^#/ { print $1 }' $T); do status $n; done; fi ;;
 env) load ${A[0]:?NAME}
 	emit WINEPREFIX $WP; emit WINE_BUILD $BUILD; emit DISPLAY $DISP; emit INV_PREFIX prefixes/$N
 	[ "$DRI" = - ] || emit DRI_PRIME $DRI ;;
@@ -101,7 +96,6 @@ release) load ${A[0]:?NAME}; h=${A[1]:-$HOLDER}
 	[ -z "$o" ] || [ "$o" = "$h" ] || [ -n "$FORCE" ] || die "$N is leased to $o (pass HOLDER, or --force)"
 	{ grep -v "^$N " $L 2>/dev/null || true; } >$L.new; mv $L.new $L ;;
 stop) load ${A[0]:?NAME}; check_lease; sp=$(server_pid)
-	[ -z "$sp" ] || [ "$(port_pid)" != "$sp" ] || [ -n "$FORCE" ] || die "$N holds the licensing port $PORT; --force to stop it (running Inventors lose licensing)"
 	case $ROLE in licens*) [ -n "$FORCE" ] || die "$N is the licensing host; --force";; esac
 	if [ -n "$sp" ]; then
 		WINEPREFIX=$WP "$(server_exe $sp)" -k || true

@@ -10,18 +10,3 @@ users:
 mounts:
   - [ host, /host, virtiofs, "ro,nofail", "0", "0" ]
 ssh_pwauth: false
-write_files:
-  # Autodesk licensing: guest 127.0.0.1:39683 -> host loopback (qemu slirp 10.0.2.2). Must be up before any Wine
-  # process of the Inventor prefix, or its own licensing service binds the port and becomes a second device.
-  - path: /etc/systemd/system/adsk-lic-fwd.socket
-    content: |
-      [Socket]
-      ListenStream=127.0.0.1:39683
-      [Install]
-      WantedBy=sockets.target
-  - path: /etc/systemd/system/adsk-lic-fwd.service
-    content: |
-      [Service]
-      ExecStart=/usr/lib/systemd/systemd-socket-proxyd 10.0.2.2:39683
-runcmd:
-  - [ systemctl, enable, --now, adsk-lic-fwd.socket ]

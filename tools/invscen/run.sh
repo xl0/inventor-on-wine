@@ -101,6 +101,7 @@ if [ -n "$VM" ]; then
 		-o LogLevel=ERROR -P 2222 "dev@127.0.0.1:C:/t/scen/$S" inst/invscen/ref/ || true
 	exit $rc
 fi
+case ${WINEDLLOVERRIDES:-} in *mscoree*) echo "WINEDLLOVERRIDES=$WINEDLLOVERRIDES disables .NET: Inventor would crash at start (152)" >&2; exit 2;; esac
 if ! (for p in $(pgrep -x Inventor.exe); do
 	tr '\0' '\n' </proc/$p/environ | grep -qx "WINEPREFIX=$WINEPREFIX" && exit 0; done; exit 1); then
 	echo "starting Inventor" >&2

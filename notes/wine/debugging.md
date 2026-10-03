@@ -92,3 +92,10 @@
   `dotnet.exe X.exe` (copy `Program Files/dotnet/{dotnet.exe,host,shared/Microsoft.NETCore.App}` from an inv
   prefix into a scratch prefix, 77 MB). Don't run it with `WINEDLLOVERRIDES=mscoree=`: IL-only
   assemblies (mscorlib.dll facade) then fail to load with "Module not found" (124).
+- Inventor crash at startup with an access violation reading 0 at `CommonUI.dll+0x60b90` (CUIxMessageTerm constructor,
+  NULL channel builder; stack FwWebBrowser.dll+0x330ee <- FwUI.dll+0x45865a), log full of `err:module:fixup_imports_ilonly
+  mscoree.dll not found, IL-only binary L"System.Runtime.dll"` and one `err:seh:user_callback_handler ignoring exception
+  e0434352`: Inventor was started with `WINEDLLOVERRIDES=mscoree=` in its environment (meant for wineboot only). The CLR
+  exception is thrown in the main frame's WM_CREATE and swallowed by Wine's callback handler; the crash comes later (152).
+- Minidumps without a debugger: `tools/mdmp.py DUMP [-m] [-n FRAMES]` prints the exception (code, address, registers) and
+  scans the faulting thread's stack for return addresses as module+RVA; `tools/decomp.sh BIN decomp RVA` names the function.

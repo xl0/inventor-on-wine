@@ -335,21 +335,23 @@ launches; previous device-limit errors do not authorize pausing another device.
   prefer the other GPUs. The user's WM (awesome 4.3, no compositor): kill that display's
   openbox by PID, `DISPLAY=:N awesome -c x/awesome-rc.lua`; `awesome-client`
   (DBus) can script it (e.g. `c.maximized = false`). awesome lacks _NET_WM_MOVERESIZE (061, 076).
-  Licensing: one AdskLicensingService on 127.0.0.1:39683 (host network) serves
-  the Inventors of all prefixes, whichever prefix's service bound it first. Never
-  wineserver -k an Inventor prefix while other Inventor sessions run; if you must,
-  restart the other Inventors afterwards (they show "Licensing error" and quit).
-  Licensing host = prefixes/inv-lic (role in x/prefixes.tsv, lease `licensing-host`): an rsync -aX copy
-  of inv2 run only for the service on the frozen `wt/lic-build` (worktree wt/lic @ 3951ce31e31, rebuilt
-  only deliberately), display :200 = plain Xvfb (wineboot needs a DISPLAY or explorer records
-  DriverError; the service itself is session 0). `prefix.sh start inv-lic --holder licensing-host` is enough:
-  the service comes up with the prefix and binds 39683 (it launches its Agent, which exits again).
-  Never restart it while Inventors run. Other prefixes' services coexist harmlessly (random HTTP port,
-  e.g. inv's 127.0.0.1:45691). inv2 is an ordinary test prefix on build/. To refresh inv-lic from inv2:
-  stop inv-lic (`--force`), `rsync -aX --delete prefixes/inv2/ prefixes/inv-lic/`, start it.
+  Licensing (152, observed 2026-10-03): every prefix is served by its OWN AdskLicensingService. The service
+  listens on the address saved in `C:\ProgramData\Autodesk\AdskLicensingService\AdskLicensingService.data`
+  (`{"Addr":"127.0.0.1:PORT"}`; port busy at start -> new port, file rewritten), and the SDK in Inventor
+  (AdskLicensingSDK_10.dll) reads that file and connects by WebSocket; if that fails it runs
+  `AdskLicensingInstHelper servicectl start`. Ports now: inv 45691, inv2 37683, inv3 46231, inv4 46809.
+  39683 was the port of the original install; copies shared it only until each rewrote its file (09-28/29).
+  prefixes/inv-lic (copy of inv2 on the frozen `wt/lic-build`, Xvfb :200, lease `licensing-host`) still holds
+  39683 but nothing has connected to it since 2026-09-29: it is not needed. So a `wineserver -k` of one
+  prefix only takes down that prefix's Inventor (follows from the connections; not tested by killing).
+  Per prefix there is also AdskIdentityManager (two loopback ports; sign-in state) used by Inventor and the agents.
+  Device = what the AdskLicensingAgent started by the client computes (monitor.dll): SHA-256 of Wine's disk
+  serial (Win32_DiskDrive; fallbacks down to the system volume serial), of the system UUID
+  (Win32_ComputerSystemProduct = Unix machine-id) and of the user name. Nothing from the prefix, hostname
+  or MACs: all prefixes of one host and user are one device, a VM or another host is another one.
   Licence = ONE active device (server "hong-Precision-7960-Tower", the VM and the user's laptop
-  "mafa" each count; a running session keeps its seat until its next check, so two can look
-  concurrent). "Device limit reached": another device holds the seat. To use the VM's Inventor,
+  "mafa" each count, and so would Inventor in the Linux VM `vmwl/`: don't start it there (152);
+  a running session keeps its seat until its next check, so two can look concurrent). "Device limit reached": another device holds the seat. To use the VM's Inventor,
   stop all server Inventors (kill-inventor); the licensing services alone don't hold the seat
   (verified 2026-10-02), then start Inventor in the VM. Never
   click Pause product (account action — the user's call).
@@ -391,6 +393,8 @@ launches; previous device-limit errors do not authorize pausing another device.
 - `vmwl/` — Linux Wayland test VM (Ubuntu 26.04; GNOME 50 / KDE Plasma 6 / sway; qemu, SSH :2223, VNC :5911,
   scripts reuse `vm/shot.sh` / `vm/input.py` via `VM_DIR`). Runs the host's `wt/wayland-build` from a read-only
   virtio-fs share. See `vmwl/README.md`; protocol tables `vmwl/globals-*.txt`.
+  Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
+  `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
   virtiofsd 1.14.0 static zip sha256 2e4fe957…8978e (GitLab upload, no
   upstream hash), virtio-win-0.1.302.iso 303f7ae4…67949d (only viofs/w11 used),
@@ -417,6 +421,8 @@ launches; previous device-limit errors do not authorize pausing another device.
 - `tools/gdb/winesyms.py`, `tools/gdb/sehbt.py`: gdb on a hung Wine process (winedbg can't attach
   under the loader lock): symbols despite the preloader, .pdata backtraces per syscall frame (048).
   `tools/gdb/bpbt.py`: `bpbt NtFoo N SKIP` = PE callers of an Nt* call on a live process (098).
+- `tools/mdmp.py DUMP [-m] [-n N]`: minidump (Autodesk CER `Temp\Inventor<ts>.dmp`) -> exception, registers,
+  module+RVA stack scan of the faulting thread (152).
 - `tools/wineserver-reqstats.patch` (debug only): SIGHUP to wineserver dumps request counts and
   handler time per client thread (+ view counts) to /tmp/wineserver-reqstats.txt (098).
 - `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports [ARG]` — headless

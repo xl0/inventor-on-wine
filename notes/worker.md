@@ -85,12 +85,16 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   before using it, release it when done: `tools/prefix.sh lease NAME you`,
   `... release NAME you` (or set `PREFIX_HOLDER`). Never use or stop a prefix leased
   to someone else. `INV=NAME tools/invscen/run.sh S` runs a scenario on it.
-- Inventor prefixes (inv, inv2, inv3, inv4) share one AdskLicensingService on
-  127.0.0.1:39683, held by prefixes/inv-lic (frozen build). Never `wineserver -k` an Inventor
-  prefix while other Inventor sessions run (they lose licensing and quit). Kill
-  Inventor with `tools/prefix.sh kill-inventor NAME [--holder H]` (Inventor.exe plus its
+- Licensing: every Inventor prefix is served by its own AdskLicensingService (CODE.md has the
+  mechanism). The device is the host + user, so all host prefixes are one device; a VM is another
+  (one active device per account: never start Inventor in a VM unless your brief says so).
+  prefixes/inv-lic is a leftover of an older theory and unused, but leave it alone.
+  Kill Inventor with `tools/prefix.sh kill-inventor NAME [--holder H]` (Inventor.exe plus its
   AdskLicensingAgent/msedgewebview2/... helpers, not the prefix's services; `--orphans`: helpers
-  only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning. If a -k is unavoidable, restart the other Inventors.
+  only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning.
+- `WINEDLLOVERRIDES="mscoree,mshtml="` is for `wineboot` only: set it on that one command, never
+  `export` it. Inventor started with mscoree disabled dies ~6 s after start (CommonUI.dll+0x60b90,
+  issue 152); `tools/invscen/run.sh` refuses to start it that way.
 - X display numbers: :98-:101 are the Inventor GPU displays (x/prefixes.tsv), tools/regress.sh
   uses :120–:151 for its shards (and cleans them up; runs queue on /tmp/regress.lock, so concurrent invocations are safe;
   `tools/regress.sh unit DLL:TEST -n 10` runs one unit repeatedly without queueing, on :152-:199) — pick your own Xvfb
