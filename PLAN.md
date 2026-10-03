@@ -294,8 +294,13 @@ commits or screenshots). Read-only mode may remain after expiry.
   User (2026-10-03): doesn't use Wayland, but would like it to work → second-priority track
   behind X11. Started: 134/135 fix (Opus worker, wt/134, inv2, owns the Wayland session):
   xdg_toplevel_set_parent for owned windows, xdg-foreign for cross-process owners; reports on 136.
-  132 is the big one (no cross-process surfaces on Wayland): read-only design study running,
-  fund a fix only after it. 133 is core (above).
+  132 design study done (in the issue): WebView2 renders on its own child of a foreign top-level and
+  the Wayland driver has no way to show it. Decision: fund design A (renderer reads back each frame
+  into a shared section, the owner attaches it to a proxy subsurface; winewayland only, ~500 lines
+  GL, software copy per frame) after 134/135 land and the Wayland session is free; first M0
+  (does the GPU process block in eglSwapBuffers on a never-mapped surface; why its hardware path
+  dies; topology-B probe). Zero-copy dmabuf is out of scope here (not verifiable without a GPU session).
+  133 is core (above).
 - Wayland VM (`vmwl/`, Sonnet worker building it): Ubuntu LTS guest with GNOME, KDE, sway;
   probes on current compositors. User approved (2026-10-03) Inventor in it through the HOST's
   licensing service (guest 127.0.0.1:39683 → host via qemu user net), prefix copied from inv4.

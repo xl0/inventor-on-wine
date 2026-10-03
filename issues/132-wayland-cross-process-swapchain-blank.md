@@ -40,3 +40,47 @@ X-side background: notes/wine/window-surfaces.md ("offscreen" client surfaces of
 the toplevel on each present; issues 027, 061). winewayland has no equivalent; win32u's `needs_offscreen_rendering`/foreign pixel-format
 machinery is driver hooks (`client_surface_*`), the Wayland driver does not implement the foreign case.
 Untested: whether the Vulkan path (WINE_D3D_CONFIG=renderer=vulkan is not usable on Wayland here, see notes) behaves the same.
+
+## Design study (2026-10-03, code reading + inst/wayland logs; nothing run)
+Corrections to the above:
+- The GL drawable IS created on the foreign HWND (`inst/wayland/xswapB-trace.log`: `wayland_opengl_surface_create
+  client=... Created drawable`); wined3d doesn't fall back to its backup DC. Each Present ends in `wayland_drawable_swap`:
+  `wayland_client_surface_update`/`_present` return early (process B has no `wayland_win_data` for A's window) and
+  `eglSwapBuffers` commits to a wl_surface that never gets a role, so the compositor never maps it.
+- `wl_xswap` (swapchain on a foreign HWND, "topology A") is not what WebView2 does. Chromium presents on its OWN child
+  HWND whose top-level is foreign ("topology B"); our dcomp then does `present_to_foreign_target` (dcomp/device.c):
+  an HWND swapchain on that child, and `wayland_client_surface_attach` finds no data for the foreign top-level and
+  detaches. Probes for B exist (`tests/layered_child_gpu.c`, `xproc_hidden_present.c`) but read the screen with
+  GetPixel: use `x/wshot.sh` on Wayland.
+- On Wayland the WebView2 GPU processes seem to crash into the software path (inventor5.log: 12 gpu-process starts,
+  9 DCompositionCreateDevice3, the 3 CreateSwapChainForComposition come from processes without Device3). Cause unknown.
+GDI is no escape: a DC only gets a surface if the top-level is in-process (win32u/dce.c update_visible_region), the
+Wayland driver has no pGetDC, win32u has no generic offscreen fallback (client_surface.offscreen is winex11 only).
+X11 gets this for free: X window ids are global and the client window is XComposite-redirected onto the top-level.
+Upstream has no cross-process work for non-X11 drivers (winemac has FIXMEs for the same gap). xdg-foreign only parents
+top-levels: no embedding, positioning or clipping, so it is no solution here.
+
+Candidate designs:
+- A. Owner-side proxy subsurface over shm (recommended): the renderer reads back each frame (GL glReadPixels; Vulkan
+  image copy) into a named section (header + 2-3 buffers) and posts a driver message to the top-level's process, which
+  makes wl_shm buffers from the section fd (the driver already does that for window surfaces), attaches them to its own
+  subsurface and commits. winewayland.drv only (+ Vulkan readback in win32u/vulkan.c), no wineserver change.
+  450-550 lines GL-only, +200-300 hardening, +350-450 Vulkan. One GPU->CPU readback per frame (5.9 MB at 1678x884):
+  fine for pages that present on damage, poor for video/4K. Frames wait on the owner's message pump; no clipping by
+  overlapping siblings. Upstreamable: low.
+- B. Shared window surfaces in win32u (1500+ lines, touches every driver, likely a server change): right in principle,
+  not from our tree.
+- C. dmabuf zero-copy via D3DKMT global handles + linux-dmabuf on top of A's proxy (1500-2500 more): can't be verified
+  here (mutter composites in software).
+Stages for A: M0 settle unknowns 1-3 (no code); M1 GL readback + proxy, gate = `wl_xswap` magenta and a topology-B probe
+show their colour in screenshots; M2 Inventor Home page/Assistant/trial popup (resize, show/hide/reparent, several
+surfaces per top-level, GPU-process restart, swap-interval guard); M3 Vulkan readback (lavapipe); M4 dmabuf, optional.
+Unknowns: (1) does the GPU process block in eglSwapBuffers on a never-mapped surface with swap interval > 0 (its own
+hidden composition popup gets interval 1; Mesa waits for a frame callback) — could be what kills the hardware path;
+gdb `thread apply all bt` on the GPU pid, or d3d11_present on a hidden window with Present(1,0); (2) why the
+hardware-path GPU processes die (Crashpad reports in the prefix, see notes/wine/dcomp.md); (3) is topology B blank for
+the reason read from the code (layered_child_gpu.exe with +waylanddrv and a screenshot); (4) Vulkan FIFO on a
+foreign-rooted surface; (5) can the sandboxed GPU process create a named section the owner opens (fallback: D3DKMT
+global handle); (6) flipped buffer transform on a subsurface in mutter 42; (7) does Inventor's UI thread pump often
+enough, and do posted messages disturb idle detection (088, 133); (8) cursor over cross-process children (085's fix is
+X11-only); (9) sibling child windows overlapping WebView areas.
