@@ -253,29 +253,37 @@ commits or screenshots). Read-only mode may remain after expiry.
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
 ## Paused for a reboot (2026-10-03) — resume from here
-State (workers were told to stop and checkpoint; their final state is in the issue files' "State at pause"):
-- wine-src `integ` (local, NOT pushed) = 232278be38e: 04293594c50 (= build/, = gh/integ + 130 d18a5dcd1ef
-  which IS pushed) + 131 (3 commits) + 140 (4) + 133 (3). All reviewed. Verification round was running
-  in `build-next/` (see below); don't push or rebuild build/ before it is clean.
-- Ready to cherry-pick onto integ after the round: fix/134 (6 commits, 5d59ae5fddf, winewayland only).
-- fix/141 rework finished (4 commits, tip 467f5b54e5d on d18a5dcd1ef; old version kept as fix/141-v1):
-  wrap, caret update, undo of the final paragraph mark, SCF_WORD in front of a paragraph mark formats
-  the mark. VM tests, regress units, fuzz, Inventor (3 of 3, no assertion) done by the worker. Not a
-  regression of ours (re-checked: master's DLL really was loaded). To do: coordinator reads the two
-  new small commits, then cherry-pick after the round. Drafts 159-161 filed.
-- Just started: fix/157 (winewayland lock-order deadlock, tests in vmwl/), fix/132 (M0 unknowns, then
-  cross-process surfaces design A) — both based on fix/134.
+Everything is stopped cleanly: inv, inv2, inv3, inv4 (wineserver -k), both VMs (guest shutdown), the
+host Wayland session, all workers. Only inv-lic (unused, 152) was left running; don't restart it.
+State:
+- wine-src `integ` (local, NOT pushed) = 232278be38e: gh/integ d18a5dcd1ef (has 130; build/ is still
+  04293594c50) + 131 (3 commits) + 140 (4) + 133 (3), all reviewed.
+- Verification round, half done: `build-next/` = wine-11.18-521-g232278be38e; full regress
+  (deps/regress/232278be38e…/, compare outputs there): 0 REAL, 0 NEW, 4 FLAKY (i386 kernel32:thread,
+  ntdll:info both arches, x86_64 ntoskrnl — fail the same on build/), nothing worse than 04293594c50;
+  user32:win win.c:12747 seen 0 of 30 runs on either build. NOT done: the Inventor half.
+- Ready to cherry-pick after the round: fix/134 (6 commits, 5d59ae5fddf, winewayland only, reviewed)
+  and fix/141 (4 commits, 467f5b54e5d; coordinator still to read the two new small commits).
+- Checkpointed, no fix code yet: fix/157 (repro in vmwl on GNOME 50, lock order rule decided, call
+  table and remaining steps in the issue; wt/157-build needs `make dlls/win32u/all
+  dlls/winewayland.drv/all`), fix/132 (M0 answered, M1 design in the issue; wt/132-build built).
 After the reboot:
-1. Everything is down. `tools/prefix.sh start inv` (and inv2, inv3, inv4) brings up Xorg, VNC and
-   the prefix; all on build/. inv-lic is NOT needed any more (152): don't start it.
+1. `tools/prefix.sh start inv` (then inv2, inv3, inv4): Xorg, VNC, prefix, all on build/.
    Windows VM: `vm/run.sh` (Inventor there only with the host's Inventors stopped). Linux VM: `vmwl/run.sh`.
-2. Resume the verification round where its report says it stopped (build-next/, regress results under
-   deps/regress/ or inst/round/), then: push integ, rebuild build/ (taskset), restart prefixes.
-3. Resume the workers (SendMessage to the same agents keeps their context; else new workers from
-   the issue files): 141 rework → cherry-pick → riched20 subset + drawing-dimension repro;
-   134 → cherry-pick; 157; 132 M0/M1. Each new fix: independent Opus review before merge.
-4. Open questions for the user: Inventor in the Linux VM (separate device + seat juggling, or not at
-   all); retire prefixes/inv-lic; MCP server later; host packages after the 26.04 reinstall.
+2. Finish the round on inv with build-next (lease, set inv's build column in x/prefixes.tsv to
+   build-next, restart): suite all, dwgloop, 131 window counts + Home screenshot, 130 rubber fps
+   (inst/130/m.sh, age.sh), 140 repro, 133 probes, connect times; restore the table. If clean:
+   push integ, rebuild build/ (taskset -c 20-59,80-119), restart prefixes.
+3. Cherry-pick 141 and 134, rebuild, riched20 subset + drawing-dimension repro; then resume 157 and
+   132 (SendMessage to the same agents if this session survives, else new workers from the issue
+   files' "State at pause"). Every new fix: independent Opus review before merge.
+4. UI pass 3 for the areas pass 2 didn't reach; drafts filed today and not started: 142, 143-151,
+   156, 158-163 (162: WebView2 hardware-path GPU process dies at a Chromium check on software GL,
+   X too — content only after ~25-30 s; 163: swap with interval > 0 on a never-mapped Wayland surface
+   blocks forever).
+5. Open questions for the user: Inventor in the Linux VM (separate device + seat juggling, or not at
+   all); retire prefixes/inv-lic; MCP server later; host packages after the 26.04 reinstall
+   (then also modeset=1: tests/gpu/gbmtest.py, GPU compositor, virgl/Venus).
 
 ## Now (2026-10-03)
 - build/ = integ 04293594c50 (wine-11.18-510, PROTOCOL 971), pushed to gh. Last full round clean:
