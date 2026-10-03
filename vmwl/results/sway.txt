@@ -1,0 +1,92 @@
+##### sway wt/134-build
+== self: modal-style B owned by the disabled A
+PASS self-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS self-2: B.green 105592 px
+PASS self-3: B.green 105592 px
+  winlist: 0000000000010068 pid=0020 wlx_00ff00                   'B modal owned popup (must stay above A)' (300,300)-(700,600) 400x300 st=94c00000 ex=00000100 own=0000000000010052;0000000000010052 pid=0020 wlx_0000ff                   'A main (owner)' (100,100)-(1376,850) 1276x750 st=1ccf0000 ex=00000100 own
+  self: protocol errors 0, set_parent 1, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+== chain: A owns B owns C
+PASS chain-1: C.blue 49392 px  [A.red (6,78) 1268x716;B.green (343,190) 594x468;C.blue (493,340) 294x168;]
+PASS chain-2: C.blue 49392 px
+PASS chain-2: B unchanged (217992 px)
+FAIL chain-3: C.blue 0 px, expected 49392
+  chain: protocol errors 0, set_parent 2, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+== late: B shown before its owner A
+PASS late-1: B.green 105592 px  [B.green (443,290) 394x268;]
+PASS late-2: B.green 105592 px
+PASS late-3: B.green 105592 px
+  late: protocol errors 0, set_parent 1, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+== hide: A hidden, shown again, destroyed
+PASS hide-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS hide-2: B.green 105592 px
+PASS hide-3: B.green 105592 px
+PASS hide-4: B.green 105592 px
+PASS hide-5: B.green 0 px
+  hide: protocol errors 0, set_parent 4, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+== reowner: SetWindowLongPtr(GWLP_HWNDPARENT), then a stale parent that would make a loop
+PASS re-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS re-1b: B.green 105592 px
+PASS re-2: B.green 105592 px
+PASS re-2b: B.green 105592 px
+  reowner: protocol errors 0, set_parent 4, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+  [1841767.330]  -> xdg_toplevel#46.set_parent(xdg_toplevel#35)
+  [1849796.784]  -> xdg_toplevel#46.set_parent(xdg_toplevel#56)
+  [1857821.533]  -> xdg_toplevel#46.set_parent(nil)
+  [1857821.543]  -> xdg_toplevel#56.set_parent(xdg_toplevel#46)
+== cross-process: B in another process
+PASS x-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS x-2: B.green 105592 px
+PASS x-3: B.green 105592 px
+  xa: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 1, exporter_v1 0
+  xb: protocol errors 0, set_parent 1, set_parent_of 1, importer_v2 1, importer_v1 0, exporter_v2 1, exporter_v1 0
+== cross-process, owner hidden and shown again
+PASS xh-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS xh-2: B.green 105592 px
+PASS xh-3: B.green 105592 px
+PASS xh-4: B.green 105592 px
+  xha: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+  xhb: protocol errors 0, set_parent 3, set_parent_of 2, importer_v2 2, importer_v1 0, exporter_v2 1, exporter_v1 0
+##### sway wt/wayland-build
+== self: modal-style B owned by the disabled A
+PASS self-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS self-2: B.green 105592 px
+PASS self-3: B.green 105592 px
+  winlist: 0000000000010068 pid=0020 wlx_00ff00                   'B modal owned popup (must stay above A)' (300,300)-(700,600) 400x300 st=94c00000 ex=00000100 own=0000000000010052;0000000000010052 pid=0020 wlx_0000ff                   'A main (owner)' (100,100)-(1376,850) 1276x750 st=1ccf0000 ex=00000100 own
+  self: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== chain: A owns B owns C
+PASS chain-1: C.blue 49392 px  [A.red (6,78) 1268x716;B.green (343,190) 594x468;C.blue (493,340) 294x168;]
+PASS chain-2: C.blue 49392 px
+PASS chain-2: B unchanged (217992 px)
+FAIL chain-3: C.blue 0 px, expected 49392
+  chain: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== late: B shown before its owner A
+PASS late-1: B.green 105592 px  [B.green (443,290) 394x268;]
+PASS late-2: B.green 105592 px
+PASS late-3: B.green 105592 px
+  late: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== hide: A hidden, shown again, destroyed
+PASS hide-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS hide-2: B.green 105592 px
+PASS hide-3: B.green 105592 px
+PASS hide-4: B.green 105592 px
+PASS hide-5: B.green 0 px
+  hide: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== reowner: SetWindowLongPtr(GWLP_HWNDPARENT), then a stale parent that would make a loop
+PASS re-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS re-1b: B.green 105592 px
+PASS re-2: B.green 105592 px
+PASS re-2b: B.green 105592 px
+  reowner: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== cross-process: B in another process
+PASS x-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS x-2: B.green 105592 px
+PASS x-3: B.green 105592 px
+  xa: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+  xb: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== cross-process, owner hidden and shown again
+PASS xh-1: B.green 105592 px  [A.red (6,78) 1268x716;B.green (443,290) 394x268;]
+PASS xh-2: B.green 105592 px
+PASS xh-3: B.green 105592 px
+PASS xh-4: B.green 105592 px
+  xha: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+  xhb: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0

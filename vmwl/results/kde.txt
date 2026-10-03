@@ -1,0 +1,104 @@
+##### kde wt/134-build
+== self: modal-style B owned by the disabled A
+PASS self-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS self-2: B.green 105592 px
+PASS self-3: B.green 105592 px
+  winlist: 000000000001006c pid=0020 wlx_00ff00                   'B modal owned popup (must stay above A)' (300,300)-(700,600) 400x300 st=94c00000 ex=00000100 own=0000000000010056;0000000000010056 pid=0020 wlx_0000ff                   'A main (owner)' (100,100)-(1160,720) 1060x620 st=1ccf0000 ex=00000100 own
+  self: protocol errors 0, set_parent 1, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+== chain: A owns B owns C
+PASS chain-1: C.blue 49392 px  [A.red (114,100) 1052x586;B.green (343,159) 594x468;C.blue (493,309) 294x168;]
+PASS chain-2: C.blue 49392 px
+PASS chain-2: B unchanged (217992 px)
+PASS chain-3: C.blue 49392 px
+  chain: protocol errors 0, set_parent 2, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+== late: B shown before its owner A
+PASS late-1: B.green 105592 px  [B.green (443,259) 394x268;]
+PASS late-2: B.green 105592 px
+PASS late-3: B.green 105592 px
+  late: protocol errors 0, set_parent 1, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+== hide: A hidden, shown again, destroyed
+PASS hide-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS hide-2: B.green 105592 px
+PASS hide-3: B.green 105592 px
+PASS hide-4: B.green 105592 px
+PASS hide-5: B.green 0 px
+  hide: protocol errors 0, set_parent 4, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+== reowner: SetWindowLongPtr(GWLP_HWNDPARENT), then a stale parent that would make a loop
+PASS re-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS re-1b: B.green 105592 px
+PASS re-2: B.green 105592 px
+PASS re-2b: B.green 105592 px
+  reowner: protocol errors 0, set_parent 4, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 3, exporter_v1 0
+  [2469179.555]  -> xdg_toplevel#51.set_parent(xdg_toplevel#37)
+  [2477204.872]  -> xdg_toplevel#51.set_parent(xdg_toplevel#63)
+  [2485226.903]  -> xdg_toplevel#51.set_parent(nil)
+  [2485226.906]  -> xdg_toplevel#63.set_parent(xdg_toplevel#51)
+== cross-process: B in another process
+PASS x-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS x-2: B.green 105592 px
+PASS x-3: B.green 105592 px
+  xa: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 1, exporter_v1 0
+  xb: protocol errors 0, set_parent 1, set_parent_of 1, importer_v2 1, importer_v1 0, exporter_v2 1, exporter_v1 0
+== cross-process, owner hidden and shown again
+PASS xh-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS xh-2: B.green 105592 px
+PASS xh-3: B.green 105592 px
+PASS xh-4: B.green 105592 px
+  xha: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 2, exporter_v1 0
+  xhb: protocol errors 0, set_parent 3, set_parent_of 2, importer_v2 2, importer_v1 0, exporter_v2 1, exporter_v1 0
+##### kde wt/wayland-build
+== self: modal-style B owned by the disabled A
+PASS self-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+FAIL self-2: B.green 0 px, expected 105592
+FAIL self-3: B.green 0 px, expected 105592
+  winlist: 000000000001006c pid=0020 wlx_00ff00                   'B modal owned popup (must stay above A)' (300,300)-(700,600) 400x300 st=94c00000 ex=00000100 own=0000000000010056;0000000000010056 pid=0020 wlx_0000ff                   'A main (owner)' (100,100)-(1160,720) 1060x620 st=1ccf0000 ex=00000100 own
+  self: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== chain: A owns B owns C
+PASS chain-1: C.blue 49392 px  [A.red (114,100) 1052x586;B.green (343,159) 594x468;C.blue (493,309) 294x168;]
+FAIL chain-2: C.blue 0 px, expected 49392
+FAIL chain-2: B 0 px, was 217992
+Traceback (most recent call last):
+  File "/home/xl0/projects/wine/vmwl/input.py", line 7, in <module>
+    runpy.run_path(sys.argv[0], run_name='__main__')
+  File "/usr/lib/python3.10/runpy.py", line 289, in run_path
+    return _run_module_code(code, init_globals, run_name,
+  File "/usr/lib/python3.10/runpy.py", line 96, in _run_module_code
+    _run_code(code, mod_globals, init_globals,
+  File "/usr/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/xl0/projects/wine/vmwl/../vm/input.py", line 60, in <module>
+    if op == 'click': click(cmd, int(args[0]), int(args[1]))
+IndexError: list index out of range
+FAIL chain-3: C.blue 0 px, expected 49392
+  chain: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== late: B shown before its owner A
+PASS late-1: B.green 105592 px  [B.green (443,259) 394x268;]
+FAIL late-2: B.green 0 px, expected 105592
+FAIL late-3: B.green 0 px, expected 105592
+  late: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== hide: A hidden, shown again, destroyed
+PASS hide-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS hide-2: B.green 105592 px
+FAIL hide-3: B.green 0 px, expected 105592
+FAIL hide-4: B.green 0 px, expected 105592
+PASS hide-5: B.green 0 px
+  hide: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== reowner: SetWindowLongPtr(GWLP_HWNDPARENT), then a stale parent that would make a loop
+PASS re-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+FAIL re-1b: B.green 0 px, expected 105592
+FAIL re-2: B.green 0 px, expected 105592
+FAIL re-2b: B.green 0 px, expected 105592
+  reowner: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== cross-process: B in another process
+PASS x-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+FAIL x-2: B.green 0 px, expected 105592
+FAIL x-3: B.green 0 px, expected 105592
+  xa: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+  xb: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+== cross-process, owner hidden and shown again
+PASS xh-1: B.green 105592 px  [A.red (114,100) 1052x586;B.green (443,259) 394x268;]
+PASS xh-2: B.green 105592 px
+FAIL xh-3: B.green 0 px, expected 105592
+FAIL xh-4: B.green 0 px, expected 105592
+  xha: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0
+  xhb: protocol errors 0, set_parent 0, set_parent_of 0, importer_v2 0, importer_v1 0, exporter_v2 0, exporter_v1 0

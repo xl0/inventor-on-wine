@@ -387,6 +387,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   xwd take its multi-colormap path (packed 24 bpp) and draw Wine dialogs black (036).
   `xwd -id WIN` of a single window is fine.
 - `vm/input.py click X Y | key COMBO | type TEXT` — VM input over QMP.
+- `vmwl/` — Linux Wayland test VM (Ubuntu 26.04; GNOME 50 / KDE Plasma 6 / sway; qemu, SSH :2223, VNC :5911,
+  scripts reuse `vm/shot.sh` / `vm/input.py` via `VM_DIR`). Runs the host's `wt/wayland-build` from a read-only
+  virtio-fs share. See `vmwl/README.md`; protocol tables `vmwl/globals-*.txt`.
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
   virtiofsd 1.14.0 static zip sha256 2e4fe957…8978e (GitLab upload, no
   upstream hash), virtio-win-0.1.302.iso 303f7ae4…67949d (only viofs/w11 used),

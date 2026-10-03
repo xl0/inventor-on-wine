@@ -7,7 +7,7 @@ import json, os, socket, sys, time
 
 def qmp():
     s = socket.socket(socket.AF_UNIX)
-    s.connect(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'qmp.sock'))
+    s.connect(os.path.join(os.environ.get('VM_DIR', os.path.dirname(os.path.abspath(__file__))), 'qmp.sock'))
     f = s.makefile('rw')
     json.loads(f.readline())  # greeting
     def cmd(name, **args):

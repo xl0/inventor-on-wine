@@ -2,7 +2,7 @@
 # Screenshot the VM display to a PNG. Usage: vm/shot.sh [out.png]
 set -euo pipefail
 out=$(realpath -m "${1:-/tmp/vm.png}")
-cd "$(dirname "$0")"
+cd "${VM_DIR:-$(dirname "$0")}"  # VM_DIR: another VM's dir (vmwl/)
 python3 - "$out" <<'EOF'
 import socket, sys, time, os
 from PIL import Image
