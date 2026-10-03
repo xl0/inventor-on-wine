@@ -260,12 +260,15 @@ commits or screenshots). Read-only mode may remain after expiry.
   Claude Code was relaunched 2026-10-03 in a new sandbox: inv-lic's processes are hidden from
   /proc (other user namespace) but work; leave it running. prefix.sh now finds servers via /proc/locks.
 - In progress:
-  - 130 (worker, wt/130): rubber-band fps drops ~108 → 40-50 over a session. Cause: 077's
-    wm_size_move_begin() toggles the XInput2 raw button-release selection on the root on every WM
-    config change; Xorg recomputes masks for all windows, and WebView2's GPU process leaks ~3 hidden
-    top-levels per document. Fix: select only during a WM grab. Remaining: aged-session check,
-    size-move table (awesome/openbox, ± picom), tests, regress subset, review, merge.
-    The WebView2 hidden-window leak gets its own draft (131).
+  - 130 merged on integ d18a5dcd1ef (pushed), not yet in build/: winex11 selects raw button releases
+    on the root only during a WM grab (077's per-config-change root XISelectEvents made Xorg recompute
+    all XI2 masks; rubber fps 119 → 47 after 12 suites, flat 117-119 with the fix). Worker ran the
+    077 size-move table (awesome/openbox ± picom: same) and user32/win32u/winex11/dinput regress (0 worse).
+    Decisions: no separate adversarial review (5 lines, same logic with an early query; read by the
+    coordinator); build/ rebuild + full regress + suite wait until the UI and Wayland passes end
+    (a regress run at load 60-120 would spoil their timing).
+  - 131 (Opus worker, wt/131, inv3): our dxgi composition-swapchain hack leaks a hidden top-level
+    window per swapchain (~80 per suite in WebView2's GPU process; Windows creates none). Review after.
   - Inventor-on-Wayland pass (Sonnet worker, inv4, wt/wayland-build, software rendering): drafts 132-139.
     Full GPU testing would need libxkbregistry-dev and nvidia-drm.modeset=1 (user's call).
   - UI pass 2 (Sonnet worker, inv :98, build/): a designer's day by mouse on the current build
