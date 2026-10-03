@@ -311,6 +311,10 @@ commits or screenshots). Read-only mode may remain after expiry.
   run.sh: a crash in a prefix outside the table no longer restarts `inv`; WAYLAND_DISPLAY set = Wayland run.
   Proposed, not done: golden prefix + `prefix.sh reset` (UI workers leave state behind: user name,
   closed Assistant pane, ribbon split buttons); must keep the live sign-in/licensing state.
+- Host reinstall coming (Ubuntu 26.04, a more minimal base; date open). Decision deferred until it
+  lands: how our host packages (build deps, mingw, Xorg/Xvfb, WMs, qemu, gdb...) get provided.
+  User ruled out re-rooting the shared bwrap sandbox. Must survive the reinstall (not in git):
+  prefixes/ (sign-in state), login.txt, VM disks, deps/, ~/.claude; keep user name and project path.
 - inv4 state artifact: Inventor's user name is a non-ASCII test string (118 campaign), which
   breaks the export scenario's IGES 80-column check on any build; reset it via the API.
 - Waiting on the user's laptop (awesome + picom, 144 DPI): retest at 04293594c50 the trial popup
