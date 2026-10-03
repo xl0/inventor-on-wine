@@ -267,20 +267,21 @@ commits or screenshots). Read-only mode may remain after expiry.
     Decisions: no separate adversarial review (5 lines, same logic with an early query; read by the
     coordinator); build/ rebuild + full regress + suite wait until the UI and Wayland passes end
     (a regress run at load 60-120 would spoil their timing).
-  - 131 (Opus worker, wt/131, inv3): our dxgi composition-swapchain hack leaks a hidden top-level
-    window per swapchain (~80 per suite in WebView2's GPU process; Windows creates none). Review after.
   - 133 fixed on fix/133 (3 commits), in review. My premise was wrong: on Windows 11 a process is
     input idle as soon as ANY thread waits for messages (as on Wine). The real bugs: two Wine-internal
     waits set the idle event — the clipboard manager thread (winewayland's per-process one, explorer's)
     and a thread sitting in WaitForInputIdle itself. No protocol change. Not yet confirmed on Wayland
     (`tests/r133/idle.exe main_getmsg helper_win_getmsg`, then drawing2/sheetmetal). Remaining Windows
     differences (PeekMessage loops count as idle, later calls track one thread, +500 ms timeout) → draft 143.
-  - 141 (Opus worker, wt/141, inv): riched20 assertion (caret.c:232, MEPF_REWRAP) when a drawing
-    dimension is placed; endless assertion box, session lost. Possibly a regression of our 125
-    riched20 commits → first priority; the user's laptop build has it.
-  - 140 (Opus worker, wt/140, prefix when one frees): Inventor spins in IsDialogMessageW on the first
-    key press after a docked pane (iLogic Browser) is closed; DIALOG_IsAccelerator never terminates
-    under a hidden container (probe tests/isdialogmsg_hidden.c). VM ground truth first.
+  - Reviews (independent Opus) and follow-ups, all on integ d18a5dcd1ef, merge round when all are back:
+    131 window-less composition swapchains: "merge as is"; worker adds a set_window guard / explicit
+      flag, Windows parity for 5 calls, drafts 149 (Present(1) doesn't pace), 150, 151 (older bugs).
+    133: "merge after fixes" — WaitForInputIdle skipped the surface flush (regression), test
+      robustness; Wayland case verified by the reviewer (+69 ms → +1590 ms). Worker applying.
+    140: reworked to the bound only (stop after one round; 3 lines, no change to cases that
+      returned, closer to Windows than the start-point rule) + msg.hwnd == hwndDlg fix. Worker applying.
+    141 (riched20 EM_SETCHARFORMAT SCF_WORD: not a regression, upstream bug since 2019; 3 commits):
+      in review. 134/135 (winewayland owned windows, 6 commits): in review.
 - UI pass 2 done (Sonnet, inv, build/ 04293594c50, about half of the areas; inst/ui2/results.md):
   nothing regressed vs the first pass; picking, viewport, ViewCube, breadcrumbs (041), file clicks
   (043) now work; 042 shadow still there. New: 140, 141 (above), 142 (low: stale pixels in the
@@ -304,9 +305,18 @@ commits or screenshots). Read-only mode may remain after expiry.
   (does the GPU process block in eglSwapBuffers on a never-mapped surface; why its hardware path
   dies; topology-B probe). Zero-copy dmabuf is out of scope here (not verifiable without a GPU session).
   133 is core (above).
-- Wayland VM (`vmwl/`, Sonnet worker building it): Ubuntu LTS guest with GNOME, KDE, sway;
-  probes on current compositors. User approved (2026-10-03) Inventor in it through the HOST's
-  licensing service (guest 127.0.0.1:39683 → host via qemu user net), prefix copied from inv4.
+- Wayland VM (`vmwl/`, Ubuntu 26.04 guest; GNOME 50, KDE, sway; qemu screenshots/input; README there):
+  built. Baseline: notepad fine on all three; 132 reproduces on all three; 134 only on GNOME/KDE.
+  fix/134 verified there: no FAIL on GNOME and KDE (unfixed: 17/16), cross-process goes through
+  xdg-foreign v2, no protocol errors incl. wlroots' strict cases (sway's one chain-3 FAIL predates it).
+  Inventor in the VM (user-approved, via the HOST's licensing service) is NOT working yet:
+  - the forward to 39683 was never used: the guest prefix's own AdskLicensingService served Inventor
+    from the copied cached licence. No prompt appeared; host licensing still works (hello on inv4).
+    Our notes on who serves whom may be wrong. No further guest launches until routing is real.
+  - Inventor crashes ~7 s after the licence checkout (GNOME and sway). Unknown whether it is the
+    26.04 userland, the VM or winewayland — matters for the coming host reinstall.
+  Worker (Opus, owns vmwl/ and inv4): licensing discovery + routing, then the crash; drafts 152-155.
+  virgl (`GL=1`): guest reports "virgl" but every Wine process hangs at start; not investigated.
   Declined: cracked/pirated Inventor (skews the licensing/WebView2 paths we test, untrusted binaries).
 - Harness: full regress runs pin themselves to CPUs 20-59,80-119 (REGRESS_CPUS) and builds use the
   same taskset, so merge rounds no longer wait for UI/timing workers. Next merge round is batched:
