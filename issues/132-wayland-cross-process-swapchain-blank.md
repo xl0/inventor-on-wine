@@ -1,5 +1,5 @@
 # 132 winewayland: a D3D11/GL swapchain created by another process on a window is never shown (all WebView2 content is blank)
-Status: draft · Found in: wayland test pass (notes/wine/wayland.md) · Blocks real Inventor use under Wayland
+Status: wip (M0 done, M1 in progress) · Branch: fix/132 (wt/132, on top of fix/134) · Found in: wayland test pass (notes/wine/wayland.md) · Blocks real Inventor use under Wayland
 
 ## Symptom
 Under winewayland.drv every WebView2 (Chromium) surface of Inventor is blank: the Inventor Home page (Recent
@@ -84,3 +84,78 @@ foreign-rooted surface; (5) can the sandboxed GPU process create a named section
 global handle); (6) flipped buffer transform on a subsurface in mutter 42; (7) does Inventor's UI thread pump often
 enough, and do posted messages disturb idle detection (088, 133); (8) cursor over cross-process children (085's fix is
 X11-only); (9) sibling child windows overlapping WebView areas.
+
+## M0 results (2026-10-03; wt/134-build = integ 0b77b17a942 + fix/134, so WITH window-less composition swapchains, 131)
+Probe: `tests/r132/xp.c` (`xp.exe host`, `xp.exe foreign|child|hidden|visible [HWND] interval=N ...`; quadrant image with a moving
+bar, time per Present, STALL watchdog). Host session (mutter 42, llvmpipe), scratch prefix `inst/132/pfx`. Logs: `inst/132/m0/`, `inst/132/inv/`.
+1. Topology B is blank for the reason read from the code: yes. `layered_child_gpu.exe` with +waylanddrv (`lcg.log`): the
+   presenting process has win_data for its own child (no wayland_surface, it is a child window), 202 `wayland_client_surface_update`
+   and not one `wayland_surface_reconfigure_client`: the attach finds no data for the foreign top-level and detaches.
+   Screenshot `lcg.png`: the 400x300 host window is black, no green pixel.
+2. A swap with interval > 0 on a surface the compositor never maps blocks forever: yes. `xp.exe hidden interval=1` stalls at
+   frame 4; gdb (`hidden-i1-gdb.txt`): wined3d_cs thread in `wayland_drawable_swap` -> eglSwapBuffers -> Mesa -> `wl_display_dispatch_queue`
+   -> poll (waiting for a frame callback that never comes). interval=0: 60 presents, 1.1 ms average. Topology B with interval=1 stalls
+   the same way (`child-i1.out`); topology A does not, only because win32u keeps no swap interval for a foreign window
+   (`get_window_swap_interval` returns 0 for WND_OTHER_PROCESS).
+   It is NOT what hurts WebView2: dcomp presents its foreign-target swapchain with `Present(0, 0)` (dcomp/device.c
+   present_to_foreign_target), and gdb on two live software-path GPU processes of Inventor shows no thread in eglSwapBuffers.
+   General driver bug, drafted as 163 (a vsync'ed swapchain on a hidden window hangs its render thread).
+3. Why the hardware-path GPU processes die: a Chromium FATAL, not a Wine crash and not Wayland. Every one of the 9 (3 browser
+   processes x `--gpu-recent-crash-count=0..2`, ~2 s after start, restarted every ~8 s) hits the same int3 (`+seh`, same address);
+   its Crashpad report says `components\viz\service\display_embedder\skia_output_surface_impl.cc:1277`,
+   `backend_format.isValid()=0 backend()=5 color_type=4 sample_count=1 willGlFBO0=1` (no renderable default RGBA8 format in
+   Skia's caps of the ANGLE/D3D11 context). The 4th start (`crash-count=3`) takes the software path (`DCompositionCreateDevice(NULL)`,
+   `CreateTargetForHwnd(own child)`, composition swapchain) and lives.
+   Control: same build, same prefix on Xvfb (winex11, wined3d GL on llvmpipe): the same 9 crashes, then the software path draws the
+   Home page and the trial popup (`inst/132/inv/m0x-60s.png`). So the hardware path dies with wined3d's GL renderer (or llvmpipe)
+   on X too; on the GPU displays (Vulkan renderer) it lives. Drafted as 162. Consequence for Wayland: WebView content can only
+   appear ~25-30 s after its browser process starts (three crash rounds), through the software path = dcomp -> HWND swapchain on
+   the GPU process' own child of Inventor's top-level = topology B, Present(0, 0), wined3d GL.
+Effect on the M1 plan: none on the design. The swap-interval guard is not needed for the remote path (it never calls
+eglSwapBuffers, see below) and would not change what is blank in Inventor; the in-process case is 163.
+
+## State at pause (2026-10-03, machine reboot; nothing of M1 is written yet)
+Done: M0 (above). Built: `wt/132` = branch `fix/132` at 5d59ae5fddf (= fix/134, no commits of mine), `wt/132-build` configured
+(xkbregistry stand-in, see notes/wine/wayland.md) and fully built (`make` rc 0, winewayland.so present); resume with
+`taskset -c 20-59,80-119 make -j40`. Probe `tests/r132/xp.c` (+ exe). Scratch prefix `inst/132/pfx` (1.6 GB, made with wt/134-build
+under Wayland; `inst/132/env.sh` sets the env). Drafts 162 (hardware-path CHECK with wined3d GL), 163 (swap interval hang).
+Left clean: Wayland session stopped, Xvfb :1330 gone, inv2 back on build/ under :99 without Inventor, lease released.
+
+Not done, in order:
+1. M1 code (design below), commits: transport, owner-side proxy, GL readback hook, hardening.
+2. Gate: `xp.exe host` + `xp.exe foreign P1` + `xp.exe child P2 color=00ffff` screenshots (quadrants upright: checks the y flip),
+   `follow=1` resize, `cycle=200` leak check (fds, handles, wl objects on both sides), kill the renderer mid-stream,
+   `WAYLAND_DEBUG=1` for protocol errors, notepad / `d3d11_present.exe` fps unchanged, `xproc_hidden_present`, `layered_child_gpu`.
+3. Per-frame cost at 1678x884 on llvmpipe (ms of the readback, 5.9 MB per frame, 3 buffers = 17.8 MB per surface).
+4. First look at Inventor on inv2/Wayland (Home page, trial popup, Assistant); expect content only ~30 s after start (162).
+5. notes/wine/wayland.md, this file.
+
+M1 design as planned (decided from the code, nothing of it tested):
+- Renderer side (process that presents; `wayland_client_surface_update`, called by win32u on window changes and at every present):
+  toplevel belongs to another pid -> the client surface gets a "source": a one-page control section (config under a seqlock:
+  generation, pixel section handle, buffer size, rect in the toplevel = win32u's `monitor_rect`, visible; a `ready` mailbox;
+  owner-written `released` mask) and, per size, a pixel section with 3 buffers (latest-wins: one shown, one in the mailbox, one
+  to draw; the renderer never waits). Topology A needs the foreign check BEFORE `wayland_win_data_get(hwnd)`, which fails there.
+- GL: `wayland_drawable_swap` for a remote surface does glReadPixels(GL_BGRA) of the back buffer straight into the free shm
+  buffer, from a private EGL context of the drawable made current around the read (no client GL state touched, works without a
+  current context), and does NOT call eglSwapBuffers (so no frame-callback wait, 163, and no second copy on llvmpipe).
+  GL rows are bottom-up: owner sets `wl_surface.set_buffer_transform(FLIPPED_180)` (unknown 6: check on mutter 42; fallback
+  GL_MESA_pack_invert or a CPU flip).
+- First contact: one driver message posted to the toplevel (`wparam` = renderer pid, `lparam` = its control section handle).
+  The owner PULLS: NtOpenProcess(PROCESS_DUP_HANDLE) + NtDuplicateObject of the handles the renderer names (nothing named, no
+  server change, the renderer needs no access to the owner). Not yet known: whether Inventor may open the sandboxed GPU process
+  that way (wineserver's default process DACL says yes; fallback: named section).
+- After that nothing depends on the owner's message pump: the renderer wakes the owner through a socketpair (owner's end passed
+  as a Wine handle, `wine_server_fd_to_handle` / `_handle_to_fd`), which the owner's Wayland dispatch thread polls next to the
+  display fd (`waylanddrv_unix_read_events` becomes a prepare_read/poll loop). On a wake the owner re-reads the control page:
+  new generation -> pull the pixel section, wl_shm pool + 3 wl_buffers; geometry -> subsurface position, viewport destination;
+  mailbox -> attach + damage + commit. EOF on the socket = renderer gone -> proxy destroyed (stale image goes away).
+  No new thread: a message-pumping driver thread would bring 133 (WaitForInputIdle) back.
+- Owner side trusts nothing: values copied once and validated (size caps, 3 * stride * height <= real section size by NtQuerySection
+  and fstat before the pool is created, so the compositor cannot fault either), bounded seqlock retries, the fd must be a socket and
+  is read with MSG_DONTWAIT, a cap on proxies per process; pixel memory is never mapped in the owner. Proxies live in a list under
+  `win_data_mutex`; no win32u calls there (geometry comes from the renderer). Hooks: toplevel wayland_surface destroyed / re-created
+  (re-make the wl_subsurface on the new parent, re-attach the last buffer), `WAYLAND_DestroyWindow` of the client window (topology A).
+- Known gaps to state in the report: a renderer that stops presenting does not learn that an ancestor in a THIRD process was
+  hidden or moved (dcomp presents at least once a second, so WebView2 lags at most ~1 s); no clipping by overlapping siblings;
+  proxies are placed just above the parent like in-process client surfaces (popups/menus stay above).

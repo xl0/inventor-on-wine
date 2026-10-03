@@ -76,6 +76,11 @@ per global (no wayland-info here).
 | DXVK d3d11_present.exe | device on RTX 6000 ok, page fault at swapchain (NVIDIA WSI, see GPU) | |
 
 Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectangles); Inventor pass (below): 132-136.
+- A swap with interval > 0 never returns while the compositor does not show the surface (hidden window, own child of a foreign
+  top-level): Mesa waits for a frame callback inside eglSwapBuffers (163; `tests/r132/xp.exe hidden interval=1`).
+- WebView2 with wined3d GL on llvmpipe (the only renderer on this Wayland host): each hardware-path GPU process dies at a Chromium
+  CHECK ~2 s after start, 3 rounds per browser process, then software compositing (162; same on X with GL). Web content therefore
+  appears ~25-30 s late even where it can be shown; under Wayland it is blank until 132 is fixed (state and design in the issue).
 
 ## Behaviour seen
 - Window placement is the compositor's (requests at 100,100 end up centred); Wine only learns the size.
