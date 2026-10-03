@@ -44,5 +44,6 @@
   (server `process->idle_event`, GUI subsystem only), set client-side in `win32u/message.c:wait_objects`, never reset;
   each thread gets its handle with the queue handle at its first wait. So every Wine-internal thread that pumps
   messages inside an application makes it idle early: fix/133 exempts threads that run a clipboard manager window
-  (`NtUserClipboardWindowProc` -> `disable_thread_input_idle`); a new internal pumping thread needs the same.
+  (WM_NCCREATE via `NtUserClipboardWindowProc` -> `disable_thread_input_idle`); a new internal pumping thread needs
+  the same. `NtUserWaitForInputIdle` waits with `wait_message` (no idle) and must flush window surfaces itself.
   user32:msg's WaitForInputIdle tests only test anything since fix/133 (GUI-subsystem copy of the test exe).

@@ -1,5 +1,5 @@
 # 133 WaitForInputIdle returns too early: Wine-internal message waits make the process input idle (winewayland clipboard thread, WaitForInputIdle itself); Inventor DWG/DXF export fails on Wayland
-Status: fixed on fix/133 (3 commits, not merged; Wayland run not done) · Branch: fix/133 (wt/133) · Found in: wayland test pass (notes/wine/wayland.md)
+Status: fixed on fix/133 (3 commits, reviewed, review fixes folded in; not merged; Wayland verified by the reviewer) · Branch: fix/133 (wt/133) · Found in: wayland test pass (notes/wine/wayland.md)
 
 ## Symptom
 invscen on Wayland: `drawing2` "export DWG" fails with REGDB_E_CLASSNOTREG (0x80040154) and `sheetmetal` "export flat
@@ -57,33 +57,48 @@ set it too:
    made that process idle (repro: `tests/wl_idle.exe` right after `wineserver -k`: 59 ms instead of ~1500+).
 
 ## Fix (fix/133, on integ d18a5dcd1ef; no server protocol change)
-- f6849b150a1 user32/tests: the WaitForInputIdle tests never tested anything: the test exe is a console program and
+- ebcb15b4d15 user32/tests: the WaitForInputIdle tests never tested anything: the test exe is a console program and
   WAIT_FAILED was accepted for console children. They now run from a GUI-subsystem copy of the exe, plus a console
   child check. All 21 old cases pass on Win11 and Wine unchanged (16 and 20 return the `broken` value on Win11).
-- 344a83186de win32u: a thread that dispatches a clipboard manager window message (`NtUserClipboardWindowProc`:
-  winewayland's per-process thread, explorer's thread for the other drivers) drops its idle event handle
+- 44e0511ff64 win32u: a thread whose clipboard manager window gets WM_NCCREATE through `NtUserClipboardWindowProc`
+  (winewayland's per-process thread, explorer's thread for the other drivers) drops its idle event handle
   (`disable_thread_input_idle`). Not testable on Windows.
-- 49300e6a97f win32u: the idle event is set in `wait_objects` (GetMessage, MsgWait, WaitMessage) instead of
-  `wait_message`; `NtUserWaitForInputIdle` calls `wait_message` directly. Test: wait_idle case 21 (fails without
-  the fix: `21: WaitForInputIdle error 00000000 expected 00000102`).
+- e304ab60cb3 win32u: the idle event is set in `wait_objects` (GetMessage, MsgWait, WaitMessage) instead of
+  `wait_message`; `NtUserWaitForInputIdle` calls `wait_message` directly, after the `flush_window_surfaces( TRUE )`
+  that `wait_objects` does (nothing else is skipped: same masks, timeout, non-alertable wait and return mapping as
+  the old `NtUserMsgWaitForMultipleObjectsEx( 2, handles, .., QS_SENDMESSAGE, 0 )`). Side effect: a MsgWait with
+  bit 0x8000 (QS_SMRESULT) in its mask now makes the process idle, as on Win11 (+514 ms in the reviewer's probe).
+  Tests: wait_idle case 21 (child waits in WaitForInputIdle on a grandchild; fails without the fix:
+  `21: WaitForInputIdle error 00000000 expected 00000102`; the child exits by itself so its checks are reported)
+  and case 22 (MsgWait mask 0xffff).
+
+Review (inst/133-review/, reviewed tip 49300e6a97f): found that the direct `wait_message` call lost the surface flush
+(GetDC drawing followed by WaitForInputIdle(child) stayed invisible until the wait ended), dead checks in case 21
+and unchecked error paths in the test's exe copy; all folded into the commits above.
 
 ## Verification
-- X stand-in for the Wayland thread: `tests/r133/idle.exe wine_` (helper thread whose window proc goes through
-  `NtUserMessageCall(NtUserClipboardWindowProc)`): `w,s1500,g/c,g` +61 ms before, +1598..1621 after.
-  NOT run on Wayland (the session belongs to the 134/135 worker). To check there: `tests/r133/idle.exe main_getmsg
-  helper_win_getmsg` (expect ~+1600 and < +200) or `tests/wl_idle.exe` (~1500; cold server ~2100) and invscen
-  drawing2 / sheetmetal.
-- VM: user32_test msg, 64-bit and 32-bit: no failure in test_WaitForInputIdle (the runs have 11 and 7 unrelated
-  failures elsewhere in msg.c: mouse/paint/hotkey tests).
-- `tools/regress.sh unit`, 2 runs per arch: user32:msg 1 failure (baseline 1), user32:win 4 (4), user32:input 0,
-  win32u:win32u 0, user32:clipboard 0, both arches.
-- Inventor on inv4 (X): suite 12/13, `export` fails only the known IGES 80-column step (user name left as is);
-  drawing2 14/14, sheetmetal 9/9. Start to connect, prefix restarted each time: build/ 20.5 s, 20.6 s; fix 20.5 s, 21.0 s.
+- Wayland (reviewer, private headless gnome-shell): `idle.exe main_getmsg` +69 ms on the unfixed build, +1590 ms on
+  fix/133; all 60 scenarios run there match X11 (inst/133-review/wayland-fix.txt).
+- X stand-in for the Wayland thread: `tests/r133/idle.exe wine_` (helper thread whose window proc forwards
+  WM_NCCREATE to `NtUserMessageCall(NtUserClipboardWindowProc)`): `w,s1500,g/c,g` +61 ms before, +1586 after.
+- Flush repro (`inst/133-review/rev.exe run G s6000 "w,D,I3000,s800,M300,s300"`, root pixel (50,50) after 1.8 s):
+  red with the flush, (245,245,245) without it (inst/133/flush-repro.sh).
+- `tests/r133/idle.exe`, all 80 scenarios on the final series: same as before the review changes
+  (inst/133/wine-fix2.txt vs wine-fix.txt, 0 differ).
+- VM: user32_test msg, 64-bit and 32-bit: no failure in test_WaitForInputIdle, cases 21 and 22 included (case 21's
+  child reports 21 tests, 0 failures; the runs have 8 and 5 unrelated failures elsewhere in msg.c:
+  mouse/paint/hotkey tests). Wine, both arches: only the old `msg.c:5744` todo success.
+- `tools/regress.sh unit`, 2 runs per arch: user32:msg 1 failure (baseline 1), user32:input 0, win32u:win32u 0,
+  user32:clipboard 0; user32:win x86_64 4 (4), i386 0 and 5: one run had an extra `win.c:12747 parent didn't get
+  WM_NCDESTROY` (test_destroy_quit, a 100 ms cross-thread race). 10 more i386 runs each: fix 5x pass, 5x 4
+  failures, build/ the same, no 12747. 1 of 16 i386 runs on fix/133 in total; not seen in the baselines.
+- Inventor on inv4 (X, before the review changes): suite 12/13, `export` fails only the known IGES 80-column step
+  (user name left as is); drawing2 14/14, sheetmetal 9/9. Start to connect, prefix restarted each time: build/
+  20.5 s, 20.6 s; fix 20.5 s, 21.0 s.
 
 ## Limits
-- The Wayland symptom itself is unverified; the argument is that the clipboard thread was the only thread of
-  DBXBridge idling early and the X stand-in shows it no longer counts.
-- Keying on `NtUserClipboardWindowProc` is implicit; it also changes explorer (its WaitForInputIdle in
+- Inventor's DWG/DXF export itself was not rerun on Wayland (only the probe was).
+- Keying on the clipboard manager window's WM_NCCREATE is implicit; it also changes explorer (its WaitForInputIdle in
   get_desktop_window now ends on another explorer thread). Other Wine-internal pumping threads (dinput, winmm devices,
   combase apartment host) still count; they only start when the app uses those APIs.
 - Not matched: 143 (state after the first idle, PeekMessage polling, timeout rounding).

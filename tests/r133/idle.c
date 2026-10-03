@@ -72,13 +72,14 @@ static void chlog(int thread, const char *tok)
     fflush(clog_file);
 }
 
-/* like winewayland's per-process clipboard manager window: Wine handles its messages in win32u.
- * WM_NULL instead of the real messages, so that the driver does nothing. */
+/* like winewayland's per-process clipboard manager window: Wine handles its messages in win32u, and
+ * WM_NCCREATE marks the thread as internal. On winex11 this makes the child a second clipboard manager
+ * (import window, format listener) for its few seconds of life: scratch prefixes only. */
 static LRESULT CALLBACK clipboard_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     static LRESULT (WINAPI *pNtUserMessageCall)(HWND, UINT, WPARAM, LPARAM, void *, DWORD, BOOL);
     if (!pNtUserMessageCall) pNtUserMessageCall = (void *)GetProcAddress(LoadLibraryA("win32u.dll"), "NtUserMessageCall");
-    if (msg == WM_NCCREATE) pNtUserMessageCall(hwnd, WM_NULL, 0, 0, 0, 0x0300 /* NtUserClipboardWindowProc */, FALSE);
+    if (msg == WM_NCCREATE) pNtUserMessageCall(hwnd, msg, wp, lp, 0, 0x0300 /* NtUserClipboardWindowProc */, FALSE);
     return DefWindowProcA(hwnd, msg, wp, lp);
 }
 
