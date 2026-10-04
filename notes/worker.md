@@ -94,10 +94,11 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   Kill Inventor with `tools/prefix.sh kill-inventor NAME [--holder H]` (Inventor.exe plus its
   AdskLicensingAgent/msedgewebview2/... helpers, not the prefix's services; `--orphans`: helpers
   only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning.
-- Host quirk (Ubuntu 26.04 AppArmor): some small tools (`lsblk`, `who`, `locale`, …) have their own
-  AppArmor profiles that refuse the sockets inherited from the sandbox, so run bare they print
-  NOTHING. Capture or pipe them: `lsblk | cat`. (`hostname` and Xorg got local overrides on
-  2026-10-04, see /data/box/apparmor-local-overrides.md; `swtpm` runs from a copy in deps/.)
+- AppArmor on this host (Ubuntu 26.04): everything in the sandbox runs under the label
+  `bwrap//&unpriv_bwrap`; since 2026-10-04 programs started inside it no longer pick up their own
+  per-binary profiles (local `priority=1 … ix` rules for the bwrap profile), so `hostname`,
+  `lsblk`, Xorg, swtpm behave normally. Capabilities and nested user namespaces (nested bwrap)
+  stay denied.
 - `WINEDLLOVERRIDES="mscoree,mshtml="` is for `wineboot` only: set it on that one command, never
   `export` it. Inventor started with mscoree disabled dies ~6 s after start (CommonUI.dll+0x60b90,
   issue 152); `tools/invscen/run.sh` refuses to start it that way.

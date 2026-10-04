@@ -252,44 +252,23 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Paused for a sandbox restart (2026-10-04, evening) — resume from here
-The user changed the host's AppArmor setup for bwrap (programs in the sandbox no longer pick up
-per-binary profiles: local `priority=1 … ix` rules for bwrap-userns-restrict) and restarts the
-sandbox. Workers were told to stop and write "State at pause" into their issue files.
-- integ = b5d75449ffe (pushed), build/ = wine-11.18-537 on it, verified (regress 0 worse, suite 13/13).
-- fix/157 (integ + 7 commits, tip 750bb757812; older tips fix/157-v1, -v2): review items done in
-  code — the role change has no gap any more (surface replaced under the lock again; client
-  subsurfaces carry a serial and are re-created by win32u's update), NULL check in relative motion,
-  title set after release, cursor-info early return, "don't commit buffers to role-less surfaces"
-  (170: fixes hide ≥ 5 ms; a 0-2 ms hide/show is still fatal because mutter hasn't applied the
-  hide's NULL commit — the robust variant, a new wl_surface per show, is on fix/157-surface-per-show
-  but orphans subsurface popups; not merged). Verified on the final tip: VM sway and GNOME
-  rapid/lockstress with pointer+key jitter, 0 hangs. TO DO (listed in the issue): KDE batch,
-  wl_xowner, debug-build pass, user32 tests, and on the host session first-frame-after-show, 132's
-  clip/geo/flip, sink stress, seq.c vs integ; update the issue's table and draft 170. Then a short
-  re-review of the changed design (serial instead of the gap) before merge.
-- fix/171 (win32u window-surface race, 3 commits): review interrupted after reading only; leads are
-  in the issue file ("Review, interrupted"). The 173 worker's reading answers lead 1 (the posted
-  message in winex11's flush takes no user lock) — to be confirmed by a run of 171 + 173 together.
-- fix/173 (3 commits, tip 6635a80202b): upstream winex11/win32u deadlock (NtUserDrawIconEx draws
-  with the user lock held → X11DRV_GetDC wants the window data; X11DRV_WindowPosChanged holds it
-  and wants the user lock). Repro tests/r173/iconlock.exe hangs in ~1 s on integ and master; fix
-  0 of 50. Also fixed: BadWindow deaths (PropertyNotify on an X window replaced by another
-  thread), a xinerama/display lock inversion. winex11's rule is the opposite of winewayland's
-  (window data → user lock; win32u is the side to fix). TO DO (in the issue): long stress, debug
-  build with 171 cherry-picked, regress units both arches, Inventor on inv2 (suite, fps A/B,
-  drag/resize), notes; then adversarial review.
-Everything is stopped: prefixes, X servers, VMs, Wayland session. Two confined stray swtpm
-processes (3008138, 3008605) can only be killed from outside the sandbox.
-After the restart:
-1. Check the AppArmor change from inside: bare `hostname`, `lsblk`, `who` print; then drop the
-   workarounds that are no longer needed (notes/worker.md quirk note; deps/swtpm copy in vm/run.sh
-   can stay, it is harmless).
-2. Start the prefixes (`tools/prefix.sh start inv` … inv4; X servers too if they died), the
-   Windows VM if needed (`vm/run.sh`).
-3. Resume 157, 173 and the 171 review (SendMessage to the same agents, else new workers from the
-   issue files). Then: merge 157 (+170) and 171 after review, verification round (regress vs the
-   h26 baselines + suite), push. Then 167 (Wayland z-order of in-process client surfaces), UI pass 3.
+## Now (2026-10-04, late)
+- Sandbox restarted with the user's AppArmor change: bare `hostname`/`lsblk`/`who` print, Xorg runs
+  under the plain sandbox label. All four prefixes and X servers are up on build/ = integ
+  b5d75449ffe (pushed, verified: regress 0 worse vs the h26 baseline, suite 13/13).
+- Running (resumed agents):
+  - 157 worker: finish verification of fix/157 (integ + 7 commits, tip 750bb757812; the role change
+    has no gap any more — surface replaced under the lock, client subsurfaces carry a serial),
+    evaluate a deferred re-show for 170's 0-2 ms case; then a short re-review, merge.
+  - 173 worker: finish fix/173 (3 commits: NtUserDrawIconEx draws without the user lock; BadWindow
+    on replaced X windows; xinerama/display inversion — all upstream bugs), debug build with 171
+    cherry-picked, regress, Inventor on inv2; then adversarial review.
+  - 171 reviewer: continue the review of fix/171 (win32u window-surface race, 3 commits).
+  171 and 173 depend on each other's lock rules (171 adds user lock → dce.c surfaces_lock; winex11's
+  rule is window data → user lock, with a trylock in the flush): both are asked about the combination.
+- After these: merge round (157+170, 171, 173) with regress + suite, push. Then 167 (Wayland z-order
+  of in-process client surfaces), UI pass 3, the warning fix for 41d9173ca57 at the next rebase.
+- Two confined stray swtpm processes (3008138, 3008605) can only be killed from outside the sandbox.
 
 ## New host (2026-10-04): Ubuntu 26.04.1, kernel 7.0, reinstalled — survey
 Project data is intact (same path and user; ZFS now, 1.4 T free): prefixes, VM disks, builds, worktrees,
