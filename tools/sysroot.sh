@@ -3,7 +3,8 @@
 # does not have: -dev headers, mingw-w64, bison, Xvfb, ... No root: packages are unpacked, not installed.
 # Usage: tools/sysroot.sh add PKG...      resolve the not-installed closure (apt-get -s), download it
 #                                         pinned to the exact versions, unpack, record in sysroot.pkgs
-#        tools/sysroot.sh rebuild         recreate the prefix from sysroot.pkgs (.debs kept in deps/sysroot-debs)
+#        tools/sysroot.sh rebuild         recreate the prefix from sysroot.pkgs (.debs kept in deps/sysroot-debs);
+#                                         wipes it first: never while builds or tests run
 #        tools/sysroot.sh env             export lines for eval; empty if the prefix is absent
 #        tools/sysroot.sh run CMD...      run CMD with that environment
 # sysroot.pkgs: "name=version sha256-of-deb" per line, sorted. The prefix has /usr paths baked in
@@ -77,7 +78,9 @@ add)
 	new=$(sed -En 's/^Inst ([^ ]+) \(([^ ]+) .*/\1=\2/p' <<< "$inst")
 	# keep recorded entries, except old versions of the packages being added
 	{ [ ! -f "$L" ] || awk -F'[= ]' 'NR == FNR { skip[$1] = 1; next } !($1 in skip)' <(sed 's/=.*//' <<< "$new") "$L"; echo "$new"; } | sync_list
-	unpack;;
+	# only the new packages: the prefix stays usable for running builds and tests (rebuild wipes it)
+	mkdir -p "$S"; for n in $new; do dpkg-deb -x "$(deb_of "${n%%=*}" "${n#*=}")" "$S"; done
+	fixup;;
 rebuild)
 	sync_list < "$L"
 	unpack;;

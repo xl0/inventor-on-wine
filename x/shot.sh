@@ -6,6 +6,7 @@
 # windows black (issue 036).
 set -euo pipefail
 out=$(realpath -m "${1:-/tmp/x${2:-98}.png}")
+eval "$("$(dirname "$0")/../tools/sysroot.sh" env)"  # numpy, PIL from the local package prefix
 DISPLAY=:${2:-98} python3 -c "
 import ctypes as C, numpy as np; from PIL import Image
 class XImage(C.Structure):

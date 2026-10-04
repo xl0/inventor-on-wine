@@ -122,7 +122,7 @@ run_units() {
     done
     export W build out tmo DISPS="${disps[*]}"
     export WINEDEBUG=-all WINETEST_PLATFORM=wine WINETEST_DEBUG=1 LIBGL_ALWAYS_SOFTWARE=1 \
-        VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+        VK_ICD_FILENAMES="$(ls /usr/share/vulkan/icd.d/lvp_icd*.json "${SYSROOT_ENV:-/nonexistent}"/usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)" \
         __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json
     export -f run_one
     xargs -P "$jobs" -L 1 bash -c 'run_one "$@"' _ < "$W/tasks" >> "$out/results.part"
