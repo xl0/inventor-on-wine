@@ -334,7 +334,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   Cost at 1678x884 on NVIDIA: ~0.9-4 ms per frame in the source, 3.75 ms compositor upload.
   Inventor on Wayland: Home page, trial popup and Assistant show content. NOT mergeable alone:
   remote surfaces aren't clipped by sibling windows, so the Home page covers open documents.
-  Worker continues with M2 (owner-side clipping/visibility, idle source, slot limits); review after.
+  M2 done (6 commits on fix/132): geometry and clipping come from the owner (two get_visible_region
+  server requests per evaluation in the sink's event thread, none per frame; rect clip + hide),
+  16 sinks per source pid. Inventor on Wayland: Home page hides behind an open document and returns
+  on the Home tab; Assistant docked/undocked/closed; popup; resize/maximize; hello/part/asm/drawing/
+  view pass. In adversarial review (transport security, threading, protocol errors).
+  Found on the way, pre-existing → draft 167: in-process GL client surfaces ignore window z-order
+  on Wayland (a part's 3D view stays on top of a drawing opened after it): blocks multi-document
+  work; same family as 145 (tooltip under the viewport). Next Wayland fix after 157.
 - Next: adversarial reviews for 157, 132 and 165 when they report; UI pass 3 (areas pass 2 missed);
   warning fix for 41d9173ca57 at the next rebase of integ; drafts not started: 142-151, 156,
   158-163 (see issues/).
