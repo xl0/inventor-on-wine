@@ -280,8 +280,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   deps/ with `rsync -aX` and leave symlinks at the old paths (build dirs, worktrees and scripts have
   absolute paths). Stays in /home: the repo, wine-src (all branches), login.txt, notes. Ask before
   deleting prefixes/inv-lic (25 G, unused). Nothing may be running during the move.
-  After the restart: nothing of ours runs (no prefixes, no VMs); the baseline worker was told to
-  stop cleanly — its report says what is done and how to resume.
+  After the restart: nothing of ours runs (checked). Baseline work so far: builds done on the new
+  host — wt/regress-master-build-h26 (wine-11.18-218-g4e819f054dd) and build-s
+  (wine-11.18-531-ge00a74f6590, with winewayland.so). regress.sh makes its template fresh on every
+  run, nothing to recreate. Not done: the master baseline (partial, rerun with -f:
+  `tools/regress.sh run wt/regress-master-build-h26 -o deps/regress/4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf-h26 -f`),
+  the integ run (`-o deps/regress/<e00a74f6590 full hash>-h26`) + compare, the host-drift table
+  (new vs old master results), and a warning scan of our patches from a clean build log.
+  Order after the restart: move to /data → rebuild is not needed (symlinks) → baseline → compare.
 - Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
   user, see 152) has very likely changed: the first Inventor start registers this machine as a new
   device. Not started yet; needs the user's go-ahead.
