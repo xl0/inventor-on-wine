@@ -52,4 +52,5 @@ qemu-system-x86_64 \
   -vnc 127.0.0.1:11 -monitor unix:mon.sock,server,nowait -qmp unix:qmp.sock,server,nowait \
   -daemonize -pidfile qemu.pid
 for _ in $(seq 90); do ./ssh.sh true 2>/dev/null && break; sleep 2; done
-./ssh.sh "sudo sh -c '$mounts'"
+echo "$mounts" >skel/.mounts   # after a guest reboot: vmwl/ssh.sh sudo sh /host/.mounts
+./ssh.sh "sudo sh /host/.mounts"

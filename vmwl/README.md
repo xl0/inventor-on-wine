@@ -11,6 +11,11 @@ Not the Windows VM (`vm/`); nothing here touches it.
 - `vmwl/session.sh gnome|kde|sway|stop`: tty1 autologins xl0, whose `~/.bash_profile` execs the compositor named in `~/.wl-session`
   (gnome: `gnome-session --session=gnome`, GNOME sends Escape once to leave the overview; kde: `startplasma-wayland`; sway).
   Log: `~/.wl-session.log` in the guest. The socket is `wayland-N` in /run/user/1000 (sway gets `wayland-1`), `wl.sh` finds it.
+  Leaving a KDE session this way does not work: kwin and plasmashell run as systemd user services and survive the getty stop, the
+  next session never gets its socket ("no wayland socket after 60 s"). Reboot the guest instead (`vmwl/ssh.sh sudo reboot`, then
+  `vmwl/ssh.sh sudo sh /host/.mounts` for the shares; tty1 starts the compositor named in `~/.wl-session`).
+  KDE locks the screen after 5 idle minutes (screenshots then show the locker): disabled in the guest since 2026-10-04 with
+  `kwriteconfig6 --file kscreenlockerrc --group Daemon --key Autolock false` (not in the `provisioned` snapshot).
 - `vmwl/wl.sh CMD...` runs CMD in the guest with XDG_RUNTIME_DIR, WAYLAND_DISPLAY, DBUS_SESSION_BUS_ADDRESS set and DISPLAY unset.
 - `vmwl/shot.sh [out.png]`, `vmwl/input.py click X Y|dclick|key COMBO|type TEXT`: QEMU screendump / QMP absolute pointer (1280x800),
   compositor independent. They are `vm/shot.sh` / `vm/input.py` with `VM_DIR` pointing here.
