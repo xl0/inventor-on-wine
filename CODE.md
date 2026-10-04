@@ -340,13 +340,13 @@ launches; previous device-limit errors do not authorize pausing another device.
   wl_xowner cases (modal, chain, late owner, hide/destroy, re-owner + loop, cross-process) with screenshot pixel checks (134, 135).
 - `x/` — headless displays. `x/prefixes.tsv` is the single source of truth: per prefix
   display, Xorg PCI bus, DRI_PRIME, VNC port, build dir, role (inv :98, inv2 :99, inv3 :100,
-  inv4 :101; inv-lic :200 via Xvfb). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
+  inv4 :101). `tools/prefix.sh status|env|start|stop|kill-inventor|lease|release`
   (kill-inventor: Inventor.exe + helpers by image name, since Wine processes all have Linux ppid 1;
   spares services) works from it (status: wineserver/build/procs/port holder/lease; servers are mapped to
   prefixes by the holder of the server dir's lock file in /proc/locks). After Claude Code is
   relaunched, processes from the old sandbox are in another user namespace: signals and sockets work,
   but /proc/PID/{cwd,exe,environ,fd} don't, so status shows them as "other sandbox" and gdb/strace
-  can't attach — restart test prefixes (not inv-lic) to manage them again. `x/leases` (git-ignored, flock'd) records who
+  can't attach — restart the prefixes to manage them again. `x/leases` (git-ignored, flock'd) records who
   uses a prefix; start/stop refuse on someone else's lease. `INV=inv3 tools/invscen/run.sh S`
   uses the table. `x/start.sh N BUS` = headless NVIDIA Xorg (needs DRI_PRIME=pci-0000_<bus>_00_0
   so Vulkan picks the GPU that owns the screen), `x/vnc.sh N`, `x/shot.sh out.png N`.
@@ -360,8 +360,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   (AdskLicensingSDK_10.dll) reads that file and connects by WebSocket; if that fails it runs
   `AdskLicensingInstHelper servicectl start`. Ports now: inv 45691, inv2 37683, inv3 46231, inv4 46809.
   39683 was the port of the original install; copies shared it only until each rewrote its file (09-28/29).
-  prefixes/inv-lic (copy of inv2 on the frozen `wt/lic-build`, Xvfb :200, lease `licensing-host`) still holds
-  39683 but nothing has connected to it since 2026-09-29: it is not needed. So a `wineserver -k` of one
+  The separate licensing prefix inv-lic (port 39683) was never needed and is gone (2026-10-04).
+  So a `wineserver -k` of one
   prefix only takes down that prefix's Inventor (follows from the connections; not tested by killing).
   Per prefix there is also AdskIdentityManager (two loopback ports; sign-in state) used by Inventor and the agents.
   Device = what the AdskLicensingAgent started by the client computes (monitor.dll): SHA-256 of Wine's disk

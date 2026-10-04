@@ -5,4 +5,3 @@ inv	:98	PCI:202:0:0	pci-0000_ca_00_0	5902	build	default Inventor/invscen/soak se
 inv2	:99	PCI:52:0:0	pci-0000_34_00_0	5903	build	test
 inv3	:100	PCI:22:0:0	pci-0000_16_00_0	5904	build	test
 inv4	:101	PCI:172:0:0	pci-0000_ac_00_0	5905	build	test; ac:00.0 also carries the host console
-inv-lic	:200	-	-	-	wt/lic-build	licensing host: service only, frozen build

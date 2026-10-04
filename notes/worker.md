@@ -91,7 +91,6 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
 - Licensing: every Inventor prefix is served by its own AdskLicensingService (CODE.md has the
   mechanism). The device is the host + user, so all host prefixes are one device; a VM is another
   (one active device per account: never start Inventor in a VM unless your brief says so).
-  prefixes/inv-lic is a leftover of an older theory and unused, but leave it alone.
   Kill Inventor with `tools/prefix.sh kill-inventor NAME [--holder H]` (Inventor.exe plus its
   AdskLicensingAgent/msedgewebview2/... helpers, not the prefix's services; `--orphans`: helpers
   only, when Inventor is already gone). Plain `kill` of Inventor.exe leaves helpers spinning.
