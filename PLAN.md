@@ -382,6 +382,10 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
 - Next: adversarial reviews for 157, 132 and 165 when they report; UI pass 3 (areas pass 2 missed);
   warning fix for 41d9173ca57 at the next rebase of integ; drafts not started: 142-151, 156,
   158-163 (see issues/).
+- AppArmor (user, 2026-10-04): local overrides for the `hostname` and `Xorg` profiles
+  (/data/box/apparmor-local-overrides.md): bare `hostname` prints again; Xorg servers need a
+  restart to stop logging — :98 and :100 restarted, :99 (inv2) and :101 (inv4) when their workers
+  are done (stop the prefix, kill that display's Xorg/openbox/x11vnc by PID, `prefix.sh start`).
 - ssh from inside the sandbox fails on the system config ("Bad owner or permissions on
   /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf": root-owned files look unowned in the user
   namespace). Fixed on our side: both repos use `core.sshCommand = ssh -F /dev/null`, and
