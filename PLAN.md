@@ -322,8 +322,18 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   141: Edit Dimension opens 3 of 3 (old build: assertion); 140: no hang 3 of 3 (old build: hangs);
   130: 117-119.5 fps fresh and aged; 131: "Static" windows 4 → 4 after two suites (old build 10 → 81);
   133 probes as expected; connect 20.5-22 s on both; identical err-line sets; WebView2 helpers run.
-  One open item → draft 165 (Opus worker, inv3): a wined3d `wined3d_not_from_cs` assertion box,
-  seen once on the new build, not reproduced, cause unknown (ours with 131, or upstream/host).
+  165 solved on fix/165 (954f2d2e4c7 + dxgi test), upstream bug, not ours: a present queued for a
+  window that is destroyed meanwhile makes the Vulkan swapchain recreation fail and leave freed
+  arrays behind (= draft 150); the next use faults in a Vulkan unix call, winevulkan calls
+  ExitProcess on the command-stream thread, and DLL detach code releasing D3D objects there hits
+  the assertion. Reproduced standalone (tests/r165) on integ and on upstream master. Fix read by
+  the coordinator (+10/-1, nulls the freed state, early return in blit). To do before the
+  cherry-pick: run the new dxgi test on the Windows VM. Drafts: 168 (winevulkan ExitProcess on a
+  faulting unix call from the CS thread), 169 (D3D object released at detach hangs on the killed CS
+  thread). Harness: run.sh/prefix.sh now see and kill an Inventor whose main thread is gone.
+- Windows VM on the new host: qemu fails on the TPM (Ubuntu's swtpm AppArmor profile only talks
+  to libvirt-labelled peers); the 132 worker is fixing vm/run.sh (copy of the swtpm binary outside
+  the profiled path).
 - 157 (winewayland lock order) resumed in the VM.
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
