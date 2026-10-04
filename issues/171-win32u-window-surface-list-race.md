@@ -129,3 +129,23 @@ create + destroy 1682 vs 1641 us. Inventor suite, part / asm scenario totals, wa
 - `destroy_window` reads `win->current_drawable` after `release_win_ptr`.
 - Wine sets last error 1400 on successful cross-thread UpdateLayeredWindow, draws for psize NULL, and delays the
   SetLayeredWindowAttributes update until the owner pumps (table above).
+
+## Review, interrupted (2026-10-04, read-only so far; nothing run, no verdict)
+Final, from the code:
+- Two different `surfaces_lock`s: dce.c:53 (window-surface list; this fix's new edge) and window.c:294
+  (client surfaces; the one in the 157 rule).
+- Only `register_window_surface` and `flush_window_surfaces` take the dce.c lock; the flush holds it across every
+  `window_surface_flush`, i.e. across the surface mutex and the driver's flush callback.
+- New edge: user lock → dce.c surfaces_lock, at apply_window_pos, free_window_handle, destroy_window,
+  destroy_thread_windows.
+- winex11's flush (bitblt.c ~1852) only trylocks win_data (`try_set_window_hidden`), so no blocking edge there.
+Leads to finish first:
+1. When that trylock fails, bitblt.c:1857 calls `NtUserPostMessage(hwnd, WM_X11DRV_SET_HIDDEN)` with the list lock
+   and the surface mutex held (our 062 code). If NtUserPostMessage can take the user lock (path: get_window_thread →
+   get_user_object_thread → get_user_entry, then put_message_in_queue: not read to the end), a flusher (list lock,
+   wants user lock) deadlocks against apply_window_pos (user lock, wants list lock). Read `get_user_entry`; if it
+   locks, reproduce with a faint-alpha layered window + resize + a thread holding win_data.
+2. `scaled_surface_flush` under the list lock (NtGdi* calls, nested flush of the target): trace for a user-lock path.
+3. `destroy_window` reads `win->current_drawable` after `release_win_ptr`.
+4. The new test waits INFINITE everywhere: a stalled thread hangs the test instead of failing it.
+Not checked: winewayland/winemac callbacks, lifetime/refcount paths, hot-path cost, anything that needs running.
