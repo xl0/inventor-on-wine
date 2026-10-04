@@ -252,6 +252,27 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
+## New host (2026-10-04): Ubuntu 26.04.1, kernel 7.0, reinstalled — survey
+Project data is intact (same path and user; ZFS now, 1.4 T free): prefixes, VM disks, builds, worktrees,
+login.txt, git state as in the pause section below. Nothing of ours is running.
+- Works as is: the existing Wine builds (build/, build-next/, wt/*-build) run — all dlopen'ed
+  libraries are present except libodbc and ffmpeg 4 (winedmo.so). Xorg + nvidia_drv, x11vnc, qemu 10.2
+  + OVMF + swtpm, /dev/kvm, gdb, gnome-shell 50.1, our own virtiofsd in deps/.
+- GPU: NVIDIA 595.91.07 (open module), nvidia-drm.modeset=1 → KMS connectors exist and
+  `tests/gpu/gbmtest.py` passes: NVIDIA GBM backend, dma-buf export, EGL on GBM. GPU-composited
+  headless Wayland and virgl/Venus in vmwl/ (qemu 10.2) are now worth trying. gdm's greeter
+  (gnome-shell on Wayland) runs on one GPU.
+- Can't build Wine: no mingw-w64, bison, flex, and no -dev headers at all (X11, freetype, fontconfig,
+  gnutls, vulkan, wayland, xkbcommon/xkbregistry, EGL/GL, cups, krb5, SDL2, udev, v4l, va, dbus...).
+- Missing tools: Xvfb (regress.sh, unit tests), openbox, awesome, picom, xdotool, python3-xlib,
+  ccache, vulkaninfo, wayland-info, winetricks/cabextract (prefix creation only).
+- kernel.yama.ptrace_scope is 1 (was 0): gdb/strace can't attach to running Wine processes (they are
+  not our descendants); start under gdb or have it set to 0.
+- Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
+  user, see 152) has very likely changed: the first Inventor start registers this machine as a new
+  device. Not started yet; needs the user's go-ahead.
+- Claude Code 2.1.289.
+
 ## Paused for a reboot (2026-10-03) — resume from here
 Everything is stopped cleanly: inv, inv2, inv3, inv4 (wineserver -k), both VMs (guest shutdown), the
 host Wayland session, all workers. Only inv-lic (unused, 152) was left running; don't restart it.
