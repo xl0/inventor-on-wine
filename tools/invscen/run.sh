@@ -103,8 +103,16 @@ if [ -n "$VM" ]; then
 	exit $rc
 fi
 case ${WINEDLLOVERRIDES:-} in *mscoree*) echo "WINEDLLOVERRIDES=$WINEDLLOVERRIDES disables .NET: Inventor would crash at start (152)" >&2; exit 2;; esac
+# An Inventor whose main thread is gone (ExitProcess from another thread, 165) can't be connected to
+# and has an empty /proc/PID/environ: its threads' environ still tells the prefix. Kill it.
+for p in $(pgrep -x Inventor.exe); do
+	if grep -q '^State:.Z' /proc/$p/status 2>/dev/null &&
+		cat /proc/$p/task/*/environ 2>/dev/null | tr '\0' '\n' | grep -qx "WINEPREFIX=$WINEPREFIX"; then
+		echo "killing half-dead Inventor $p" >&2; kill -9 $p
+	fi
+done
 if ! (for p in $(pgrep -x Inventor.exe); do
-	tr '\0' '\n' </proc/$p/environ | grep -qx "WINEPREFIX=$WINEPREFIX" && exit 0; done; exit 1); then
+	tr '\0' '\n' </proc/$p/environ 2>/dev/null | grep -qx "WINEPREFIX=$WINEPREFIX" && exit 0; done; exit 1); then
 	echo "starting Inventor" >&2
 	setsid nohup $W/wine 'C:\Program Files\Autodesk\Inventor 2027\Bin\Inventor.exe' >>$L 2>&1 </dev/null &
 fi

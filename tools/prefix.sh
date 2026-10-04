@@ -43,8 +43,9 @@ hidden() { ! : 2>/dev/null </proc/$1/environ; }
 prefix_pids() {
 	local anc=" " p=$$ f
 	while [ "$p" -gt 1 ]; do anc+="$p "; p=$(awk '/^PPid/ { print $2 }' /proc/$p/status); done
-	for f in $(grep -lxsz "WINEPREFIX=$WP" /proc/[0-9]*/environ || true); do
-		p=${f#/proc/}; p=${p%/environ}
+	# task/*/environ too: a process whose main thread has exited (ExitProcess from another thread, 165)
+	# has an empty /proc/PID/environ but still runs
+	for p in $(grep -lxsz "WINEPREFIX=$WP" /proc/[0-9]*/environ /proc/[0-9]*/task/[0-9]*/environ 2>/dev/null | cut -d/ -f3 | sort -un); do
 		case $anc in *" $p "*) continue;; esac
 		case $(cat /proc/$p/comm 2>/dev/null) in bash|sh|zsh|dash|timeout|setsid|make|tee|sleep|"") continue;; esac
 		echo $p
@@ -56,6 +57,7 @@ inv_pids() { # prints "PID image" lines
 	local p c
 	for p in $(prefix_pids); do
 		c=$(tr '\0' '\n' </proc/$p/cmdline 2>/dev/null | head -1) || continue; c=${c##*[\\/]}
+		[ -n "$c" ] || c=$(cat /proc/$p/comm 2>/dev/null)  # main thread gone: cmdline is empty
 		case ${c%.exe} in Inventor|AdskLicensingAgent|msedgewebview2|InventorViewCompute|DwgTrans*|ADPClientService) echo $p $c;; esac
 	done
 }
