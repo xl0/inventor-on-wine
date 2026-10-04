@@ -90,3 +90,19 @@
   process"), so a foreign cursor couldn't be created there: the pointer stayed empty over
   WebView2/Chromium children (085). fix/085 posts it to the cursor's owner thread, whose
   winex11 XDefineCursor()s the foreign whole window. Check the screen cursor with x/xcur.c.
+- Locking (171): `win->surface` and the process' list of window surfaces (dce.c `window_surfaces`, what
+  `flush_window_surfaces` walks) change together with the window pointer (= user lock) held:
+  `register_window_surface` is called under it, in `apply_window_pos`, `destroy_window`,
+  `free_window_handle` and `destroy_thread_windows`. Order: user lock -> dce.c `surfaces_lock` -> a surface's
+  lock -> driver. `flush_window_surfaces` holds `surfaces_lock` over the driver flushes, so a driver flush must
+  never take the user lock (it couldn't before either: `update_surface_region` flushes with the window
+  pointer held). A surface is in the list exactly while it is some window's `win->surface`; the list holds
+  no reference.
+- `UpdateLayeredWindow` is the one caller of `apply_window_pos` that runs on a thread that doesn't own the
+  window (Windows too: direct, no messages to the owner, works while the owner doesn't pump; `SetWindowPos`
+  goes through the owner's message loop on both; Wine's `SetLayeredWindowAttributes` surface update is posted
+  to the owner). So a window's surface can change under its owner thread at any time: take it from the
+  window pointer with a reference, never keep it across a release. Probe: `tests/r171/ulwrace.c`.
+- A fault in Unix-side code inside a syscall is not a crash: ntdll returns the exception code to the PE caller
+  and mutexes held stay locked (172). A hang on a Unix mutex whose owner isn't in the locked region: rerun
+  with `WINEDEBUG=+seh` and grep `handle_syscall_fault`.

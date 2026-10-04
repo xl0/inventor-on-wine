@@ -328,6 +328,11 @@ launches; previous device-limit errors do not authorize pausing another device.
   descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
   `r165/deadwin.c [PRESENTS] [keep|detach]` + `detach.c` (DLL): D3D11 swapchain presented after its window is destroyed,
   a buffer released at process detach (150, 165: Vulkan renderer exit code 3 + wined3d_not_from_cs() assertion; `detach`: 169).
+  `r171/ulwrace.c` (`race|destroy|exit [N] [FLUSHERS] [hold]`, `bench`, `basic`): UpdateLayeredWindow on another thread's
+  window while its owner resizes / destroys it (win32u surface list race; FAULT = a call returned an NTSTATUS), cost of the
+  surface-changing calls, Windows semantics of cross-thread layered calls; `r171/run.sh BUILD TAG RUNS TIMEOUT EXE ARGS`:
+  any probe N times on an own Xvfb with a watchdog + gdb backtraces; `r171/leak.sh`, `surfaces.py`: window surfaces left
+  in win32u's list (gdb) (171).
   `r133/idle.c [-v] [-x EXE] [NAME..]`: WaitForInputIdle scenarios, child threads scripted per scenario (which
   thread / which wait makes a process input idle, later calls, console children; `wine_*` = Wine-only stand-in for a
   driver's clipboard manager thread); the child is a GUI/console-patched copy of the exe (133, 143).
