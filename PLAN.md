@@ -309,7 +309,11 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   commit 41d9173ca57; the loop always runs once) — initialise it at the next rebase of integ.
 - regress.sh pointed at a lavapipe ICD file that doesn't exist on this host (Mesa 26 renamed it):
   the first new-host baselines ran without any Vulkan driver. Fixed (ICD from the local prefix);
-  both baselines are being rerun (old copies: inst/h26/*-novk-results.txt).
+  both baselines rerun with lavapipe (old copies: inst/h26/*-novk-results.txt): master 1644 pass /
+  81 fail / 30 crash, integ 1648 / 80 / 28 (+1 timeout), compare 0 REAL, 0 NEW, 2 FLAKY
+  (i386 amstream, kernel32:thread). With a Vulkan driver mfplat crashes on master again (as on the
+  old host) and kernel32:debugger, rpcrt4:server, x86_64 user32:input pass — those three were
+  flaky, not host drift. These two result dirs are the reference for this host.
   `tools/sysroot.sh add` no longer wipes the prefix; x/shot.sh loads the prefix env itself.
 - Inventor half of the round (Sonnet worker, inv3, build-s vs build/ A/B; told to redo what it
   measured before the 164 fix): suite, dwgloop, 141 and
