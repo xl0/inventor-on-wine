@@ -307,9 +307,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   user32:input (timing). kernel32:path fails on both hosts.
   gcc 15: one warning in our stack, a false positive (win32u/input.c:868 `clip` maybe uninitialized,
   commit 41d9173ca57; the loop always runs once) — initialise it at the next rebase of integ.
-- Inventor half of the round (Sonnet worker, inv3, build-s vs build/ A/B): suite, dwgloop, 141 and
+- regress.sh pointed at a lavapipe ICD file that doesn't exist on this host (Mesa 26 renamed it):
+  the first new-host baselines ran without any Vulkan driver. Fixed (ICD from the local prefix);
+  both baselines are being rerun (old copies: inst/h26/*-novk-results.txt).
+  `tools/sysroot.sh add` no longer wipes the prefix; x/shot.sh loads the prefix env itself.
+- Inventor half of the round (Sonnet worker, inv3, build-s vs build/ A/B; told to redo what it
+  measured before the 164 fix): suite, dwgloop, 141 and
   140 repros, 130 fps, 133 probes, WebView2 state per build, connect times. Push integ and switch
-  the prefixes to a new-host build when it is back and 164 is understood.
+  the prefixes to a new-host build when it is back.
 - Local prefix additions: python3-numpy, python3-pil (x/shot.sh and the dialog screenshots need
   them); blas/lapack alternative links recreated in tools/sysroot.sh. Never `rebuild` the prefix
   while a worker runs (it is wiped for ~13 s).
