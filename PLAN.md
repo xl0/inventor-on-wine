@@ -274,6 +274,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   Worker (Sonnet) running: new-host master build + regress baseline (old-host results are not
   comparable: ZFS, kernel 7, Mesa 26), integ build + compare, host-drift table. No Inventor yet.
 - kernel.yama.ptrace_scope: was 1 after the reinstall, the user set it back to 0 (gdb attach works).
+- Disk move (user, 2026-10-04): bulky data goes from /home (ZFS, 2 T) to /data (XFS on RAID0 of
+  three NVMe partitions, 6.2 T free, no redundancy). The user restarts the sandbox with /data
+  writable; then move prefixes/ (151 G), vm/ (94 G), wt/ (44 G), vmwl/ (34 G), inst/, iso/, build*/,
+  deps/ with `rsync -aX` and leave symlinks at the old paths (build dirs, worktrees and scripts have
+  absolute paths). Stays in /home: the repo, wine-src (all branches), login.txt, notes. Ask before
+  deleting prefixes/inv-lic (25 G, unused). Nothing may be running during the move.
+  After the restart: nothing of ours runs (no prefixes, no VMs); the baseline worker was told to
+  stop cleanly — its report says what is done and how to resume.
 - Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
   user, see 152) has very likely changed: the first Inventor start registers this machine as a new
   device. Not started yet; needs the user's go-ahead.
