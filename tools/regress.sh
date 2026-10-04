@@ -45,6 +45,7 @@
 set -eu
 shopt -s nullglob
 root=$(cd "$(dirname "$0")/.." && pwd)
+eval "$("$root/tools/sysroot.sh" env)"  # Xvfb, gcc headers from the local package prefix (empty if absent)
 unset DRI_PRIME WINE_D3D_CONFIG WINEDLLOVERRIDES WINEARCH WINESERVER WINELOADER WINEPREFIX
 
 usage() { sed -n '2,/^set -eu/p' "$0" | sed '$d; s/^# \{0,1\}//'; exit 1; }

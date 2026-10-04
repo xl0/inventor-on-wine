@@ -65,6 +65,9 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   coordinator gets it fixed and merged, then asks you to rebase.
 
 ## Build and test
+- The host has no -dev headers, mingw or bison: builds need the local package prefix in the shell,
+  `eval "$(tools/sysroot.sh env)"` (or `tools/sysroot.sh run make ...`) before `configure` and `make`
+  (CODE.md). regress.sh, prefix.sh, invscen/run.sh and x/start.sh load it themselves.
 - Worktree + out-of-tree build:
   `git -C wine-src worktree add ../wt/NNN -b fix/NNN-slug`, then in
   `wt/NNN-build`: `../NNN/configure --enable-archs=i386,x86_64 && make -j40`.

@@ -2,6 +2,7 @@
 Checked against wine-src d7799da4d5c (mutter 42.9 / gnome-shell 42.9, Mesa 23.2.1, NVIDIA 580).
 
 ## Build
+Superseded: with the local package prefix (tools/sysroot.sh, CODE.md) libxkbregistry-dev is present and winewayland.drv builds in the normal tree; the stand-in below is not needed.
 `build/` has no winewayland.drv: configure lacks `xkbregistry` (headers/.pc of libxkbregistry-dev are not
 installed; only libxkbregistry.so.0). Workaround without installs: separate tree `wt/wayland-build`
 (same wine-src, `--enable-archs=i386,x86_64`) configured with a hand-written 10-line

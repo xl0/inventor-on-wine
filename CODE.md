@@ -133,6 +133,21 @@ launches; previous device-limit errors do not authorize pausing another device.
   no 32-bit host libs). Run in place: `build/wine`, `build/server/wineserver`.
   Full `make -j120` ≈ 2.5 min. Wine's own conformance tests are in
   `build/dlls/*/tests/x86_64-windows/`.
+- `deps/sysroot/` — local package prefix (git-ignored): Ubuntu archive packages the host lacks (-dev
+  headers, mingw-w64, bison/flex, Xvfb, openbox, awesome, picom, xdotool, vulkan-tools, wayland-info,
+  cabextract, ccache), unpacked without root. `tools/sysroot.sh add PKG...` resolves the not-installed
+  closure (`apt-get -s`), downloads it pinned (.debs in `deps/sysroot-debs/`) and records
+  `name=version sha256` in `tools/sysroot.pkgs`; `rebuild` recreates the prefix from that list;
+  `eval "$(tools/sysroot.sh env)"` or `tools/sysroot.sh run CMD` sets PATH (appended), PKG_CONFIG_PATH,
+  CPATH, LIBRARY_PATH, LD_LIBRARY_PATH, PYTHONPATH, BISON_PKGDATADIR, M4, LUA_PATH, XDG_*.
+  regress.sh, prefix.sh, invscen/run.sh and x/start.sh source it themselves; a Wine build
+  (configure and every later `make`) needs it in the shell. Rough edges: .pc files are rewritten to
+  absolute prefix paths (not relocatable; `rebuild` after moving); dangling -dev symlinks are repointed
+  to the system's runtime libs; mingw is the win32-thread variant (Debian's default alternative); only the
+  mingw gcc/g++/cpp alternatives are recreated; CPATH also reaches mingw gcc (hasn't hurt Wine's
+  build); ffmpeg 8 (winedmo.so NEEDED) and libodbc exist only in the prefix, so winedmo's unix side
+  fails and ODBC is absent when the env is not set; `x/awesome-rc.lua` finds its themes via
+  `$SYSROOT_ENV`; the Wayland session needs `x/dbus-session.conf` (AppArmor query fails in the sandbox).
 - `issues/NNN-slug.md` — one per Wine bug (brief + memory for its worker).
 - `notes/wine/*.md` — Wine internals reference by subsystem. `notes/worker.md`
   — worker rules, reporting, build/test recipe (the brief every worker reads).

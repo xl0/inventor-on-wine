@@ -19,6 +19,7 @@
 # Inventor start).
 set -e
 cd "$(dirname "$0")/../.."
+eval "$(tools/sysroot.sh env)"  # local package prefix, empty if absent
 if [ -n "${INV:-}" ]; then B0=${WINE_BUILD:-}; eval "$(tools/prefix.sh env "$INV")"; WINE_BUILD=${B0:-$WINE_BUILD}; fi
 # Wayland run (eval "$(x/wayland.sh env)" first): no X display, Wine falls back to winewayland.drv
 W11=1; [ -z "${WAYLAND_DISPLAY:-}" ] || { W11=; unset DISPLAY; }

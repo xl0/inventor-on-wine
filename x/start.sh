@@ -5,6 +5,7 @@
 # GPU that owns the X screen.
 set -euo pipefail
 cd "$(dirname "$0")"
+eval "$(../tools/sysroot.sh env)"  # local package prefix (openbox), empty if absent
 N=${1:-98} BUS=${2:-PCI:202:0:0}
 conf=xorg-nvidia.conf
 if [ "$BUS" != PCI:202:0:0 ]; then

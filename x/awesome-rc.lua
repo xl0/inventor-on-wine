@@ -51,6 +51,12 @@ end
 
 -- {{{ Variable definitions
 -- Themes define colours, icons, font and wallpapers.
+-- The themes dir is compiled in as /usr/share/awesome (theme.lua uses it for its images too);
+-- with the local package prefix (tools/sysroot.sh) point it there.
+if os.getenv("SYSROOT_ENV") then
+    local themes = os.getenv("SYSROOT_ENV") .. "/usr/share/awesome/themes/"
+    gears.filesystem.get_themes_dir = function() return themes end
+end
 beautiful.init(gears.filesystem.get_themes_dir() .. "default/theme.lua")
 
 -- This is used later as the default terminal and editor to run.

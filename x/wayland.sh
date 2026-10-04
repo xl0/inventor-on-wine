@@ -17,13 +17,13 @@ start)
   cat >$X/inner.sh <<EOS
 echo "export DBUS_SESSION_BUS_ADDRESS='\$DBUS_SESSION_BUS_ADDRESS'" >$X/dbus.env
 pipewire >$X/pipewire.log 2>&1 &
-gnome-shell --headless --wayland --no-x11 --wayland-display $W --virtual-monitor 1920x1080 --sm-disable >$X/shell.log 2>&1 &
+gnome-shell --headless --wayland --no-x11 --wayland-display $W --virtual-monitor 1920x1080 >$X/shell.log 2>&1 &
 until [ -S $X/$W ]; do sleep 0.2; done; sleep 3
 python3 $here/winj.py >$X/winj.log 2>&1 &
 wait
 EOS
   env -u DISPLAY -u WAYLAND_DISPLAY -u DBUS_SESSION_BUS_ADDRESS XDG_RUNTIME_DIR=$X \
-    setsid -f bash -c 'echo $$ >'$X'/pgid; exec dbus-run-session -- bash '$X'/inner.sh' >$X/dbus.log 2>&1
+    setsid -f bash -c 'echo $$ >'$X'/pgid; exec dbus-run-session --config-file='$here'/dbus-session.conf -- bash '$X'/inner.sh' >$X/dbus.log 2>&1
   until [ -S $X/winj.sock ]; do sleep 0.3; done
   "$here/wshot.sh" key Escape >/dev/null  # Ubuntu's shell starts in the Activities overview
   sleep 1

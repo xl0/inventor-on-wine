@@ -8,6 +8,7 @@
 # HOLDER defaults to $PREFIX_HOLDER. start/stop refuse on a prefix leased to another holder.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+eval "$(tools/sysroot.sh env)"  # local package prefix (xdotool, cabextract, ...), empty if absent
 ROOT=$PWD T=x/prefixes.tsv L=x/leases
 HOLDER=${PREFIX_HOLDER:-} ORPH= FORCE= DEFAULTS= A=()
 cmd=${1:?usage: $0 status|env|start|stop|lease|release [NAME]}; shift
