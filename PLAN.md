@@ -330,8 +330,9 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   AppArmor profile only talks to libvirt peers). Its display is 1280x800 now, so dxgi's
   display-mode lines fail differently than in older VM logs (175 vs 58 failures).
   Two stray confined swtpm processes (3008138, 3008605) can't be signalled from the sandbox.
-- integ (local) = b5d75449ffe = e00a74f6590 + 165 (2 commits) + 132 (4 commits, winewayland only);
-  build/ rebuilt (wine-11.18-537), prefixes restarted; full regress + suite running, push after.
+- integ = b5d75449ffe (pushed) = e00a74f6590 + 165 (2 commits) + 132 (4 commits, winewayland only);
+  build/ = wine-11.18-537-gb5d75449ffe, all four prefixes on it. Full regress vs the new-host
+  master baseline: 0 worse of 1757 (1649 pass / 80 fail / 28 crash); suite on inv 13/13.
 - 157 (winewayland lock order) resumed in the VM.
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
