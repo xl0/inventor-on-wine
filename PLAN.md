@@ -322,18 +322,16 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   141: Edit Dimension opens 3 of 3 (old build: assertion); 140: no hang 3 of 3 (old build: hangs);
   130: 117-119.5 fps fresh and aged; 131: "Static" windows 4 → 4 after two suites (old build 10 → 81);
   133 probes as expected; connect 20.5-22 s on both; identical err-line sets; WebView2 helpers run.
-  165 solved on fix/165 (954f2d2e4c7 + dxgi test), upstream bug, not ours: a present queued for a
-  window that is destroyed meanwhile makes the Vulkan swapchain recreation fail and leave freed
-  arrays behind (= draft 150); the next use faults in a Vulkan unix call, winevulkan calls
-  ExitProcess on the command-stream thread, and DLL detach code releasing D3D objects there hits
-  the assertion. Reproduced standalone (tests/r165) on integ and on upstream master. Fix read by
-  the coordinator (+10/-1, nulls the freed state, early return in blit). To do before the
-  cherry-pick: run the new dxgi test on the Windows VM. Drafts: 168 (winevulkan ExitProcess on a
-  faulting unix call from the CS thread), 169 (D3D object released at detach hangs on the killed CS
-  thread). Harness: run.sh/prefix.sh now see and kill an Inventor whose main thread is gone.
-- Windows VM on the new host: qemu fails on the TPM (Ubuntu's swtpm AppArmor profile only talks
-  to libvirt-labelled peers); the 132 worker is fixing vm/run.sh (copy of the swtpm binary outside
-  the profiled path).
+  165: upstream wined3d bug, fixed and on integ (a present queued for a window destroyed meanwhile
+  left a stale Vulkan swapchain → fault in a Vulkan call → winevulkan exits the process from the
+  command-stream thread → assertion at DLL detach; also resolves draft 150). New dxgi test passes
+  on the Windows VM (both arches). Drafts 168, 169. Harness sees/kills a half-dead Inventor.
+- Windows VM works on the new host: vm/run.sh runs swtpm from a copy in deps/ (the system binary's
+  AppArmor profile only talks to libvirt peers). Its display is 1280x800 now, so dxgi's
+  display-mode lines fail differently than in older VM logs (175 vs 58 failures).
+  Two stray confined swtpm processes (3008138, 3008605) can't be signalled from the sandbox.
+- integ (local) = b5d75449ffe = e00a74f6590 + 165 (2 commits) + 132 (4 commits, winewayland only);
+  build/ rebuilt (wine-11.18-537), prefixes restarted; full regress + suite running, push after.
 - 157 (winewayland lock order) resumed in the VM.
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
@@ -348,13 +346,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   server requests per evaluation in the sink's event thread, none per frame; rect clip + hide),
   16 sinks per source pid. Inventor on Wayland: Home page hides behind an open document and returns
   on the Home tab; Assistant docked/undocked/closed; popup; resize/maximize; hello/part/asm/drawing/
-  view pass. Review back: memory safety of the transport is sound; reproduced: a source could name
-  a window it doesn't own and paint over it (any prefix process, one posted message). Decision:
-  the client window must belong to the source pid and be rooted in the posted top-level — so only
-  topology B (the source's own child, what WebView2 does) is carried; a swapchain on another
-  process' window stays blank on Wayland as before. Also: POLLOUT backpressure in the new poll loop
-  (affects every winewayland process), drain the wake socket, slot limits per top-level, size cap.
-  Worker applying; then merge (a second look by the coordinator at the authorization hunk).
+  view pass. Reviewed (memory safety sound; a source could name a window it didn't own) and
+  reworked: the first-contact message carries the client window, the sink derives the source pid
+  from it, refuses its own process' windows and windows not rooted in the posted top-level,
+  re-checks at every evaluation; 16 sinks and 1 GiB per source process; POLLOUT in the poll loop;
+  wake socket drained; 8192 px cap. Only topology B is carried (a swapchain on another process'
+  window stays blank on Wayland; Windows allows it — table in the issue). On integ.
+  Remains: 167, tooltips under sinks, non-rectangular regions, Vulkan (blocked by 166), mutter-only
+  assumptions (buffer destroy while attached, FLIPPED_180, scale 100 %).
   Found on the way, pre-existing → draft 167: in-process GL client surfaces ignore window z-order
   on Wayland (a part's 3D view stays on top of a drawing opened after it): blocks multi-document
   work; same family as 145 (tooltip under the viewport). Next Wayland fix after 157.
