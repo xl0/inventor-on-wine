@@ -340,7 +340,15 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   GNOME), 0 protocol errors, wl_xowner 26/26. Narrow races accepted and documented (title set from
   another thread during the role change; surface re-creation gap). Rebased onto integ b5d75449ffe
   (tip 7fb257635be; old tip fix/157-v1): 132's sink code obeys the rule (debug build + reading);
-  stress clean again in the VM. In adversarial review (Opus; host session + VM).
+  stress clean again in the VM. Review back: reordering sound, 170/171 independent; one regression
+  (role-change gap: pointer focus still on the window whose surface is NULL → relative-motion
+  handler faults → process dies; reviewer's roleflip + pointer jitter 4/4 dead) and smaller items.
+  Worker applying, auditing all event paths for that state, adding pointer/key input to the
+  stress, and fixing 170 on the same branch (driver commits a buffer to the role-less surface).
+- 173 (Opus worker, wt/173, inv2): winex11 deadlock found by the 157 reviewer on Xvfb with integ —
+  X11DRV_WindowPosChanged holds winex11's window data and wants the user lock, update_visible_region
+  → X11DRV_GetDC under the user lock wants the window data. X11 is what the user runs: find out
+  whether upstream's or ours, table + rule + fix; also two BadWindow deaths in the same stress.
   A combined stress on the host's GPU session found two older bugs: 170 (protocol error "wl_surface
   already has a buffer committed" on a quick hide/show of a toplevel with a GL child; 6 of 6 on
   unfixed integ) and 171 (win32u, driver-independent: two threads changing one window's surface →
