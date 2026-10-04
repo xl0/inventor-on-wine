@@ -338,8 +338,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   locked regions (styles/title, cursor clipping, client-surface updates on role change, cursor
   info, IME rect). Stress in vmwl: 0 hangs in 100 runs on GNOME/KDE/sway (unfixed: 18 of 20 on
   GNOME), 0 protocol errors, wl_xowner 26/26. Narrow races accepted and documented (title set from
-  another thread during the role change; surface re-creation gap). Now: rebase onto integ with 132,
-  lock-order check of 132's sink code with the debug build, re-run; then adversarial review.
+  another thread during the role change; surface re-creation gap). Rebased onto integ b5d75449ffe
+  (tip 7fb257635be; old tip fix/157-v1): 132's sink code obeys the rule (debug build + reading);
+  stress clean again in the VM. In adversarial review (Opus; host session + VM).
+  A combined stress on the host's GPU session found two older bugs: 170 (protocol error "wl_surface
+  already has a buffer committed" on a quick hide/show of a toplevel with a GL child; 6 of 6 on
+  unfixed integ) and 171 (win32u, driver-independent: two threads changing one window's surface →
+  NULL write in register_window_surface with dce.c's surfaces_lock held, the fault is swallowed
+  and the process hangs later) — 171 has an Opus fix worker (wt/171, X11 repro, inv4).
   vmwl on the new host: no nested bwrap → one read-only virtiofsd per shared path (README).
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
