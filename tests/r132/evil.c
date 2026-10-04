@@ -2,11 +2,14 @@
  * protocol from the Win32 side with invalid data. The owner (e.g. `xp.exe host`) must survive every case
  * and keep showing honest sources. Wine only; mirrors struct remote_shared of dlls/winewayland.drv/wayland_remote.c.
  *
- * evil.exe HWND [CASE]   HWND = a top-level window of the victim process; without CASE all cases run.
- * Cases: msg (bogus first-contact messages), nosock (wake handle is a file), huge (2^31 x 2^31 buffers),
- *   small (section smaller than the buffers), nosect (buffer section is an event), odd (sequence lock never
- *   released), index (frame index out of range), rect (absurd rectangles), flood (20000 generation changes
- *   and wakes), ok (valid: a red 300x200 frame at 30,60, then the process exits without cleanup).
+ * evil.exe HWND [CASE [N [CLIENT]]]   HWND = a top-level window of the victim process; without CASE all cases run.
+ *   CLIENT = the window the source claims to present to (default HWND, i.e. over the whole client area).
+ * Cases: msg (bogus first-contact messages, then 200 sources: prints how many the victim took), nosock (wake
+ *   handle is a file), huge (2^31 x 2^31 buffers), small (section smaller than the buffers), nosect (buffer
+ *   section is an event), odd (sequence lock never released), index (frame index out of range), hwnd (client
+ *   windows that are not in the victim's top-level: bogus, desktop, own window), flood (N, default 20000,
+ *   generation changes + window change notifications + wakes), ok (valid: a red frame over the whole client
+ *   area of HWND, then the process exits without cleanup).
  * Build: x86_64-w64-mingw32-gcc -O2 -o evil.exe evil.c -lws2_32 */
 #include <winsock2.h>
 #include <windows.h>
@@ -17,11 +20,11 @@
 
 struct remote_shared
 {
-    LONG seq; UINT hwnd, wake, section, generation, width, height; RECT rect; UINT visible;
+    LONG seq; UINT hwnd, wake, section, generation, width, height;
     LONG ready, released, attached;
 };
 
-static HWND victim;
+static HWND victim, client;
 
 struct source
 {
@@ -49,10 +52,8 @@ static void source_init( struct source *s, HANDLE wake_handle )
 
     s->mapping = CreateFileMappingA( INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 4096, NULL );
     s->shared = MapViewOfFile( s->mapping, FILE_MAP_ALL_ACCESS, 0, 0, 0 );
-    s->shared->hwnd = (UINT)(UINT_PTR)victim;
+    s->shared->hwnd = (UINT)(UINT_PTR)client;
     s->shared->wake = (UINT)(UINT_PTR)(wake_handle ? wake_handle : (HANDLE)s->peer);
-    SetRect( &s->shared->rect, 30, 60, 330, 260 );
-    s->shared->visible = 1;
 }
 
 static void source_start( struct source *s )
@@ -76,11 +77,11 @@ static DWORD *source_buffers( struct source *s, UINT w, UINT h, SIZE_T size, UIN
     return MapViewOfFile( mapping, FILE_MAP_ALL_ACCESS, 0, 0, 0 );
 }
 
-static void run( const char *name )
+static void run( const char *name, UINT count )
 {
-    struct source s;
+    struct source s, all[200];
     DWORD *bits;
-    UINT i;
+    UINT i, n;
 
     printf( "case %s\n", name );
     if (!strcmp( name, "msg" ))
@@ -97,10 +98,12 @@ static void run( const char *name )
         PostMessageA( victim, WM_WAYLAND_REMOTE_SURFACE, pid, (LPARAM)-1 );
         for (i = 0; i < 200; i++)  /* more sources than the victim accepts */
         {
-            source_init( &s, 0 );
-            PostMessageA( victim, WM_WAYLAND_REMOTE_SURFACE, GetCurrentProcessId(), (UINT)(UINT_PTR)s.mapping );
+            source_init( &all[i], 0 );
+            PostMessageA( victim, WM_WAYLAND_REMOTE_SURFACE, GetCurrentProcessId(), (UINT)(UINT_PTR)all[i].mapping );
         }
-        Sleep( 1000 );
+        Sleep( 1500 );
+        for (i = n = 0; i < 200; i++) n += all[i].shared->attached;
+        printf( "  %u of 200 sources attached\n", n );
         return;
     }
     if (!strcmp( name, "nosock" ))
@@ -131,26 +134,30 @@ static void run( const char *name )
         static const LONG values[] = {(1 << 8) | 4, (1 << 8) | 200, (1 << 8) | 0xff, (2 << 8) | 1, -1, 0x7fffffff, 0x80000000};
         for (i = 0; i < ARRAYSIZE(values); i++) { s.shared->ready = values[i]; wake( &s ); Sleep( 100 ); }
     }
-    else if (!strcmp( name, "rect" ))
+    else if (!strcmp( name, "hwnd" ))
     {
-        static const RECT rects[] = {{0x7fffffff, 0x7fffffff, -1, -1}, {-100000, -100000, 100000, 100000}, {10, 10, 10, 10},
-                                     {0x80000000, 0x80000000, 0x7fffffff, 0x7fffffff}, {0, 0, 40000, 40000}, {-5000, -5000, 100, 100}};
-        for (i = 0; i < ARRAYSIZE(rects); i++)
+        /* the client window is read once, so each one needs a source of its own */
+        HWND own = CreateWindowA( "static", "evil", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 0, 200, 200, 0, 0, 0, 0 );
+        HWND hwnds[] = {(HWND)(UINT_PTR)0xdeadbeef, GetDesktopWindow(), own, 0};
+        for (i = 0; i < ARRAYSIZE(hwnds); i++)
         {
-            s.shared->seq++; s.shared->rect = rects[i]; s.shared->seq++;
-            s.shared->ready = (1 << 8) | 1; wake( &s ); Sleep( 200 );
+            source_init( &s, 0 );
+            s.shared->hwnd = (UINT)(UINT_PTR)hwnds[i];
+            source_buffers( &s, 300, 200, 300 * 200 * 4 * 3, 1 );
+            s.shared->ready = (1 << 8) | 1;
+            source_start( &s );
         }
     }
     else if (!strcmp( name, "flood" ))
     {
         DWORD start = GetTickCount();
-        for (i = 2; i < 20002; i++)
+        for (i = 2; i < count + 2; i++)
         {
-            source_buffers( &s, 64, 64, 64 * 64 * 4 * 3, i );
+            source_buffers( &s, 64, 64, 64 * 64 * 4 * 3, i & 0xffffff );
             s.shared->ready = (i << 8) | 1; s.shared->released = 0xdeadbeef;
             wake( &s );
         }
-        printf( "  20000 generations in %lu ms\n", GetTickCount() - start );
+        printf( "  %u generations in %lu ms\n", count, GetTickCount() - start );
         Sleep( 2000 );
     }
     else if (!strcmp( name, "ok" ))
@@ -166,15 +173,16 @@ static void run( const char *name )
 
 int main( int argc, char **argv )
 {
-    static const char *all[] = {"msg", "nosock", "huge", "small", "nosect", "odd", "index", "rect", "flood", "ok"};
+    static const char *all[] = {"msg", "nosock", "huge", "small", "nosect", "odd", "index", "hwnd", "flood", "ok"};
     WSADATA data;
     UINT i;
 
     setvbuf( stdout, NULL, _IONBF, 0 );
     if (argc < 2) return 1;
     WSAStartup( MAKEWORD( 2, 2 ), &data );
-    victim = (HWND)(ULONG_PTR)strtoull( argv[1], NULL, 16 );
-    if (argc > 2) run( argv[2] );
-    else for (i = 0; i < ARRAYSIZE(all); i++) run( all[i] );
+    client = victim = (HWND)(ULONG_PTR)strtoull( argv[1], NULL, 16 );
+    if (argc > 4) client = (HWND)(ULONG_PTR)strtoull( argv[4], NULL, 16 );
+    if (argc > 2) run( argv[2], argc > 3 ? atoi( argv[3] ) : 20000 );
+    else for (i = 0; i < ARRAYSIZE(all); i++) run( all[i], 20000 );
     return 0;
 }

@@ -1,5 +1,5 @@
 # 132 winewayland: a D3D11/GL swapchain created by another process on a window is never shown (all WebView2 content is blank)
-Status: M1 done (GL path, both topologies; gates pass), in review; M2 (owner-side clipping/geometry) needed before Inventor is usable · Branch: fix/132 (wt/132, 4 commits on integ e00a74f6590) · Found in: wayland test pass (notes/wine/wayland.md) · Blocks real Inventor use under Wayland
+Status: M1 + M2 done (GL path; owner-side geometry and clipping), in review; Inventor's Home page, Assistant and trial popup work, multi-document views are blocked by 167 (in-process, on integ too) · Branch: fix/132 (wt/132, 6 commits on integ e00a74f6590) · Found in: wayland test pass (notes/wine/wayland.md) · Blocks real Inventor use under Wayland
 
 ## Symptom
 Under winewayland.drv every WebView2 (Chromium) surface of Inventor is blank: the Inventor Home page (Recent
@@ -249,3 +249,91 @@ Terms: source = the process that presents; sink = the process that owns the top-
 - glFinish + a second context per frame: correct by the spec, measured only on NVIDIA.
 - `wayland_win_data_lock()` is held during the sink update including server round trips (dup, query, fd) on generation changes.
 - The poll loop replaces wl_display_dispatch_queue() for every process of the driver.
+
+## M2 as built (2026-10-04, +2 commits: 6d3ae2fb1df geometry and clipping, 9c7f21021d4 per-process limit)
+What changed against "M1 as built" (the items 1, 2 and the slot weakness of the lists above are done; they are kept as history):
+- The sink no longer uses a position from the source. `struct remote_shared` lost `rect` / `visible`; the source only bumps `seq`
+  (+2) and wakes when its view of the window changes, as a "look again" signal.
+- Geometry comes from the server, per sink, in the sink's event thread and WITHOUT `win_data_mutex`: two plain
+  `get_visible_region` requests (client window: client rect + visible region, both in screen coordinates, and its top window;
+  then the top window's client rect). No win32u call at all, so nothing can take the user lock. The region is what GetDC would
+  clip to: parents' client rects and, where the styles ask for it (WS_CLIPSIBLINGS on the window or an ancestor), the siblings
+  above. Flags 0: children of the client window do not clip.
+- Placement: bounding box of the region -> subsurface position and `wp_viewport` destination; the part of the buffer that
+  belongs to it -> `wp_viewport.set_source`, computed as fractions of the client rect times the size of the buffer that is
+  ATTACHED (tracked separately from the current generation: a source outside the committed buffer is a fatal protocol error);
+  empty region, foreign or missing top window -> the subsurface is destroyed (hidden). Driver coordinates may be scaled: the
+  server rects are mapped with client-rect ratio of the toplevel (`data->rects.client` vs the server's), identity here (100%).
+- When is it evaluated: `sink->dirty` (set by `WAYLAND_WindowPosChanged` of ANY window whose root is the sink's toplevel, by
+  `WAYLAND_SetWindowStyle` for WS_VISIBLE/CLIPSIBLINGS/CLIPCHILDREN, by the new `WAYLAND_SetParent` for the old root, by surface
+  re-creation and scale changes) or a changed `seq` of the source. Frame-only wakes use the stored geometry and commit only the
+  sink surface (the parent is committed when the position changes, not per frame as in M1).
+- Re-homing: if the server says the client window now sits in another toplevel of this process (pane undocked / docked), the
+  sink moves there at once; the source re-creates itself at its next present (seen 20 ms later in Inventor).
+- Limits: 16 sinks per source pid (64 per process as before).
+- Event thread: one bounded update per sink per loop iteration, display events are read and dispatched before each round.
+
+### Gates, M2 build (same session; `inst/132/m1/`)
+- `tests/r132/clip.sh` (13 steps, sources idle = every step is owner-side only): panel moved; panel made smaller than the
+  source's child (cropped to the parent: only the top-left quadrant shows); panel resized (buffer stretched); sibling over the
+  right half (cropped, the other panel loses the 10 px it covers); sibling over all of it (hidden); panel raised above the
+  sibling (back); panel pushed over the toplevel's edge (cropped to 100 px); owner hides / shows the panel; toplevel hide / show;
+  panel destroyed. All as expected.
+- `geo.sh` (live sources) as in M1. Role flip (`host flip=8`) with an idle source: the idle sink is now at the right place after the
+  role change (M1: 22 px off). 30 resizes of two half-covered panels with live `follow=1` sources: 348 set_source over 64 buffer
+  generations, no protocol error.
+- WAYLAND_DEBUG=1 on the owner for clip.sh, the role flip, the resize stress and the hostile cases: 0 protocol errors.
+- Leaks, 200 cycles: owner fds 24 -> 24, maps 387 -> 387, handles 32 -> 32 (child); 24/388/32 (foreign); renderer handles 36 / 39 flat.
+- Hostile source (`evil.exe`, updated for the new block; new case `hwnd`: bogus, desktop and own-process client windows): owner
+  survives all; `msg`: 16 of 200 sources accepted. Flood of generation changes + window-change notifications on one panel while
+  an honest source animates in the other: the honest bar keeps moving in 4 screenshots 2.5 s apart, the owner's UI thread keeps
+  its 5 s prints, owner CPU 15 % of a core.
+- In-process: d3d11_present 5260-5900 fps.
+
+### Cost, M2 build (NVIDIA RTX 6000 Ada / NVIDIA EGL, 1678x884, 5.93 MB per frame; the machine was busier than at the M1 run)
+- Source: unchanged code, 0.93 ms per frame back to back, 4.2 ms at 30 ms spacing (M1 numbers).
+- Sink: 0.35 ms CPU per frame (M1 run: 0.15); compositor 5.8 ms CPU per remote frame vs 1.6 ms in-process (M1 run: 3.75 vs 0.95).
+- Geometry: 2 server requests per evaluation; Inventor session of ~8 min with five scenarios, tab switches, pane and window
+  operations: 7120 evaluations, none per frame.
+
+### Inventor on inv2 / Wayland, M2 build (`inst/132/inv/m2-*`)
+- Start: Home page, Assistant pane and trial popup with content; the Home page ends at the Assistant pane now (Chromium's GPU
+  window is wider than its parent, e.g. 1569 px in a 1327 px parent with a document's browser pane open, and is cropped): [132-m2-home-clipped-to-parent.png](attachments/132-m2-home-clipped-to-parent.png).
+- Open part (`invscen view`): the Home page sink is hidden, the 3D view shows:
+  [132-m2-document-visible.png](attachments/132-m2-document-visible.png). Home tab clicked: Home page back; document tab: hidden
+  again; all documents closed (`hello`): Home page back. MDI children have WS_CLIPSIBLINGS, so the server region does it.
+- invscen hello 2/2, part 11/11, asm 10/10, drawing 8/8, view 3/3 PASS, no dialogs.
+- Assistant pane: closed with its X -> hidden at once; reopened by command; undocked by double-click -> floats as its own
+  toplevel with content ([132-m2-assistant-undocked.png](attachments/132-m2-assistant-undocked.png)); docked again -> back in
+  the main window. Main window restored, resized (1300x800), maximized, restored, maximized: both sinks follow.
+- Open drawing next to the part: NOT fixed and not 132: the drawing is active but the part's 3D view (an in-process GL client
+  surface) stays on top; same on integ. Draft 167. It also hides the Assistant sink after a resize.
+- Visible region shape: 9 of 7120 evaluations had more than one rectangle (the Home window, bounding box = the whole window, a
+  transient): rect clip + hide is what Inventor needs; non-rectangular clipping is not implemented.
+- Z-order (investigated only): the File (application) menu shows above the Home page; a ribbon tooltip that reaches down over
+  the Home page is cut off at the page's edge = it is under the sink
+  ([132-m2-tooltip-under-home.png](attachments/132-m2-tooltip-under-home.png)); the Assistant pane's "Help" menu and the
+  "closed" balloon over the 3D view show. Same mechanism as 145: popups in the subsurface role are re-placed directly above the
+  parent surface, below every sink / client surface (see 167 for the fix direction). Does not fall out of the clipping work.
+- Compositor log: `Mtk-CRITICAL mtk_region_ref` lines appear per opened document on integ as well (1 each): in-process, 167.
+
+### Remains
+1. 167 (in-process client surfaces vs z-order) for multi-document work; 145 / tooltips under sinks with it.
+2. Non-rectangular visible regions (bounding box only), children of the client window do not clip, window regions
+   (SetWindowRgn has no driver hook here) are only seen at the next evaluation.
+3. A third process in the parent chain (WebView2's browser process) that changes its windows: seen when the source presents or
+   the owner changes something (dcomp presents at least once a second; not measured separately).
+4. First contact needs the owner's message loop; Vulkan (M3, blocked by 166); other compositors / Mesa not run; DPI scaling
+   other than 100 % not run (the mapping is there, by ratio).
+
+### Weak spots after M2 (for the review)
+- The source names the client window (read once at first contact). The sink shows the frames where the server says that window
+  is, in whatever toplevel of the owner contains it: a source can still draw over any window of the owner, as before.
+- `get_visible_region` is a server request made from the driver (winex11 / winemac do the same); its semantics (which flags,
+  STATUS_BUFFER_OVERFLOW with a short reply buffer) are relied on.
+- The event thread drops `win_data_mutex` in the middle of the sink list walk for the queries; it relies on "only this thread
+  removes sinks" and re-reads the next entry afterwards.
+- A re-homed sink is shown at the window's intermediate position for a moment (seen: one evaluation at (4,28) during a dock).
+- Evaluation rate is bounded only by the owner's own window changes and the source's notifications (one per wake).
+- The rest of the M1 list still holds (old-generation buffers destroyed while shown, second EGL context, poll loop for all
+  processes, lock held across the dup / pool creation).

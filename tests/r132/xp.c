@@ -2,7 +2,8 @@
  *
  * xp.exe host [secs=N] [busy=N] [pw=N ph=N] [popup]
  *     Top-level (700x300) with two child panels p1 (20,20 300x200) and p2 (360,20 300x200).
- *     Prints "top=HWND p1=HWND p2=HWND", pumps messages for secs (default 60), prints its handle count every 5 s.
+ *     Prints "top=HWND p1=HWND p2=HWND cover=HWND", pumps messages for secs (default 60), prints its handle count every 5 s.
+ *     cover is a hidden orange sibling (below the panels as created: `wl_winctl COVER top`, show, move to cover them).
  *     busy=N: after 5 s the UI thread sleeps N seconds without pumping (do frames need the owner's pump?).
  *     pw, ph: one panel p1 of that size at (10,10) in a top-level that fits it.
  *     flip=N: the top-level is a popup shown without activation next to an active window of the thread (not managed by
@@ -155,14 +156,15 @@ int main( int argc, char **argv )
         int secs = opt( argc, argv, "secs", 60, 10 ), busy = opt( argc, argv, "busy", 0, 10 ), popup = argc > 2 && !strcmp( argv[argc - 1], "popup" );
         WNDCLASSA wc = {.lpfnWndProc = DefWindowProcA, .lpszClassName = "xp_host", .hbrBackground = CreateSolidBrush( RGB( 64, 64, 64 ) )};
         WNDCLASSA pc = {.lpfnWndProc = DefWindowProcA, .lpszClassName = "xp_panel", .hbrBackground = CreateSolidBrush( RGB( 255, 255, 0 ) )};
+        WNDCLASSA cc = {.lpfnWndProc = DefWindowProcA, .lpszClassName = "xp_cover", .hbrBackground = CreateSolidBrush( RGB( 255, 128, 0 ) )};
         int pw = opt( argc, argv, "pw", 0, 10 ), ph = opt( argc, argv, "ph", 0, 10 ), flip = opt( argc, argv, "flip", 0, 10 );
         DWORD start = GetTickCount(), last = 0;
-        HWND top, p1, p2 = 0;
+        HWND top, p1, p2 = 0, cover;
         RECT rect = {0, 0, 700, 300};
 
         if (pw) SetRect( &rect, 0, 0, pw + 20, ph + 20 );
 
-        RegisterClassA( &wc ); RegisterClassA( &pc );
+        RegisterClassA( &wc ); RegisterClassA( &pc ); RegisterClassA( &cc );
         AdjustWindowRect( &rect, popup ? WS_POPUP : WS_OVERLAPPEDWINDOW, FALSE );
         if (flip)
         {
@@ -177,7 +179,8 @@ int main( int argc, char **argv )
         p1 = CreateWindowA( "xp_panel", NULL, WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE, pw ? 10 : 20, pw ? 10 : 20,
                             pw ? pw : 300, pw ? ph : 200, top, 0, 0, 0 );
         if (!pw) p2 = CreateWindowA( "xp_panel", NULL, WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE, 360, 20, 300, 200, top, 0, 0, 0 );
-        printf( "top=%p p1=%p p2=%p\n", top, p1, p2 );
+        cover = CreateWindowA( "xp_cover", NULL, WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 100, 100, top, 0, 0, 0 );
+        printf( "top=%p p1=%p p2=%p cover=%p\n", top, p1, p2, cover );
         while (GetTickCount() - start < secs * 1000)
         {
             pump();

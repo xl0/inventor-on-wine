@@ -33,8 +33,13 @@ describe the llvmpipe session; what holds now is in "Host session on the new hos
 - GL on NVIDIA: a second EGL context made current on the same window surface reads the back buffer the client just rendered
   (after glFinish in the client context); a wl_egl_window that is resized but never swapped still gets its new size.
   `wl_surface.set_buffer_transform(FLIPPED_180)` on a subsurface flips GL's bottom-up rows on mutter 50.
-- Not clipped: a sink covers siblings that are above its client window in Win32 z-order (Inventor: the Home page MDI child covers
-  the active document). Owner-side changes are only followed when the source presents again. Both are M2 in the issue.
+- Placement is the owner's: the sink asks the server (`get_visible_region` request: client rect, visible region in screen
+  coordinates, top window; a short reply buffer gives STATUS_BUFFER_OVERFLOW with the fixed fields still valid) whenever a window
+  of that toplevel changes, crops to the region's bounding box (`wp_viewport.set_source` must stay inside the buffer that is
+  attached at the commit, or the compositor kills the connection) and hides on an empty region. Child windows are created at the
+  BOTTOM of the z-order, MDI children carry WS_CLIPSIBLINGS: Inventor's Home page behind a document comes out empty.
+- In-process client surfaces have no such clipping and are re-placed at the bottom of the subsurface stack at every present:
+  an inactive document's view covers the active one (167), tooltips go under GL views and sinks (145).
 - Probes: `tests/r132/xp.c` (host / foreign / child, cycles, resize, busy owner, role flip), `tests/r132/evil.c` (hostile source),
   `tests/r132/{geo,leak,run2}.sh` + `pix.py` (scenarios with screenshot colour boxes; `env.sh` = their environment).
 
