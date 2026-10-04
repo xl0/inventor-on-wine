@@ -315,13 +315,20 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   old host) and kernel32:debugger, rpcrt4:server, x86_64 user32:input pass — those three were
   flaky, not host drift. These two result dirs are the reference for this host.
   `tools/sysroot.sh add` no longer wipes the prefix; x/shot.sh loads the prefix env itself.
-- Inventor half of the round (Sonnet worker, inv3, build-s vs build/ A/B; told to redo what it
-  measured before the 164 fix): suite, dwgloop, 141 and
-  140 repros, 130 fps, 133 probes, WebView2 state per build, connect times. Push integ and switch
-  the prefixes to a new-host build when it is back.
-- Local prefix additions: python3-numpy, python3-pil (x/shot.sh and the dialog screenshots need
-  them); blas/lapack alternative links recreated in tools/sysroot.sh. Never `rebuild` the prefix
-  while a worker runs (it is wiped for ~13 s).
+- Round finished (2026-10-04): integ e00a74f6590 pushed to gh; build/ rebuilt natively at that tip
+  (wine-11.18-531, with winewayland.so); inv, inv2, inv3, inv4 run it (all four headless NVIDIA X
+  servers come up, :101 too). Inventor half on inv3, new build vs old binaries (inst/round2/):
+  suite 13/13 (also 13/13 on the old build), dwgloop 10/10, samples 464 PASS / 2 FAIL (known 055);
+  141: Edit Dimension opens 3 of 3 (old build: assertion); 140: no hang 3 of 3 (old build: hangs);
+  130: 117-119.5 fps fresh and aged; 131: "Static" windows 4 → 4 after two suites (old build 10 → 81);
+  133 probes as expected; connect 20.5-22 s on both; identical err-line sets; WebView2 helpers run.
+  One open item → draft 165 (Opus worker, inv3): a wined3d `wined3d_not_from_cs` assertion box,
+  seen once on the new build, not reproduced, cause unknown (ours with 131, or upstream/host).
+- Resumed on the new host: 157 (winewayland lock order; VM) and 132 M1 (cross-process surfaces;
+  host session on gnome-shell 50, inv2; told to re-check whether the session is GPU-rendered now).
+- Next: adversarial reviews for 157, 132 and 165 when they report; UI pass 3 (areas pass 2 missed);
+  warning fix for 41d9173ca57 at the next rebase of integ; drafts not started: 142-151, 156,
+  158-163 (see issues/).
 - ssh from inside the sandbox fails on the system config ("Bad owner or permissions on
   /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf": root-owned files look unowned in the user
   namespace). Fixed on our side: both repos use `core.sshCommand = ssh -F /dev/null`, and
