@@ -1,5 +1,5 @@
 # 132 winewayland: a D3D11/GL swapchain created by another process on a window is never shown (all WebView2 content is blank)
-Status: M1 + M2 done (GL path; owner-side geometry and clipping), in review; Inventor's Home page, Assistant and trial popup work, multi-document views are blocked by 167 (in-process, on integ too) · Branch: fix/132 (wt/132, 6 commits on integ e00a74f6590) · Found in: wayland test pass (notes/wine/wayland.md) · Blocks real Inventor use under Wayland
+Status: M1 + M2 + review fixes done (GL path, topology B only), 4 commits on fix/132 (integ e00a74f6590), tip 3b3fb1a465e; topology A (swapchain on a window owned by another process, `wl_xswap`) stays blank by design; multi-document views are blocked by 167 (in-process, on integ too) · Found in: wayland test pass (notes/wine/wayland.md)
 
 ## Symptom
 Under winewayland.drv every WebView2 (Chromium) surface of Inventor is blank: the Inventor Home page (Recent
@@ -337,3 +337,86 @@ What changed against "M1 as built" (the items 1, 2 and the slot weakness of the 
 - Evaluation rate is bounded only by the owner's own window changes and the source's notifications (one per wake).
 - The rest of the M1 list still holds (old-generation buffers destroyed while shown, second EGL context, poll loop for all
   processes, lock held across the dup / pool creation).
+
+## After the adversarial review (2026-10-04; fix/132 rewritten as 4 commits, the old tip is kept as branch `fix/132-m2`)
+Commits: 031aa6ee145 (event thread: poll loop), 27a491fea96 (sink, with the server-side geometry and the limits folded in),
+89fa1151047 (source), 3b3fb1a465e (GL readback). Everything above this section describes how it got here; where it differs,
+this section is what the branch does.
+
+### Scope change: topology B only
+A source is accepted only for a window OF ITS OWN PROCESS that is rooted in the top-level the first-contact message was posted to.
+Topology A (process B presents to a window owned by process A: `wl_xswap`, `xp.exe foreign`) is no longer carried: the source
+side does not create a source for a foreign window (one WARN per client surface: "Window %p belongs to another process, its
+client surface will not be shown"), nothing is posted, the owner creates no sink, the window stays blank as on integ.
+Chromium / WebView2 (own child of a foreign top-level) is unaffected.
+Windows 11 for the record (`tests/r132/xwin.exe` in the VM, D3D11 hardware device with WARP as fallback, B8G8R8A8, process B on a child
+panel of process A; screen pixel in the middle of the panel):
+
+| what process B does on A's window | result | on screen while B runs | after B exited |
+|---|---|---|---|
+| GetDC + FillRect | GetDC non-NULL, FillRect 1 | B's colour | B's colour (until A repaints) |
+| swapchain, DXGI_SWAP_EFFECT_DISCARD (blt model) | CreateSwapChain S_OK, Present S_OK | B's colour | B's colour |
+| swapchain, FLIP_SEQUENTIAL | S_OK, S_OK | B's colour | B's colour |
+| swapchain, FLIP_DISCARD | S_OK, S_OK | B's colour | B's colour |
+| own WS_CHILD of A's panel + DISCARD / FLIP_SEQUENTIAL swapchain on it | S_OK, S_OK | B's colour | panel's own colour (the child is gone) |
+
+So Windows allows all of it, including drawing on another process' window (X11 too). Wayland stays stricter on purpose: there
+the owner's process would have to show the foreign frames itself, and any process of the prefix could then cover any window.
+
+### Per finding
+1. Authorization (HIGH). The first-contact message now carries the client window (`wparam`) instead of a pid; the sink
+   (`wayland_remote_sink_create`, UI thread, no driver lock) takes the source pid from `NtUserGetWindowThread(client)`, refuses
+   own-process and invalid windows and windows whose GA_ROOT is not the posted top-level, and only then opens that process. The
+   control block must carry a magic number and name the same window before anything is written to it (a third party could
+   otherwise make the sink write `attached` into an unrelated section of the window's owner). At every geometry evaluation the
+   window must still belong to the source pid (`NtUserGetWindowThread`, outside `win_data_mutex`; a window handle can be reused),
+   and its top window must be the sink's or another top-level of this process (re-homing), else the sink is hidden.
+   Pid spoofing has no parameter left to spoof; slot exhaustion costs the attacker one own child window per slot.
+2. Limits. No global limit any more (the event thread's poll array grows); 16 sinks and 1 GiB of buffers per SOURCE PROCESS.
+   A process can only use up its own share, whatever top-level it targets; N attacker processes cost the owner N * 16 small
+   sinks. (A per-top-level cap would let the attackers' sinks starve the honest ones of that top-level, so I chose per process.)
+3. Poll loop. `wl_display_flush` result is used: on EAGAIN the display fd is polled for POLLOUT as well, a POLLOUT-only wake
+   does not read, EPIPE falls through to the read (which reports the error), other errors end the loop. Note: with libwayland
+   1.24 a producing thread whose request does not fit blocks in libwayland itself (ppoll POLLOUT); the event loop's part is
+   the remainder that a non-blocking flush left behind.
+4. Wake socket. Drained with 4 KB reads until short (at most 256 KB per round), one update per round.
+5. Size. 8192 px per side (both sides enforce it; a larger window is not shown and WARNs), within the 1 GiB per process.
+6. Wording. The NtQuerySection / fstat check only makes sure the pool is valid when it is created. The source keeps a writable
+   handle and could shrink the file afterwards; the compositor survives that through libwayland's SIGBUS handling for wl_shm
+   pools, and answers with an error that ends the OWNER's connection (not tried). Possible hardening, not done: wineserver
+   creates section files with `memfd_create("wine-mapping", MFD_EXEC)`, i.e. without MFD_ALLOW_SEALING; with that flag the sink
+   (or the server, for sections the driver asks for) could add F_SEAL_SHRINK before making the pool.
+Found while testing the backpressure case, also fixed: with the compositor not releasing buffers the sink took every frame and
+ended up holding all three, the source dropped its remaining frames ("No free buffer") and the LAST frame never showed. The sink
+now leaves the mailbox alone while two buffers are unreleased and takes the latest frame when one is released.
+
+### Verification of the final branch (mutter 50.1 + NVIDIA EGL, renderer=gl; `inst/132/m1/`)
+- Gate change: `wl_xswap.exe`: blank, 0 magenta pixels, one WARN (by design). Topology B: `run2.sh` (two processes, own children
+  in p1 and p2), `layered_child_gpu` green 300x200, `xproc_hidden_present` green before / none after the hide.
+- `evil.exe` (WAYLAND_DEBUG=1 on the owner, 0 protocol errors, owner alive after every case, fds 24 before and after):
+  `foreign` = valid control blocks for the victim's panel, the victim's top-level, a third process' window and an own window
+  outside the top-level: all four refused (attached=0), 0 red pixels on screen; `magic` (wrong magic, block naming another
+  window): refused; `msg`: bogus messages refused, 16 of 200 sources accepted; `quota`: 16 of 17 sources accepted, their
+  8192x8192 buffers refused beyond 1 GiB; `nosock`, `huge` (2^31 and 8193 px), `small`, `nosect`, `odd`, `index`: as before;
+  `ok`: the red frame is exactly on the source's own child (970..1268 x 440..638), gone when the process dies.
+- Wake flood (`evil.exe TOP wake 200`: 200 MB of wake bytes, nothing else): owner CPU 3.55 s before the drain fix (M2 build,
+  the whole 3.5 s of the flood at 100 %), 0.09 s after. Generation flood (20000 in 2.6 s): 0.94 s of owner CPU, as before.
+- Backpressure (`tests/r132/backpressure.sh`, compositor SIGSTOPped 14 s while a source presents 12000 frames and, with
+  TITLES=3000, the owner's UI thread queues 9 MB of title changes): strace of the owner shows 13525 sendmsg EAGAIN and 6641
+  event-loop polls with POLLIN|POLLOUT on the display fd, no spinning (0.6 s CPU in 14 s incl. the title loop); after SIGCONT
+  the titles finish, the owner lives and the LAST frame is on screen (bar at x 296; before the buffer fix it stopped ~20-30
+  frames early). `burst.sh` (UI thread only): window turns red after SIGCONT on the old and the new loop.
+- `geo.sh` (11 steps), `clip.sh` (13 steps), both with WAYLAND_DEBUG=1: as before, 0 protocol errors. Leaks over 200 cycles:
+  owner fds 24 -> 24, maps 388 -> 388, handles 32 -> 32; renderer handles 36 flat. `leak.sh foreign` (topology A): no sink, no growth.
+- In-process fps (`d3d11_present.exe`, 8 interleaved runs, one prefix per build): integ 5079-6056 (median 5773), fix/132
+  5135-5973 (median 5641). Batches run one build after the other differ by +-40 % in either direction on this shared host.
+- Inventor on inv2 / Wayland, final build (`inst/132/inv/r-*`): Home page, Assistant pane and trial popup with content at 45 s
+  (4 sinks, none refused, no topology A warning: all of Inventor's WebView2 surfaces are topology B); invscen hello 2/2,
+  part 11/11, drawing 8/8, view 3/3; part open -> 3D view visible, Home tab -> Home page, document tab -> 3D view.
+
+### Remains / stays as listed
+167 (in-process client surfaces vs z-order; tooltips under sinks), non-rectangular regions, third process in the parent chain,
+first contact needs the owner's message loop, Vulkan (M3, 166). Mutter-only / not exercised: wl_buffers of the previous
+generation destroyed while possibly attached, FLIPPED_180 on a subsurface, scale != 100 %, Mesa EGL, a source truncating its
+section. The event loop covers a flush that returned EAGAIN in the event thread; data left behind by ANOTHER thread's failed
+flush while the event thread already sleeps in poll is not noticed until the next wake (same as wl_display_dispatch_queue).

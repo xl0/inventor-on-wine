@@ -20,10 +20,17 @@ describe the llvmpipe session; what holds now is in "Host session on the new hos
   "probe log" is theirs.
 
 ## Client surfaces across processes (132, branch fix/132; not on integ yet)
-- A window presented to by a process that does not own its top-level (swapchain on a foreign HWND, or on an own child inside a
-  foreign window = Chromium's GPU process, dcomp's `present_to_foreign_target`) has no wl_surface parent in that process.
-  fix/132: the presenting process (source) reads each frame back into a shared section, the owner (sink) shows it in a subsurface
-  of its top-level. `dlls/winewayland.drv/wayland_remote.c` has the protocol in its header comment; design, costs, limits: issue 132.
+- A window presented to by a process that does not own its top-level has no wl_surface parent in that process.
+  fix/132 carries ONE case: a process presenting to its OWN child window inside a foreign top-level (Chromium's GPU process,
+  dcomp's `present_to_foreign_target`): the presenting process (source) reads each frame back into a shared section, the owner
+  (sink) shows it in a subsurface of its top-level. A swapchain on a window OWNED by another process (`wl_xswap`) stays blank
+  on purpose: the owner only accepts a source for a window of the source's own process, otherwise any process could cover any
+  window (Windows and X11 allow it; table in issue 132). `dlls/winewayland.drv/wayland_remote.c` has the protocol in its header
+  comment; design, costs, limits: issue 132.
+- libwayland 1.24: a thread whose request does not fit the connection buffer while the socket is full blocks inside libwayland
+  (ppoll POLLOUT), it does not fail; a non-blocking `wl_display_flush` returns EAGAIN and somebody has to poll POLLOUT. Stop the
+  compositor of the own session (SIGSTOP / SIGCONT gnome-shell) to test such paths: `tests/r132/backpressure.sh`, `burst.sh`.
+- A compositor that is slow to release wl_shm buffers must not make a producer run out of buffers: keep at most two with it.
 - The owner pulls everything with `NtOpenProcess(PROCESS_DUP_HANDLE)` + `NtDuplicateObject`; a unix fd travels between two Wine
   processes as a Wine handle (`wine_server_fd_to_handle` in one, `NtDuplicateObject` + `wine_server_handle_to_fd` in the other:
   the fd refers to the same file description, here a socketpair end; the handle_to_fd result is not close-on-exec).

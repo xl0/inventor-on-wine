@@ -320,8 +320,10 @@ launches; previous device-limit errors do not authorize pausing another device.
   parent, hidden too; `r132/xp.c`: cross-process present probe (`xp.exe host [busy=N flip=N pw= ph=]`, then
   `foreign|child|hidden|visible [HWND] interval=N cycle=N follow=1 hold=N ...`: quadrant image + moving bar, ms per Present, STALL
   watchdog, handle counts; 132, 163, 166); `r132/evil.c`: hostile source for winewayland's cross-process surfaces (bad handles, sizes,
-  rects, floods; the owner must survive; 132); `r132/{run2,geo,clip,leak}.sh` + `pix.py`: both topologies / geometry and lifetime
-  steps / owner-side clipping with idle sources / 200-cycle leak check on the host Wayland session, judged by colour boxes in screenshots; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
+  rects, floods; the owner must survive; 132); `r132/{run2,geo,clip,leak}.sh` + `pix.py`: two source processes / geometry and lifetime
+  steps / owner-side clipping with idle sources / 200-cycle leak check on the host Wayland session, judged by colour boxes in screenshots;
+  `r132/backpressure.sh`, `burst.sh` (+ `burst.c`): requests queued while the compositor is SIGSTOPped; `r132/xwin.c`: what Windows
+  shows when process B draws / presents on a window of process A (GDI, blt and flip swapchains; table in 132); `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
   `r131/comp_probe.c`: what a composition swapchain (D3D11, D3D12) answers to the window-related calls and invalid
   descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
   `r165/deadwin.c [PRESENTS] [keep|detach]` + `detach.c` (DLL): D3D11 swapchain presented after its window is destroyed,
@@ -382,6 +384,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   Copy prefixes with `cp -a` / `rsync -aX`: junctions live in the
   user.WINEREPARSE xattr of `name?` dirs (052); plain copies break them.
 - `vm/` — Windows 11 Pro reference VM (qemu/KVM, not libvirt).
+  26.04 host: `vm/run.sh` starts swtpm from a copy (`deps/swtpm`, made from /usr/bin/swtpm if missing): the system binary's
+  AppArmor profile only talks to libvirt-labelled peers (qemu: "tpm-emulator: Failed to send CMD_SET_DATAFD"), and a confined
+  swtpm cannot be signalled from the sandbox (a stray one stays until the user kills it).
   `run.sh [install]`, `shot.sh [png]` (screendump via HMP `mon.sock`).
   SSH: `ssh -i vm/id_ed25519 -p 2222 -o StrictHostKeyChecking=no
   -o UserKnownHostsFile=/dev/null -o BatchMode=yes dev@127.0.0.1`

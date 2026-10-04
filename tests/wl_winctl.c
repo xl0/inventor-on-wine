@@ -1,4 +1,4 @@
-/* wl_winctl.exe HWND_HEX ACTION: top | show | hide | max | restore | close | foreground | topmost | move X Y W H  on any top-level window.
+/* wl_winctl.exe HWND_HEX ACTION: top | show | hide | max | restore | title N LEN | close | foreground | topmost | move X Y W H  on any top-level window.
  * Build: x86_64-w64-mingw32-gcc -o tests/wl_winctl.exe tests/wl_winctl.c -luser32 */
 #include <windows.h>
 #include <stdio.h>
@@ -10,6 +10,12 @@ int main(int argc, char **argv)
     if (!strcmp(a, "top")) BringWindowToTop(h);
     else if (!strcmp(a, "show")) ShowWindow(h, SW_SHOW);
     else if (!strcmp(a, "hide")) ShowWindow(h, SW_HIDE);
+    else if (!strcmp(a, "title"))  /* title N LEN: N title changes of LEN characters */
+    {
+        int i, n = atoi(argv[3]), len = atoi(argv[4]); char *t = malloc(len + 16);
+        memset(t, 'x', len + 15);
+        for (i = 0; i < n; i++) { sprintf(t, "%06d", i); t[6] = 'x'; t[len] = 0; SendMessageTimeoutA(h, WM_SETTEXT, 0, (LPARAM)t, SMTO_ABORTIFHUNG, 60000, NULL); }
+    }
     else if (!strcmp(a, "max")) ShowWindow(h, SW_MAXIMIZE);
     else if (!strcmp(a, "restore")) ShowWindow(h, SW_RESTORE);
     else if (!strcmp(a, "close")) PostMessageW(h, WM_CLOSE, 0, 0);

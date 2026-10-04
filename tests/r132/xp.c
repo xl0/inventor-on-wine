@@ -6,6 +6,8 @@
  *     cover is a hidden orange sibling (below the panels as created: `wl_winctl COVER top`, show, move to cover them).
  *     busy=N: after 5 s the UI thread sleeps N seconds without pumping (do frames need the owner's pump?).
  *     pw, ph: one panel p1 of that size at (10,10) in a top-level that fits it.
+ *     titles=N: after 7 s the UI thread sets N window titles of 3000 characters in a row (megabytes of Wayland
+ *     requests: backpressure when the compositor is slow or stopped).
  *     flip=N: the top-level is a popup shown without activation next to an active window of the thread (not managed by
  *     the Wine driver: a subsurface on Wayland); after N seconds it is activated (managed: its surface changes role).
  * xp.exe MODE [HWND] [key=val ...]
@@ -158,6 +160,7 @@ int main( int argc, char **argv )
         WNDCLASSA pc = {.lpfnWndProc = DefWindowProcA, .lpszClassName = "xp_panel", .hbrBackground = CreateSolidBrush( RGB( 255, 255, 0 ) )};
         WNDCLASSA cc = {.lpfnWndProc = DefWindowProcA, .lpszClassName = "xp_cover", .hbrBackground = CreateSolidBrush( RGB( 255, 128, 0 ) )};
         int pw = opt( argc, argv, "pw", 0, 10 ), ph = opt( argc, argv, "ph", 0, 10 ), flip = opt( argc, argv, "flip", 0, 10 );
+        int titles = opt( argc, argv, "titles", 0, 10 );
         DWORD start = GetTickCount(), last = 0;
         HWND top, p1, p2 = 0, cover;
         RECT rect = {0, 0, 700, 300};
@@ -196,6 +199,16 @@ int main( int argc, char **argv )
                 SetActiveWindow( top );
                 printf( "host: activated the popup, active %p\n", GetActiveWindow() );
                 flip = 0;
+            }
+            if (titles && GetTickCount() - start > 7000)
+            {
+                static char title[3016];
+                DWORD t = GetTickCount();
+                int i;
+                memset( title, 'x', 3000 );
+                for (i = 0; i < titles; i++) { sprintf( title, "%06d", i ); title[6] = 'x'; SetWindowTextA( top, title ); }
+                printf( "host: %d titles set in %lu ms\n", titles, GetTickCount() - t );
+                titles = 0;
             }
             if (busy && GetTickCount() - start > 5000)
             {

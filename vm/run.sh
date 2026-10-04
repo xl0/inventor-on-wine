@@ -11,7 +11,10 @@ DATA=${WINE_DATA:-/data/users/xl0/wine} DISK=$DATA/win.qcow2
 [ -f "$DISK" ] || qemu-img create -f qcow2 "$DISK" 160G
 [ -f vars.fd ] || cp /usr/share/OVMF/OVMF_VARS_4M.ms.fd vars.fd
 mkdir -p tpm
-swtpm socket --tpm2 --tpmstate dir=tpm --ctrl type=unixio,path=tpm/sock --daemon --terminate
+# Ubuntu 26.04's AppArmor profile for /usr/bin/swtpm only lets it talk to libvirt-labelled peers (qemu fails with
+# "tpm-emulator: Failed to send CMD_SET_DATAFD"). Profiles attach by path: run a copy of the binary instead.
+[ -x ../deps/swtpm ] || cp /usr/bin/swtpm ../deps/swtpm
+../deps/swtpm socket --tpm2 --tpmstate dir=tpm --ctrl type=unixio,path=tpm/sock --daemon --terminate
 
 # Unprivileged virtiofsd: no uid switching, bwrap already confines it.
 mkdir -p share; rm -f vfs.sock

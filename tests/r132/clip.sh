@@ -10,7 +10,7 @@ ctl() { $W tests/wl_winctl.exe "$@" >/dev/null 2>&1; }
 sleep 3
 get() { sed -n "s/.*$1=0*\([0-9A-Fa-f]*\).*/\1/p" $O-host.out; }
 TOP=$(get top); P1=$(get p1); P2=$(get p2); C=$(get cover)
-(setsid nohup $W tests/r132/xp.exe foreign $P1 frames=40 hold=120 quiet=1 > $O-foreign.out 2>&1 &)
+(setsid nohup $W tests/r132/xp.exe child $P1 frames=40 hold=120 quiet=1 > $O-foreign.out 2>&1 &)
 (setsid nohup $W tests/r132/xp.exe child $P2 color=00ffff frames=40 hold=120 quiet=1 > $O-child.out 2>&1 &)
 shot 1-start 5
 ctl $P2 move 360 60 300 200; shot 2-p2-moved
