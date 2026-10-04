@@ -2,9 +2,9 @@
 # VM copy of tests/wl_xowner.sh: all tests/wl_xowner.exe cases (issues 134, 135) in the current vmwl compositor session
 # (vmwl/session.sh gnome|kde|sway first; the VM must be started with VMWL_BIND="wt/134-build" for that build). Screenshots by
 # vmwl/shot.sh, clicks by vmwl/input.py, Wine runs in the guest from the /host share. PASS/FAIL per check on stdout.
-#   vmwl/wl_xowner.sh COMPOSITOR [BUILD]     (BUILD default wt/wayland-build; output vmwl/results/COMPOSITOR-<build>/)
+#   vmwl/wl_xowner.sh COMPOSITOR [BUILD]     (BUILD default build; output vmwl/results/COMPOSITOR-<build>/)
 cd "$(dirname "$0")/.."
-C=${1:?compositor name}; B=${2:-wt/wayland-build}
+C=${1:?compositor name}; B=${2:-build}
 W=/host/$B/wine; SRV=/host/$B/server/wineserver
 OUT=$PWD/vmwl/results/$C-$(basename $B); mkdir -p $OUT
 P='$HOME/wp-xo-'$(basename $B)

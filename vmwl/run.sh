@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Wayland test VM (Ubuntu 26.04 guest). Usage: vmwl/run.sh   (first run creates disk + seed from dl/)
 #   SSH 127.0.0.1:2223 (user xl0, key vmwl/id_ed25519), VNC 127.0.0.1:5911, HMP vmwl/mon.sock, QMP vmwl/qmp.sock.
-#   Project subset exported read-only over virtio-fs (tag "host", mounted at /host in the guest):
-#   wt/wayland-build, tests, wine-src/{nls,fonts} (the build's symlinks point there) + $VMWL_BIND
-#   (space-separated project-relative paths, same layout in the guest). virtiofsd exits with QEMU.
+#   Project subset exported read-only over virtio-fs, mounted under /host in the guest: tests, wine-src/{nls,fonts}
+#   (the symlinks of build/ point there) + $VMWL_BIND (space-separated project-relative paths, same layout in the
+#   guest; default "build" = the integ build). The virtiofsd processes exit with QEMU.
 set -euo pipefail
 cd "$(dirname "$0")"
 DISK=${WINE_DATA:-/data/users/xl0/wine}/vmwl-disk.qcow2  # big image outside /home
@@ -21,14 +21,20 @@ if [ ! -f "$DISK" ]; then
   rm -f $t/user-data $t/meta-data; rmdir $t
 fi
 
-# virtiofsd inside bwrap: only the listed paths are visible under /mnt, read-only.
-rm -f vfs.sock
-binds=(); for p in wt/wayland-build tests wine-src/nls wine-src/fonts ${VMWL_BIND:-}; do
-  binds+=(--ro-bind "$ROOT/$p" "/mnt/$p"); done
-setsid bwrap --ro-bind / / --tmpfs /mnt --bind "$PWD" "$PWD" --dev-bind /dev /dev "${binds[@]}" \
-  ../deps/virtiofsd-v1.14.0/target/x86_64-unknown-linux-musl/release/virtiofsd \
-  --socket-path="$PWD/vfs.sock" --shared-dir=/mnt --sandbox=none --readonly --log-level=${VFS_LOG:-warn} >vfs.log 2>&1 </dev/null &
-until [ -S vfs.sock ]; do sleep 0.1; done
+# One read-only virtiofsd per exported path (user namespaces, and so bwrap, are not available in the sandbox on this host):
+# tag "host" is an empty skeleton holding the mount points, mounted at /host by the guest's fstab; the paths are tags
+# h0, h1, ... mounted below it over ssh once the guest is up.
+VFSD=../deps/virtiofsd-v1.14.0/target/x86_64-unknown-linux-musl/release/virtiofsd
+vfsd() { rm -f "$1"; setsid $VFSD --socket-path="$PWD/$1" --shared-dir="$2" --sandbox=none --readonly --log-level=${VFS_LOG:-warn} >>vfs.log 2>&1 </dev/null &
+         until [ -S "$1" ]; do sleep 0.1; done; }
+: >vfs.log
+fsdev=(-chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=host); mounts=; n=0
+for p in tests wine-src/nls wine-src/fonts ${VMWL_BIND:-build}; do
+  mkdir -p "skel/$p"; vfsd vfs-$n.sock "$ROOT/$p"
+  fsdev+=(-chardev socket,id=vfs$n,path=vfs-$n.sock -device vhost-user-fs-pci,chardev=vfs$n,tag=h$n)
+  mounts+="mount -t virtiofs -o ro h$n /host/$p; "; n=$((n + 1))
+done
+vfsd vfs.sock "$PWD/skel"
 
 # GL=1: virgl-accelerated guest GL through a host render node (egl-headless; GL_NODE overrides). Default: llvmpipe in the guest.
 gpu=(-device virtio-vga,xres=1280,yres=800)
@@ -37,7 +43,7 @@ gpu=(-device virtio-vga,xres=1280,yres=800)
 qemu-system-x86_64 \
   -name vmwl -machine q35,accel=kvm -cpu host -smp 8 -m 16G \
   -object memory-backend-memfd,id=mem,size=16G,share=on -numa node,memdev=mem \
-  -chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=host \
+  "${fsdev[@]}" \
   -drive file="$DISK",if=none,id=disk0,cache=unsafe,discard=unmap -device virtio-blk-pci,drive=disk0,bootindex=1 \
   -drive file=seed.iso,media=cdrom,if=none,id=cd0,readonly=on -device ide-cd,drive=cd0,bus=ide.0 \
   -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22 -device virtio-net-pci,netdev=net0 \
@@ -45,3 +51,5 @@ qemu-system-x86_64 \
   "${gpu[@]}" \
   -vnc 127.0.0.1:11 -monitor unix:mon.sock,server,nowait -qmp unix:qmp.sock,server,nowait \
   -daemonize -pidfile qemu.pid
+for _ in $(seq 90); do ./ssh.sh true 2>/dev/null && break; sleep 2; done
+./ssh.sh "sudo sh -c '$mounts'"

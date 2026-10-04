@@ -14,14 +14,18 @@ Not the Windows VM (`vm/`); nothing here touches it.
 - `vmwl/wl.sh CMD...` runs CMD in the guest with XDG_RUNTIME_DIR, WAYLAND_DISPLAY, DBUS_SESSION_BUS_ADDRESS set and DISPLAY unset.
 - `vmwl/shot.sh [out.png]`, `vmwl/input.py click X Y|dclick|key COMBO|type TEXT`: QEMU screendump / QMP absolute pointer (1280x800),
   compositor independent. They are `vm/shot.sh` / `vm/input.py` with `VM_DIR` pointing here.
-- Project subset exported read-only over virtio-fs (virtiofsd inside bwrap, only these paths exist): guest `/host/{wt/wayland-build,tests,wine-src/nls,wine-src/fonts}`
-  (the build's symlinks point into wine-src). Add more with `VMWL_BIND="wt/foo-build" vmwl/run.sh` (project-relative, same path under /host).
-  `prefixes/` is not shared. Prefixes live on the guest disk (`/home/xl0/...`).
-- Wine: `vmwl/wl.sh 'export WINEPREFIX=$HOME/wp-x WINEDEBUG=-all; B=/host/wt/wayland-build; WINEDLLOVERRIDES="mscoree,mshtml=" $B/wine wineboot -i; $B/wine notepad'`
+- Project subset exported read-only over virtio-fs: guest `/host/{tests,wine-src/nls,wine-src/fonts}` plus `$VMWL_BIND`
+  (space-separated project-relative paths, same path under /host; default `build` = the integ build, whose symlinks point
+  into wine-src). A worktree build needs its own nls and fonts: `VMWL_BIND="build wt/NNN-build wt/NNN/nls wt/NNN/fonts" vmwl/run.sh`.
+  One read-only virtiofsd per path (tags h0, h1, ...), mounted by run.sh over ssh under the skeleton share `host` -> /host
+  (`vmwl/skel`, empty mount points); binds are fixed at VM start. bwrap is gone from run.sh: the sandbox on the 26.04 host has no
+  user namespaces. `prefixes/` is not shared. Prefixes live on the guest disk (`/home/xl0/...`).
+- Wine: `vmwl/wl.sh 'export WINEPREFIX=$HOME/wp-x WINEDEBUG=-all; B=/host/build; WINEDLLOVERRIDES="mscoree,mshtml=" $B/wine wineboot -i; $B/wine notepad'`
   (the override only on wineboot: exported, it reaches the app and breaks every .NET program, see Inventor below; long-running apps:
-  `setsid nohup ... &`; stop with `$B/server/wineserver -k`). The host's glibc-2.35 build runs as is on the guest.
+  `setsid nohup ... &`; stop with `$B/server/wineserver -k`). Host builds run as is on the guest (both Ubuntu 26.04 now).
   X11 instead of Wayland (GNOME/KDE have Xwayland): `export DISPLAY=:0 XAUTHORITY=$(ls /run/user/1000/.mutter-Xwaylandauth.*); unset WAYLAND_DISPLAY`,
   then `wineboot -u` (Wine picks winex11.drv; check with `WINEDEBUG=+loaddll`).
+- gdb on a Wine process that is not a child: `sudo sysctl kernel.yama.ptrace_scope=0` in the guest first (default 1; not persistent).
 - `vmwl/wl_xowner.sh COMPOSITOR [BUILD]`: all wl_xowner cases with PASS/FAIL, protocol-error and xdg-foreign counts; results for fix/134 in `results-134.md`.
 - `vmwl/probes.sh NAME`: notepad, `wl_xowner.exe self` (+ click into the owner), `wl_xswap.exe` in the current session ->
   `vmwl/shots/NAME-*.png`, fresh prefix `~/wp-NAME`.

@@ -3,7 +3,7 @@
 # Screenshots vmwl/shots/NAME-*.png; fresh prefix ~/wp-NAME in the guest (deleted before).
 set -euo pipefail
 cd "$(dirname "$0")"; n=$1; mkdir -p shots
-W="export WINEPREFIX=\$HOME/wp-$n WINEDLLOVERRIDES='mscoree,mshtml=' WINEDEBUG=-all; B=/host/wt/wayland-build; T=/host/tests"
+W="export WINEPREFIX=\$HOME/wp-$n WINEDLLOVERRIDES='mscoree,mshtml=' WINEDEBUG=-all; B=/host/build; T=/host/tests"
 bg() { ./wl.sh "$W; setsid nohup \$B/wine $1 >~/$2.log 2>&1 </dev/null &"; }
 stop() { ./wl.sh "$W; \$B/server/wineserver -k; sleep 1; true"; }
 ./wl.sh "rm -rf ~/wp-$n"; ./wl.sh "$W; \$B/wine wineboot -i >/dev/null 2>&1"
