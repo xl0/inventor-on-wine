@@ -291,7 +291,19 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   New on this host (issue 164, Opus worker on inv): the WebView2 helper processes crash (no
   gpu/renderer/utility children, fresh Crashpad dumps) → Home page black, Assistant blank; and a
   modal "Encountered an improper argument." box after start with EndDialog-invalid-handle spam.
-- Baseline worker (Sonnet) resumed: master baseline, integ compare, host-drift table, warning scan.
+- New-host regression baseline done: master (wt/regress-master-build-h26) 1641 pass / 86 fail /
+  28 crash of 1755 → deps/regress/4e819f054dd…-h26/; integ e00a74f6590 (build-s) 1648 / 81 / 28 of
+  1757 → deps/regress/e00a74f6590…-h26/; compare: 0 REAL, 0 NEW, 3 FLAKY (i386 crypt32:store,
+  user32:input, quartz:filtergraph). Old-host results kept, not comparable. Host drift (23 units
+  changed state between hosts; table in the worker report, inst/h26/): mostly improvements from
+  Mesa 26 and fonts (opengl32, d3d9/d3d8 visual, ddraw7, gdi32:font pass now); worse: ntdll:info
+  and kernel32:thread (CPU affinity), x86_64 kernel32:debugger, ntoskrnl, rpcrt4:server,
+  user32:input (timing). kernel32:path fails on both hosts.
+  gcc 15: one warning in our stack, a false positive (win32u/input.c:868 `clip` maybe uninitialized,
+  commit 41d9173ca57; the loop always runs once) — initialise it at the next rebase of integ.
+- Inventor half of the round (Sonnet worker, inv3, build-s vs build/ A/B): suite, dwgloop, 141 and
+  140 repros, 130 fps, 133 probes, WebView2 state per build, connect times. Push integ and switch
+  the prefixes to a new-host build when it is back and 164 is understood.
 - Local prefix additions: python3-numpy, python3-pil (x/shot.sh and the dialog screenshots need
   them); blas/lapack alternative links recreated in tools/sysroot.sh. Never `rebuild` the prefix
   while a worker runs (it is wiped for ~13 s).
