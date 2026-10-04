@@ -262,12 +262,18 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   `tests/gpu/gbmtest.py` passes: NVIDIA GBM backend, dma-buf export, EGL on GBM. GPU-composited
   headless Wayland and virgl/Venus in vmwl/ (qemu 10.2) are now worth trying. gdm's greeter
   (gnome-shell on Wayland) runs on one GPU.
-- Can't build Wine: no mingw-w64, bison, flex, and no -dev headers at all (X11, freetype, fontconfig,
-  gnutls, vulkan, wayland, xkbcommon/xkbregistry, EGL/GL, cups, krb5, SDL2, udev, v4l, va, dbus...).
-- Missing tools: Xvfb (regress.sh, unit tests), openbox, awesome, picom, xdotool, python3-xlib,
-  ccache, vulkaninfo, wayland-info, winetricks/cabextract (prefix creation only).
-- kernel.yama.ptrace_scope is 1 (was 0): gdb/strace can't attach to running Wine processes (they are
-  not our descendants); start under gdb or have it set to 0.
+- Build deps and tools now come from a project-local prefix (user's choice; no root, no sandbox
+  change): `tools/sysroot.sh` unpacks 233 pinned Ubuntu packages into deps/sysroot (822 MB), list in
+  tools/sysroot.pkgs; regress.sh, prefix.sh, run.sh, x/start.sh pick it up themselves; builds need
+  `eval "$(tools/sysroot.sh env)"`. A fresh integ build from it (build-s/) matches the old feature
+  set and gains native winewayland.drv, winedmo on ffmpeg 8 and ntsync headers (no /dev/ntsync in
+  the sandbox). Xvfb, openbox, awesome, picom, xdotool, python3-xlib, mingw run from it.
+  x/wayland.sh works on gnome-shell 50 (private dbus config without AppArmor mediation).
+  Nested bwrap/user namespaces are blocked inside the sandbox.
+- integ (local) = e00a74f6590: 232278be38e + 141 (4 commits, read by the coordinator) + 134 (6).
+  Worker (Sonnet) running: new-host master build + regress baseline (old-host results are not
+  comparable: ZFS, kernel 7, Mesa 26), integ build + compare, host-drift table. No Inventor yet.
+- kernel.yama.ptrace_scope: was 1 after the reinstall, the user set it back to 0 (gdb attach works).
 - Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
   user, see 152) has very likely changed: the first Inventor start registers this machine as a new
   device. Not started yet; needs the user's go-ahead.
