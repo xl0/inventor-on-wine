@@ -285,9 +285,16 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   (`tools/regress.sh run wt/regress-master-build-h26 -o deps/regress/4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf-h26 -f`),
   integ run (`-o deps/regress/<e00a74f6590 full hash>-h26`) + compare, host-drift table, warning scan;
   then start the prefixes (first Inventor launch on the new device id) and the Inventor checks.
-- Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
-  user, see 152) has very likely changed: the first Inventor start registers this machine as a new
-  device. Not started yet; needs the user's go-ahead.
+- First Inventor run on the new host (inv, :98, old-host binary build/): headless NVIDIA Xorg comes
+  up with modeset=1 (GL 4.6 NVIDIA 595), the licence works without sign-in (trial, 25 days left;
+  the new machine-id did not cause a device-limit or sign-in prompt), `hello` passes (connect 20.6 s).
+  New on this host (issue 164, Opus worker on inv): the WebView2 helper processes crash (no
+  gpu/renderer/utility children, fresh Crashpad dumps) → Home page black, Assistant blank; and a
+  modal "Encountered an improper argument." box after start with EndDialog-invalid-handle spam.
+- Baseline worker (Sonnet) resumed: master baseline, integ compare, host-drift table, warning scan.
+- Local prefix additions: python3-numpy, python3-pil (x/shot.sh and the dialog screenshots need
+  them); blas/lapack alternative links recreated in tools/sysroot.sh. Never `rebuild` the prefix
+  while a worker runs (it is wiped for ~13 s).
 - ssh from inside the sandbox fails on the system config ("Bad owner or permissions on
   /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf": root-owned files look unowned in the user
   namespace). Fixed on our side: both repos use `core.sshCommand = ssh -F /dev/null`, and

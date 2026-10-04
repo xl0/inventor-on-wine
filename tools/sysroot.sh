@@ -40,6 +40,9 @@ fixup() {
 	# the win32 variant (priority 60) beats posix (30) in Debian's auto mode, so link every *-win32.
 	local f
 	for f in "$S"/usr/bin/*-w64-mingw32-*-win32; do ln -sfn "$(basename "$f")" "${f%-win32}"; done
+	# libblas3/liblapack3 are reached through alternatives (libblas.so.3 -> blas/libblas.so.3);
+	# without the link numpy fails with "import numpy from its source directory".
+	for f in "$S/usr/lib/$MA"/{blas,lapack}/lib*.so.3; do ln -sfn "${f#"$S/usr/lib/$MA/"}" "$S/usr/lib/$MA/$(basename "$f")"; done
 	# pkg-config: .pc files say prefix=/usr; without this -I/-L point at /usr and miss the prefix.
 	# (PKG_CONFIG_SYSROOT_DIR would also prefix -I/-L of the system's own .pc files.)
 	find "$S/usr" -name '*.pc' -type f -exec sed -i -E "s#(^|[ =])/usr(/|\$)#\\1$S/usr\\2#g" {} +
