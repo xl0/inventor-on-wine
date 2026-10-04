@@ -288,9 +288,15 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
 - First Inventor run on the new host (inv, :98, old-host binary build/): headless NVIDIA Xorg comes
   up with modeset=1 (GL 4.6 NVIDIA 595), the licence works without sign-in (trial, 25 days left;
   the new machine-id did not cause a device-limit or sign-in prompt), `hello` passes (connect 20.6 s).
-  New on this host (issue 164, Opus worker on inv): the WebView2 helper processes crash (no
-  gpu/renderer/utility children, fresh Crashpad dumps) → Home page black, Assistant blank; and a
-  modal "Encountered an improper argument." box after start with EndDialog-invalid-handle spam.
+  [164](issues/164-new-host-webview2-children-crash.md), fixed in the environment: the host has no
+  mesa-vulkan-drivers, so no device_select Vulkan layer; DRI_PRIME was ignored, wined3d took GPU
+  16:00.0 and every D3D11CreateDevice on :98 failed (WebView2 gone → Home page black; Inventor's
+  view init → "Encountered an improper argument."). Package added to deps/sysroot: Home page,
+  Assistant and trial popup render, `hello` passes without dialogs. Anything started without the
+  sysroot env still fails (host fix: `apt install mesa-vulkan-drivers`).
+  Follow-ups: regress.sh's `VK_ICD_FILENAMES=…/lvp_icd.x86_64.json` does not exist here (file is
+  lvp_icd.json, now in deps/sysroot), so the h26 baselines ran with no Vulkan driver;
+  x/shot.sh does not load the sysroot env (numpy/PIL); `sysroot.sh add` wipes the prefix like rebuild.
 - New-host regression baseline done: master (wt/regress-master-build-h26) 1641 pass / 86 fail /
   28 crash of 1755 → deps/regress/4e819f054dd…-h26/; integ e00a74f6590 (build-s) 1648 / 81 / 28 of
   1757 → deps/regress/e00a74f6590…-h26/; compare: 0 REAL, 0 NEW, 3 FLAKY (i386 crypt32:store,

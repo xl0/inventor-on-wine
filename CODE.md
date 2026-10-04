@@ -444,6 +444,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   `tools/gdb/bpbt.py`: `bpbt NtFoo N SKIP` = PE callers of an Nt* call on a live process (098).
 - `tools/mdmp.py DUMP [-m] [-n N]`: minidump (Autodesk CER `Temp\Inventor<ts>.dmp`) -> exception, registers,
   module+RVA stack scan of the faulting thread (152).
+- `tools/pdbpub.py FILE.pdb RVA...`: nearest public symbol per RVA from a Microsoft symbol-server PDB (164).
 - `tools/wineserver-reqstats.patch` (debug only): SIGHUP to wineserver dumps request counts and
   handler time per client thread (+ view counts) to /tmp/wineserver-reqstats.txt (098).
 - `tools/decomp.sh BIN funcs|decomp|xrefs|strings|imports [ARG]` — headless
@@ -588,7 +589,13 @@ launches; previous device-limit errors do not authorize pausing another device.
 
 # Running Wine with GPU
 
-    DISPLAY=:98 DRI_PRIME=pci-0000_ca_00_0 WINE_D3D_CONFIG=renderer=vulkan build/wine app.exe
+    tools/sysroot.sh run env DISPLAY=:98 DRI_PRIME=pci-0000_ca_00_0 WINE_D3D_CONFIG=renderer=vulkan build/wine app.exe
+
+The sysroot env is required (26.04 host): DRI_PRIME only works through Mesa's device_select Vulkan layer, which
+lives in deps/sysroot (mesa-vulkan-drivers). Without it wined3d takes Vulkan device 0 (16:00.0) and every
+D3D11CreateDevice on another GPU's display fails with 0x8007000e ("Queue family does not support presentation"):
+WebView2 dies ("GPU process isn't usable"), Inventor shows "Encountered an improper argument." (164).
+Check: `tests/d3d11_present.exe`.
 
 Long-running app sessions (installers, Inventor): launch with
 `setsid nohup ... &` so a Claude Code restart doesn't kill part of the process
@@ -602,6 +609,8 @@ tree (ODIS helpers died once, leaving Installer.exe spinning on dead COM peers).
   Rootless Xorg can't get DRM master → `UseDisplayDevice none` (no modesetting).
 - Vulkan device order is ac, llvmpipe, 34, 16, ca; wined3d takes the first.
   Mesa's implicit device_select layer + `DRI_PRIME=pci-0000_ca_00_0` fixes it.
+  26.04 host: order 16, 34, ac, ca (+ llvmpipe with the sysroot env); the layer is not installed
+  system-wide, only in deps/sysroot (164).
 - Wine's full d3d11 test suite still hits VK_ERROR_INITIALIZATION_FAILED on some
   swapchain and crashes mid-run on this setup; single-swapchain apps work.
 - DXVK reports the RTX as AMD (1002:73df) by default; set

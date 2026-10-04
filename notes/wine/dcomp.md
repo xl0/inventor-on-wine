@@ -30,6 +30,11 @@
     is a CHECK (int3); 6 GPU crashes (~30 s) then software compositing. All succeed since
     fix/085. IDXGIDevice2::EnqueueSetEvent failing at the first present only makes a
     >100 MB DumpWithoutCrashing. The compositor still ignores offsets/clips/transforms.
+  - No usable D3D11 device at all (164: wined3d on a Vulkan device that cannot present to the display,
+    D3D11CreateDevice 0x8007000e): hardware-path GPU processes exit quietly (7 per browser), then three software-mode ones
+    (`--use-gl=disabled`) die at `output_device_backing.cc:150 D3D11CreateDevice failed` (the software presenter wants a
+    WARP device), then the BROWSER process dies: `gpu_data_manager_impl_private.cc:436 GPU process isn't usable. Goodbye.`
+    No msedgewebview2 process is left; the host app's web panes stay blank/black.
   - Crashpad dumps (EBWebView/Crashpad/reports) name the site: `strings -a` shows
     `ptype`, `DumpWithoutCrashing-file/-line`; Chromium source (github.com/chromium mirror).
   - software path (see also 023: it presents with a dirty rect): DCompositionCreateDevice(NULL), CreateTargetForHwnd(its own child

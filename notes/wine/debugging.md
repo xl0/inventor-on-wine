@@ -85,7 +85,11 @@
 - CoreCLR frames (`coreclr.dll+RVA`) without disassembly: Microsoft publishes the PDB. RSDS GUID+age from
   the PE debug directory → `https://msdl.microsoft.com/download/symbols/coreclr.pdb/<GUID><age>/coreclr.pdb`,
   `llvm-pdbutil-14 dump --publics --section-headers`, nearest public symbol per RVA; then read the function in
-  dotnet/runtime at the matching tag (124).
+  dotnet/runtime at the matching tag (124). No llvm-pdbutil on the 26.04 host: `tools/pdbpub.py FILE.pdb RVA...` does
+  the lookup (works for any MS module with a published PDB, e.g. mfc140u.amd64.pdb; MFC's source ships with Visual Studio).
+- C++ exception already caught, box on screen (MFC `ReportError`): the catch block runs on top of the thrower's frames,
+  which sehbt skips. `stackscan RSP RSP+0x5000` on that thread, find `_CxxThrowException`'s return slot above
+  `call_consolidate_callback`, then `sehfrom SLOT` unwinds the throw chain (164: COleDocument::OnIdle's ENSURE).
 - Standalone .NET 10 tests without an SDK: compile C# on the VM with the .NET 4.8 csc
   (`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /platform:x64`), put a
   `X.runtimeconfig.json` (framework Microsoft.NETCore.App 10.0.0, rollForward LatestMinor) next to it and run
