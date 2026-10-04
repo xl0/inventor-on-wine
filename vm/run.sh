@@ -5,8 +5,10 @@
 #   vm/share/ is exported over virtio-fs (tag "share"); virtiofsd exits with QEMU.
 set -euo pipefail
 cd "$(dirname "$0")"
+# Big images live outside /home (no redundancy there: RAID0); everything else stays here.
+DATA=${WINE_DATA:-/data/users/xl0/wine} DISK=$DATA/win.qcow2
 
-[ -f win.qcow2 ] || qemu-img create -f qcow2 win.qcow2 160G
+[ -f "$DISK" ] || qemu-img create -f qcow2 "$DISK" 160G
 [ -f vars.fd ] || cp /usr/share/OVMF/OVMF_VARS_4M.ms.fd vars.fd
 mkdir -p tpm
 swtpm socket --tpm2 --tpmstate dir=tpm --ctrl type=unixio,path=tpm/sock --daemon --terminate
@@ -23,7 +25,7 @@ if [ "${1:-}" = install ]; then
   xorriso -as mkisofs -quiet -J -o unattend.iso -graft-points \
     autounattend.xml=autounattend.xml setup.ps1=setup.ps1 authorized_keys=id_ed25519.pub
   extra=(
-    -drive file=../iso/Win11_25H2_English_x64_v2.iso,media=cdrom,if=none,id=cd0,readonly=on
+    -drive file="$DATA/iso/Win11_25H2_English_x64_v2.iso",media=cdrom,if=none,id=cd0,readonly=on
     -device ide-cd,drive=cd0,bus=ide.0,bootindex=0
     -drive file=unattend.iso,media=cdrom,if=none,id=cd1,readonly=on
     -device ide-cd,drive=cd1,bus=ide.1
@@ -40,7 +42,7 @@ qemu-system-x86_64 \
   -object memory-backend-memfd,id=mem,size=32G,share=on -numa node,memdev=mem \
   -chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=share \
   -chardev socket,id=tpm,path=tpm/sock -tpmdev emulator,id=tpm0,chardev=tpm -device tpm-crb,tpmdev=tpm0 \
-  -drive file=win.qcow2,if=none,id=disk0,cache=unsafe,discard=unmap \
+  -drive file="$DISK",if=none,id=disk0,cache=unsafe,discard=unmap \
   -device nvme,drive=disk0,serial=winref0,bootindex=1 \
   -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22 -device e1000e,netdev=net0 \
   -device qemu-xhci -device usb-tablet -vga std \

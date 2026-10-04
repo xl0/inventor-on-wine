@@ -58,7 +58,7 @@ EOF
 	# so a -U read of the live qcow2 is consistent. Own vars.fd/tpm copies.
 	local B=$T/basevm
 	rm -rf "$B"; mkdir -p "$B"
-	qemu-img convert -U -l snapshot.name=base -O qcow2 "$ROOT/vm/win.qcow2" "$B/base.qcow2"
+	qemu-img convert -U -l snapshot.name=base -O qcow2 "${WINE_DATA:-/data/users/xl0/wine}/win.qcow2" "$B/base.qcow2"
 	cp "$ROOT/vm/snap/base/vars.fd" "$B/"; cp -r "$ROOT/vm/snap/base/tpm" "$B/"
 	swtpm socket --tpm2 --tpmstate dir="$B/tpm" --ctrl type=unixio,path="$B/tpm/sock" --daemon --terminate
 	qemu-system-x86_64 -name winbase -machine q35,accel=kvm,smm=on \

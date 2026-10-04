@@ -1,7 +1,7 @@
 # vmwl: Linux VM for testing winewayland.drv against real compositors
 
 Ubuntu 26.04 LTS guest (kernel 7.0, Mesa 26.0, mutter/gnome-shell 50.1, KDE Plasma/KWin 6, sway 1.11).
-qemu/KVM, 8 vCPU, 16 GB, 120 GB qcow2 (`disk.qcow2`, ~5 GB used), virtio-vga (KMS, software GL = llvmpipe),
+qemu/KVM, 8 vCPU, 16 GB, 120 GB qcow2 (`/data/users/xl0/wine/vmwl-disk.qcow2`, ~5 GB used), virtio-vga (KMS, software GL = llvmpipe),
 usb-tablet (absolute pointer), user networking. Everything listens on 127.0.0.1 only: SSH :2223, VNC :5911.
 Not the Windows VM (`vm/`); nothing here touches it.
 
@@ -26,7 +26,7 @@ Not the Windows VM (`vm/`); nothing here touches it.
 - `vmwl/probes.sh NAME`: notepad, `wl_xowner.exe self` (+ click into the owner), `wl_xswap.exe` in the current session ->
   `vmwl/shots/NAME-*.png`, fresh prefix `~/wp-NAME`.
 - Snapshot: internal qcow2 snapshot `provisioned` (clean guest, no compositor running, no prefixes). Back to it with the VM stopped:
-  `qemu-img snapshot -a provisioned vmwl/disk.qcow2`. New one: `-d provisioned` then `-c provisioned`. Full reset: delete `disk.qcow2`, `seed.iso`, `id_ed25519*`, run.sh again (re-provision: `ssh.sh 'sudo bash -s' < provision.sh`, then `provision2.sh`).
+  `qemu-img snapshot -a provisioned /data/users/xl0/wine/vmwl-disk.qcow2`. New one: `-d provisioned` then `-c provisioned`. Full reset: delete `disk.qcow2`, `seed.iso`, `id_ed25519*`, run.sh again (re-provision: `ssh.sh 'sudo bash -s' < provision.sh`, then `provision2.sh`).
 
 ## Image provenance
 `https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img` (825 MiB, published 2026-09-29, release build

@@ -6,13 +6,14 @@
 #   (space-separated project-relative paths, same layout in the guest). virtiofsd exits with QEMU.
 set -euo pipefail
 cd "$(dirname "$0")"
+DISK=${WINE_DATA:-/data/users/xl0/wine}/vmwl-disk.qcow2  # big image outside /home
 ROOT=$(realpath ..)
 
-if [ ! -f disk.qcow2 ]; then
+if [ ! -f "$DISK" ]; then
   ./fetch.sh
   [ -f id_ed25519 ] || ssh-keygen -q -t ed25519 -N '' -C vmwl -f id_ed25519
-  qemu-img convert -O qcow2 dl/ubuntu-26.04-server-cloudimg-amd64.img disk.qcow2
-  qemu-img resize -q disk.qcow2 120G
+  qemu-img convert -O qcow2 dl/ubuntu-26.04-server-cloudimg-amd64.img "$DISK"
+  qemu-img resize -q "$DISK" 120G
   t=$(mktemp -d)
   sed "s|@PUBKEY@|$(cat id_ed25519.pub)|" user-data.in > $t/user-data
   printf 'instance-id: vmwl-1\nlocal-hostname: %s\n' "$(hostname)" > $t/meta-data
@@ -37,7 +38,7 @@ qemu-system-x86_64 \
   -name vmwl -machine q35,accel=kvm -cpu host -smp 8 -m 16G \
   -object memory-backend-memfd,id=mem,size=16G,share=on -numa node,memdev=mem \
   -chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=host \
-  -drive file=disk.qcow2,if=none,id=disk0,cache=unsafe,discard=unmap -device virtio-blk-pci,drive=disk0,bootindex=1 \
+  -drive file="$DISK",if=none,id=disk0,cache=unsafe,discard=unmap -device virtio-blk-pci,drive=disk0,bootindex=1 \
   -drive file=seed.iso,media=cdrom,if=none,id=cd0,readonly=on -device ide-cd,drive=cd0,bus=ide.0 \
   -netdev user,id=net0,hostfwd=tcp:127.0.0.1:2223-:22 -device virtio-net-pci,netdev=net0 \
   -device qemu-xhci -device usb-tablet \

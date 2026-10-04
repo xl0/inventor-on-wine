@@ -274,20 +274,17 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   Worker (Sonnet) running: new-host master build + regress baseline (old-host results are not
   comparable: ZFS, kernel 7, Mesa 26), integ build + compare, host-drift table. No Inventor yet.
 - kernel.yama.ptrace_scope: was 1 after the reinstall, the user set it back to 0 (gdb attach works).
-- Disk move (user, 2026-10-04): bulky data goes from /home (ZFS, 2 T) to /data (XFS on RAID0 of
-  three NVMe partitions, 6.2 T free, no redundancy). The user restarts the sandbox with /data
-  writable; then move prefixes/ (151 G), vm/ (94 G), wt/ (44 G), vmwl/ (34 G), inst/, iso/, build*/,
-  deps/ with `rsync -aX` and leave symlinks at the old paths (build dirs, worktrees and scripts have
-  absolute paths). Stays in /home: the repo, wine-src (all branches), login.txt, notes. Ask before
-  deleting prefixes/inv-lic (25 G, unused). Nothing may be running during the move.
-  After the restart: nothing of ours runs (checked). Baseline work so far: builds done on the new
-  host — wt/regress-master-build-h26 (wine-11.18-218-g4e819f054dd) and build-s
-  (wine-11.18-531-ge00a74f6590, with winewayland.so). regress.sh makes its template fresh on every
-  run, nothing to recreate. Not done: the master baseline (partial, rerun with -f:
-  `tools/regress.sh run wt/regress-master-build-h26 -o deps/regress/4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf-h26 -f`),
-  the integ run (`-o deps/regress/<e00a74f6590 full hash>-h26`) + compare, the host-drift table
-  (new vs old master results), and a warning scan of our patches from a clean build log.
-  Order after the restart: move to /data → rebuild is not needed (symlinks) → baseline → compare.
+- Disk layout (user, 2026-10-04): everything stays in the project dir on /home (ZFS, compressed ~2x);
+  only the big images live in /data/users/xl0/wine (XFS on RAID0, no redundancy, no symlinks):
+  win.qcow2, vmwl-disk.qcow2, iso/. vm/run.sh, vmwl/run.sh, transplant.sh use $WINE_DATA (default
+  that path). Pruned: prefixes/inv-lic and inv-vm, merged worktrees (branches kept), all old-host
+  builds under wt/ and build-next/. The user allowed deleting prefixes as needed and using the licence.
+- New-host builds: wt/regress-master-build-h26 (wine-11.18-218-g4e819f054dd) and build-s
+  (wine-11.18-531-ge00a74f6590, with winewayland.so). wt/132 and wt/157 have no build (rebuild
+  natively when resumed). Next: master baseline
+  (`tools/regress.sh run wt/regress-master-build-h26 -o deps/regress/4e819f054dd2d9ee855ee3f1e30d8c1bb8f80fcf-h26 -f`),
+  integ run (`-o deps/regress/<e00a74f6590 full hash>-h26`) + compare, host-drift table, warning scan;
+  then start the prefixes (first Inventor launch on the new device id) and the Inventor checks.
 - Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
   user, see 152) has very likely changed: the first Inventor start registers this machine as a new
   device. Not started yet; needs the user's go-ahead.

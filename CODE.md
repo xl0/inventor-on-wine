@@ -390,7 +390,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   `WINRUN_TIMEOUT` (600 s) kills hung runs (exit 124).
   Snapshots: qcow2 internal (`clean` = fresh install, `base` = + virtio-fs) with
   matching `snap/<name>/{vars.fd,tpm}`. Restore: VM off, `qemu-img snapshot -a
-  NAME win.qcow2`, copy vars.fd + tpm back.
+  NAME /data/users/xl0/wine/win.qcow2`, copy vars.fd + tpm back.
 - virtio-fs share: host `vm/share/` = guest `Z:`. Host side: Rust virtiofsd
   (unprivileged, `--sandbox none`; `VFS_LOG=debug vm/run.sh` for tracing),
   guest RAM is a shared memfd. Guest side: WinFsp + viofs driver + VirtioFsSvc.
@@ -399,7 +399,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   session via winrun — Z: isn't visible to SSH/session 0; over SSH plain `scp`
   is fast: 3.4 GB in ~22 s) for bulk data, then
   run things from C: (never from Z:, it isn't NTFS).
-- `iso/` — Windows ISO, Inventor 2027.1 web installer.
+- `/data/users/xl0/wine/` (XFS on RAID0, no redundancy; `WINE_DATA` overrides): the big images only —
+  `win.qcow2` (Windows VM), `vmwl-disk.qcow2` (Linux VM), `iso/` (Windows ISO, Inventor 2027.1 web
+  installer). Everything else, incl. prefixes and builds, stays in the project dir (ZFS, compressed ~2x).
 - `inst/` — installer work: `webinstall/` (7z-extracted web installer), logs.
 - :98 runs openbox (started by x/start.sh); without a WM Wine never unmaps
   hidden windows (issue 029).
