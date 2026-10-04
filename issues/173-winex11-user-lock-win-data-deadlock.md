@@ -128,9 +128,10 @@ inv2 was not leased again and is on build/; my Xvfb servers and scratch wineserv
 Builds: wt/173-build = fix/173 tip. wt/173-dbg (detached) = integ + the three 173 commits + fix/171's three commits
 (49738642551, af812239de0, 784c189d22e cherry-picked) + the debug patch uncommitted (= tests/r173/lockorder-debug.patch);
 wt/173-dbg-build is built from that (win32u, winex11, user32 tests) but nothing has been run on it yet.
-Second session, before the reboot (10 minutes of stress, lanes killed, no summary lines): visual_race on fix without a WM
-13 started, 12 DONE, 0 X errors (1 killed mid-run); integ on :1414 7 of 7 X_GetProperty BadWindow; the 171 worker's
-`ulwrace.exe destroy 2000 1 - x` on integ 2 of 2 X_GetProperty BadWindow; it did not get to run on the fix build.
+Second session, before the reboot (a few minutes of stress, lanes killed, no summary lines, counts from the output files):
+visual_race on fix without a WM: 3 runs started, 2 DONE, 0 X errors (1 killed mid-run); integ on :1414: 10 runs died of
+X_GetProperty BadWindow (7 visual_race and 2 `ulwrace.exe destroy 2000 1 - x` runs are listed in inst/173/out/laneB2.txt);
+ulwrace did not get to run on the fix build. Too little to count as verification: redo step 1 in full.
 `inst/173/x.sh start` now brings up :1410, :1414, :1416 (no WM) and :1411, :1415 (openbox).
 Remaining, in order:
 1. Stress (scripts in inst/173/, copies in tests/r173/), fix on :1410/:1411, integ contrast on :1414/:1415:
