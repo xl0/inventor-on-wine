@@ -324,6 +324,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   steps / owner-side clipping with idle sources / 200-cycle leak check on the host Wayland session, judged by colour boxes in screenshots; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
   `r131/comp_probe.c`: what a composition swapchain (D3D11, D3D12) answers to the window-related calls and invalid
   descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
+  `r165/deadwin.c [PRESENTS] [keep|detach]` + `detach.c` (DLL): D3D11 swapchain presented after its window is destroyed,
+  a buffer released at process detach (150, 165: Vulkan renderer exit code 3 + wined3d_not_from_cs() assertion; `detach`: 169).
   `r133/idle.c [-v] [-x EXE] [NAME..]`: WaitForInputIdle scenarios, child threads scripted per scenario (which
   thread / which wait makes a process input idle, later calls, console children; `wine_*` = Wine-only stand-in for a
   driver's clipboard manager thread); the child is a GUI/console-patched copy of the exe (133, 143).

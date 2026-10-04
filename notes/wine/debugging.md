@@ -103,3 +103,13 @@
   exception is thrown in the main frame's WM_CREATE and swallowed by Wine's callback handler; the crash comes later (152).
 - Minidumps without a debugger: `tools/mdmp.py DUMP [-m] [-n FRAMES]` prints the exception (code, address, registers) and
   scans the faulting thread's stack for return addresses as module+RVA; `tools/decomp.sh BIN decomp RVA` names the function.
+- Process that exited "from the wrong thread" (165): `err:vulkan:vkXxx Exception 0x... in Unix call.` means winevulkan
+  called `ExitProcess(3)` on the thread that made the Vulkan call, for wined3d the command stream thread; DLL detach code
+  then runs there (wined3d's `cs->thread_id != GetCurrentThreadId()` assertion box when an app DLL releases D3D objects).
+  Signs without a log: `/proc/PID/environ` of the process gives "Permission denied" (thread group leader is a zombie:
+  the main thread was killed, another thread lives on; `pgrep` still lists it, `prefix.sh kill-inventor` and run.sh's
+  "is Inventor running" check don't see it) and a 0-byte `Temp\Inventor<ts>.dmp`. A harness `dialog-N.png` in the
+  *previous* scenario's folder dates the box.
+- Forcing a "present vs. window destroyed" race: make the command stream thread lag (a Sleep before each present,
+  inst/165/debug-165.patch `WINE_165_PRESENT_DELAY=ms`); the same patch prints who calls RtlExitUserProcess and the
+  stack of a failing `wined3d_not_from_cs()`.

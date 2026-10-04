@@ -1,5 +1,5 @@
 # 150 Vulkan renderer: swapchain of a destroyed window fails to recreate, then crashes when destroyed
-Status: draft · Found in: 131 review, integ d18a5dcd1ef (predates fix/131), 2026-10-03
+Status: fixed (not merged, with 165) · Branch: fix/165 954f2d2e4c7 · Found in: 131 review, integ d18a5dcd1ef (predates fix/131), 2026-10-03
 
 ## Symptom
 D3D11 swapchain on an HWND, the window is destroyed, then Present and Release of the swapchain, with
@@ -31,3 +31,11 @@ process drops the target, this path can take the GPU process down.
 Leave the swapchain in a clean "no Vulkan swapchain" state when recreation fails (NULL the pointers, zero
 image_count, VK_NULL_HANDLE for the handles) so later presents skip or retry and destruction is safe; decide what
 Present should do meanwhile (Windows: S_OK). A test with a destroyed window in d3d11 or dxgi tests.
+
+## Outcome (165)
+This is what took Inventor down in [165](165-wined3d-not-from-cs-assert.md): a view presented once after its window
+was destroyed, the fault in the Vulkan Unix call made winevulkan call ExitProcess(3) on the command stream thread,
+and Inventor's detach-time Release there hit the `wined3d_not_from_cs()` assertion.
+Fixed on fix/165: `954f2d2e4c7 wined3d: Leave no stale Vulkan swapchain behind when recreating it fails.` (the
+destroy function resets what it frees; presents go through the GDI path afterwards, Present stays S_OK) and
+`ea4f722a1f3 dxgi/tests: Test presenting to a destroyed window.` Probe: `tests/r165/deadwin.exe`.
