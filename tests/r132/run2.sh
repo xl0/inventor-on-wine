@@ -1,7 +1,7 @@
 #!/bin/bash
 # run2.sh TAG "[host args]|[p1 args]|[p2 args]": xp host + a source process with its own child in each panel (topology B); screenshot after 6 s
 . "$(dirname "$0")/env.sh"
-O=inst/132/m1/$1; shift
+O=${R132_OUT:-inst/132/m1}/$1; shift
 IFS='|' read -r HA FA CA <<<"$*"
 export WINE_D3D_CONFIG=${WINE_D3D_CONFIG:-renderer=gl}
 (WINEDEBUG=${HDEBUG:--all} setsid nohup $W tests/r132/xp.exe host secs=${SECS:-20} $HA > $O-host.out 2>&1 &)

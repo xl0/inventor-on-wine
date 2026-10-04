@@ -1,6 +1,7 @@
 /* winewayland lock-order stress (issue 157): several threads change window state at once.
  * Build: x86_64-w64-mingw32-gcc -O1 -o lockstress.exe lockstress.c -lopengl32 -lgdi32 -luser32
  *   lockstress N [SEED] [nogl]     N operations per thread; prints "DONE" when every thread finished
+ *   lockstress glhide N            one thread hides/shows a toplevel N times, another swaps on its GL child
  * Threads: main (A main window, D owned popup, F popup flipping managed/unmanaged with a GL child G,
  * L layered popup, C child <-> toplevel), two (B main, E popup owned by A), gl (SwapBuffers on G),
  * poke (style/text/layered/position changes and painting on the other threads' windows),
@@ -10,6 +11,7 @@
 #include <GL/gl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define NOZ (SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
 
@@ -125,7 +127,7 @@ static DWORD WINAPI gl_proc(void *arg)
     }
     /* with an interval the swap waits for a frame callback, forever while F is hidden or minimized (issue 163) */
     if ((swap_interval = (void *)wglGetProcAddress("wglSwapIntervalEXT"))) swap_interval(0);
-    for (i = 0; i < N; i++)
+    for (i = 0; i < N * 100 && !stop; i++)
     {
         glClearColor((i & 1) ? 1.0f : 0.0f, 0.5f, (i & 2) ? 1.0f : 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -197,6 +199,24 @@ int main(int argc, char **argv)
     unsigned seed = argc > 2 ? atoi(argv[2]) : 1, s; int i; HANDLE th[4]; DWORD last = 0;
 
     t0 = GetTickCount();
+    if (argc > 2 && !strcmp(argv[1], "glhide"))
+    {
+        /* one UI thread hiding and showing a toplevel while another thread swaps on its GL child (issue 170) */
+        N = atoi(argv[2]);
+        F = mk("F hide/show", RGB(0, 0, 255), WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN, 0, 160, 180, 260, 180, NULL);
+        G = mk("G gl child", RGB(64, 64, 64), WS_CHILD | WS_VISIBLE, 0, 20, 40, 120, 90, F);
+        pump(1000);
+        running = 1;
+        CreateThread(NULL, 0, gl_proc, NULL, 0, NULL);
+        for (i = 0; i < N && running; i++)
+        {
+            ShowWindow(F, SW_HIDE); pump(i % 3);
+            ShowWindow(F, SW_SHOWNA); pump(i % 5);
+        }
+        stop = 1;
+        lg("DONE %d hide/show, %ld swaps", i, ops);
+        return 0;
+    }
     N = argc > 1 ? atoi(argv[1]) : 300;
     if (argc > 3) use_gl = 0;
     A = mk("A main", RGB(255, 0, 0), WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 60, 60, 420, 320, NULL);

@@ -3,7 +3,7 @@
 # (issue 132 M2): every step is a change made by the owner process only. Screenshots inst/132/m1/clip-N.png.
 . "$(dirname "$0")/env.sh"
 export WINEDEBUG=-all WINE_D3D_CONFIG=${WINE_D3D_CONFIG:-renderer=gl}
-O=inst/132/m1/clip
+O=${R132_OUT:-inst/132/m1}/clip
 shot() { sleep ${2:-1.2}; x/wshot.sh $O-$1.png >/dev/null; echo "--- $1"; python3 tests/r132/pix.py $O-$1.png | grep -v "white\|black\|grey"; }
 ctl() { $W tests/wl_winctl.exe "$@" >/dev/null 2>&1; }
 (WINEDEBUG=${HDEBUG:--all} setsid nohup $W tests/r132/xp.exe host secs=100 > $O-host.out 2>&1 &)

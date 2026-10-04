@@ -2,7 +2,7 @@
 # geo.sh: geometry / lifetime scenarios with screenshots after each step (inst/132/m1/geo-N.png)
 . "$(dirname "$0")/env.sh"
 export WINEDEBUG=-all WINE_D3D_CONFIG=${WINE_D3D_CONFIG:-renderer=gl}
-O=inst/132/m1/geo
+O=${R132_OUT:-inst/132/m1}/geo
 shot() { sleep ${2:-1.5}; x/wshot.sh $O-$1.png >/dev/null; echo "--- $1"; python3 tests/r132/pix.py $O-$1.png | grep -v "white\|black"; }
 ctl() { $W tests/wl_winctl.exe "$@" >/dev/null 2>&1; }
 (WINEDEBUG=${HDEBUG:--all} setsid nohup $W tests/r132/xp.exe host secs=90 > $O-host.out 2>&1 &)

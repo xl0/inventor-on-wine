@@ -427,6 +427,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   `tests/r157/`: winewayland lock-order tools (157): `lockstress.c` (multi-thread window state stress), `batch.sh` /
   `g-run.sh` / `g-utest.sh` (stress matrix and conformance units in the guest, watchdog + gdb backtraces),
   `lockorder-debug.patch` + `lockorder.py` (debug build that reports win32u locks taken under driver mutexes).
+  `r132.sh` (132's probes on any build, host session), `sinkstress.sh` (lockstress with 132's sources in its windows).
   Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
   `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).

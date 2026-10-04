@@ -3,7 +3,7 @@
 Usage: lockorder.py LOG... ; prints one line per distinct (held -> acquired, call chain)."""
 import re, subprocess, sys, collections
 
-ROOT = '/home/xl0/projects/wine/'
+ROOT = '/home/xl0/projects/wine/'  # guest paths /host/... map here
 cache = {}
 
 def sym(path, off):

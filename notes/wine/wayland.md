@@ -184,6 +184,7 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 win32u's locks come first, the driver's window data last:
 `client surfaces_lock (win32u window.c)` -> `user lock` -> `window surface lock` -> `win_data_mutex` -> `pointer / keyboard /
 text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
+132's `source_mutex` (wayland_remote.c) is a leaf: taken with no driver lock held or under win32u's client surfaces_lock.
 - Why this way round: win32u calls the surface flush with the window pointer (= user lock) held (`apply_window_pos` ->
   `update_surface_region` -> `window_surface_set_shape`), and the client surface callbacks (update, detach, present) with its
   client `surfaces_lock` held; in this driver all of them need win_data (window contents and the wayland_surface live there).
@@ -204,6 +205,9 @@ text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
   user / display / client surfaces / window surface locks to the driver, which prints `LOCKORDER held -> acquired` + backtrace
   when the thread holds a driver mutex, and every new pair of driver mutexes; `tests/r157/lockorder.py LOG...` folds them.
   Expected after 157: only `win_data -> win32u:display`, `win_data -> pointer/keyboard/text_input/seat`, `seat -> data_device`.
+- On a GPU compositor (host session) lockstress also hits 170 (protocol error when a toplevel with a GL child is shown again)
+  and 171 (win32u surface list race, hang on dce.c's surfaces_lock): not lock order problems. `tests/r157/sinkstress.sh` =
+  lockstress + 132's sources, `tests/r157/r132.sh` = 132's probes on another build.
 - Stress: `inst/134-review/rv.exe rapid N`, `tests/r157/lockstress.c` (threads changing styles, text, owners, roles, layered
   attributes, GL child, short-lived threads); `tests/r157/batch.sh COMPOSITOR BUILD RUNS` runs them in the vmwl session
   under a watchdog (`g-run.sh`: gdb backtraces of a hung run).

@@ -1,5 +1,5 @@
 # 157 winewayland: deadlock between win32u's user lock and the driver's win_data_mutex (two threads showing/hiding windows)
-Status: fixed on fix/157 (5 commits on integ e00a74f6590), verified in the VM, awaiting review · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
+Status: fixed on fix/157 (5 commits, rebased onto integ b5d75449ffe with 132; old tip kept as fix/157-v1), verified in the VM and with 132's probes, awaiting review · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
 app with two UI threads changing window visibility can hang for good
 
 ## Symptom
@@ -93,7 +93,7 @@ Called without the user lock (read at the call sites): pWindowPosChanging, pWind
 pSetWindowIcons, pDestroyWindow (both sites, after release_win_ptr / user_unlock), pSetCursor, pClipCursor, pSetCursorPos,
 pSetLayeredWindowAttributes, pUpdateLayeredWindow, pCreateWindowSurface, pSysCommand.
 
-## Fix (branch fix/157 on integ e00a74f6590, winewayland.drv only)
+## Fix (winewayland.drv only; hashes here and in the table are the first series = fix/157-v1 on e00a74f6590, rebased hashes below)
 1. a267640e53b `winewayland: Get the window styles and text before locking the window data.` WAYLAND_WindowPosChanged reads
    style, ex style and (for windows with a surface) the text next to the existing is_window_managed / owner lookup and passes
    them down (rows 1-3).
@@ -183,3 +183,64 @@ and is killed by PID). ok / hang / exited early:
 - vmwl/wl_xowner.sh needs numpy from the package prefix (loads `tools/sysroot.sh env` now).
 - Leaving a KDE session with session.sh does not work (plasma user services survive): reboot the guest. KDE autolock is
   disabled in the guest now. gdb attach in the guest needs `kernel.yama.ptrace_scope=0` (g-run.sh sets it).
+
+## Rebase onto integ b5d75449ffe (132: client surfaces of other processes), 2026-10-04
+Old tip 8641c9d1fba = branch `fix/157-v1`. New series (each commit compiles):
+`a9d7aa29907` styles and text before the lock, `99b964dc032` cursor clipping after the release, `4f3a0256f3f` client surfaces
+updated unlocked, `3bc7d04ebb6` cursor info before pointer.mutex, `7fb257635be` win_data before text_input.
+Conflicts, all in WAYLAND_WindowPosChanged / the scale handler, both intents kept:
+- commit 1: 132 added `wayland_win_data_lock/unlock` next to `wayland_win_data_get_config` (kept, with the new `style`
+  parameter) and `wayland_remote_sinks_update(toplevel)` in the "no win data" early return (kept, after the state reads).
+- commit 2: end of WindowPosChanged: sinks update first, then the cursor clipping.
+- commit 3: 132's `toplevel` variable + `stale`; the stale block (detach client surfaces, destroy, run again) comes before
+  the sinks update, so the second pass does it once for the new surface. Scale handler: `update_client_surfaces` and
+  `wayland_remote_sinks_update` both after the release.
+- commits 4, 5 applied as they were.
+
+### 132's code against the lock order rule (rows 20-27 of the call table)
+| # | held | caller | callee | lock it takes | |
+|---|---|---|---|---|---|
+| 20 | win_data | wayland_remote_sinks_detach / _update / _destroy (from wayland_surface_destroy, WindowPosChanged, scale handler, DestroyWindow) | list walk, wl requests; eventfd write after the unlock | none | read + debug build |
+| 21 | win_data | wayland_remote_process_events (event thread): remote_sink_read_wakes, remote_sink_update, remote_sink_set_buffers, remote_sink_destroy | recv; NtDuplicateObject, NtQuerySection, wine_server_handle_to_fd, NtUnmapViewOfSection, NtClose; wayland_win_data_get (recursive); wl requests | ntdll / server only | read + debug build (traced run: 3 sinks, 730 buffer sets, 1622 placements, 428 hides) |
+| 22 | none (lock dropped mid-walk) | remote_sink_get_geometry | NtUserGetWindowThread (shared memory), get_visible_region requests | none | read; only the event thread unlinks sinks, `next` is re-read after the relock |
+| 23 | none | wayland_remote_sink_create (window thread, WM_WAYLAND_REMOTE_SURFACE) | NtUserGetWindowThread, NtUserGetAncestor (user lock) before win_data | user, then win_data | read |
+| 24 | none | wayland_remote_window_changed <- WAYLAND_SetWindowStyle, WAYLAND_SetParent | NtUserGetAncestor (user lock) before win_data | user, then win_data | read |
+| 25 | win_data | buffer_release (event thread listener) | interlocked operations on the shared block | none | read |
+| 26 | win32u client surfaces_lock | wayland_client_surface_update / detach / destroy -> wayland_client_surface_set_remote | source_mutex; under it NtCreateSection, NtMapViewOfSection, socketpair, wine_server_fd_to_handle, NtClose; NtUserPostMessage after the unlock | source_mutex (leaf) | read + debug build (no pair with source_mutex reported) |
+| 27 | source_mutex (from lock_remote_buffer to unlock_remote_buffer) | wayland_drawable_present_remote | eglQuerySurface, glFinish, eglMakeCurrent, glReadPixels | host GL only, no win32u or driver lock | read + debug build |
+Result: no win32u lock is taken under a driver mutex in 132's code and no inversion with the reordered paths:
+source_mutex is only taken with no driver lock held or under win32u's client surfaces_lock, and nothing is taken under it;
+the sink paths take win_data only. Order with 132: `client surfaces_lock` -> `source_mutex`; `user` -> `win_data`.
+(On integ without 157 the role change still called update_client_surfaces under win_data: win_data -> surfaces_lock ->
+source_mutex; gone with commit 3.) Observation, not a bug here: source_mutex is one mutex for all client surfaces of the
+process and is held over the frame readback, so client surface updates of other windows (under win32u's surfaces_lock)
+wait for a glReadPixels.
+
+### Role change with live sinks
+The surface taken out of the win data is destroyed after the release; `wayland_surface_destroy` detaches the sinks
+(132) before the wl_surface goes, the second pass creates the new surface and marks the sinks dirty. In the gap the event
+thread finds no surface for the toplevel and hides the sink (its subsurface is still a child of the live old surface).
+Checks on the host session (gnome-shell 50, NVIDIA EGL, renderer=gl), `tests/r157/r132.sh BUILD TAG`:
+- `xp.exe host flip=8` with an idle and a live source: both sinks back in place after the role change; pix.py output
+  identical to integ `build/`.
+- `tests/r132/clip.sh` (13 steps) and `geo.sh` (11 steps): pix.py output identical to integ in every step; 0 protocol errors.
+- `tests/r157/sinkstress.sh` (lockstress with xp.exe sources in A, in the role-flipping popup F and in D; 61500 operations):
+  23 of 32 runs DONE with 0 protocol errors and, on the debug build, only allowed lock pairs. 9 failed, neither a lock order
+  problem nor 132's code (both also without sources, `NOSRC=1`): 4 x protocol error = draft 170 (reproduces on unfixed integ
+  with one UI thread: `lockstress glhide 3000`, 6 of 6), 5 x hang = draft 171 (win32u NULL write in
+  register_window_surface with its list lock held; user lock and win_data free in the gdb dumps).
+
+### Stress on the rebased build (vmwl guest, wt/157-build 7fb257635be; `inst/157/results2/`)
+| compositor | rv rapid 300 | rv rapid 3000 | lockstress 3000 |
+|---|---|---|---|
+| GNOME 50 | 10 / 0 / 0 of 10 | 10 / 0 / 0 of 10 | 5 / 0 / 0 of 5 |
+| KDE | 5 / 0 / 0 of 5 | 5 / 0 / 0 of 5 | 3 / 0 / 0 of 3 |
+| sway | 5 / 0 / 0 of 5 | 5 / 0 / 0 of 5 | 3 / 0 / 0 of 3 |
+(ok / hang / exited early.) 0 protocol errors; `vmwl/wl_xowner.sh gnome`: 26 PASS / 0 FAIL, protocol errors 0.
+Debug build of the rebased tree on the host session (132's clip/geo/flip + 4 sink stress runs): reports only
+`win_data -> win32u:display`, `win_data -> pointer / keyboard / text_input`, `seat -> data_device` (`inst/157/r132/dbg.folded`).
+
+### Changes to shared scripts
+`tests/r132/{env,geo,clip,run2}.sh` take `R132_PREFIX` / `R132_OUT` (defaults unchanged) so the probes can run on another
+build without touching inst/132. WAYLAND_DEBUG=1 cannot be used with them: the trace lands in the same file as the
+probe's handle line and splits it (the scripts then start `wl_winctl.exe` without a window and hang).
