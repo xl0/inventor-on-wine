@@ -1,5 +1,5 @@
 # 163 winewayland: a swap with interval > 0 blocks forever while the compositor does not show the surface
-Status: draft · Found in: 132 M0 · Component: winewayland.drv opengl.c (Vulkan FIFO probably the same, not tested)
+Status: draft · Found in: 132 M0 (Mesa EGL, old host; NVIDIA EGL on the new host does not block: hidden interval=1 0.26 ms per present) · Component: winewayland.drv opengl.c
 
 ## Symptom
 `IDXGISwapChain::Present(1, 0)` (or wglSwapBuffers with swap interval 1) on a window that is not shown never returns:

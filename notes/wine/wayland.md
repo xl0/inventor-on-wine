@@ -1,5 +1,43 @@
 # Wayland driver (winewayland.drv) on the headless server
 Checked against wine-src d7799da4d5c (mutter 42.9 / gnome-shell 42.9, Mesa 23.2.1, NVIDIA 580).
+New host (2026-10-04: Ubuntu 26.04, mutter/gnome-shell 50.1, NVIDIA 595 with modeset=1): the sections below marked "old host"
+describe the llvmpipe session; what holds now is in "Host session on the new host".
+
+## Host session on the new host (checked 2026-10-04, integ e00a74f6590)
+- GPU-accelerated on both sides: mutter composites on NVIDIA (gbm renderers, primary renderD130, linux-dmabuf with NVIDIA
+  modifiers), Wine's EGL is NVIDIA's (`eglinfo -p wayland`; `WINEDEBUG=+wgl` vendor line). No llvmpipe unless forced.
+- renderer=gl works (d3d11_present 5000-6000 fps). renderer=vulkan: Present on a visible window stalls for seconds in
+  vkAcquireNextImageKHR (166), so Inventor on Wayland still runs `WINE_D3D_CONFIG=renderer=gl`.
+- NVIDIA's EGL does not block a swap with interval > 0 on an unmapped surface (163 is Mesa-only), and WebView2's hardware-path
+  GPU processes live on NVIDIA GL (162 is llvmpipe/Mesa-only).
+- mutter 50 globals that 42 lacked: wp_fractional_scale, cursor_shape, pointer_warp, xdg_wm_dialog, xdg-foreign v2,
+  wp_linux_drm_syncobj, wl_fixes. Still no zwlr_data_control (per-process clipboard thread stays).
+- x/wshot.sh: shell 50 only lets `org.gnome.SettingsDaemon.MediaKeys` / the GNOME portal call its Screenshot service; the script
+  owns that name on the private bus (and `org.gnome.Screenshot` for shell 42).
+- Switching the build of a prefix: always `WINEDLLOVERRIDES="mscoree,mshtml=" <build>/wine wineboot -u` first; a plain command
+  with another build starts the update with the Mono install dialog and hangs (also from a backgrounded `wineserver -p; wine cmd`).
+- Scripts that start a probe with WAYLAND_DEBUG=1 must have the prefix running already, or explorer/services inherit it and the
+  "probe log" is theirs.
+
+## Client surfaces across processes (132, branch fix/132; not on integ yet)
+- A window presented to by a process that does not own its top-level (swapchain on a foreign HWND, or on an own child inside a
+  foreign window = Chromium's GPU process, dcomp's `present_to_foreign_target`) has no wl_surface parent in that process.
+  fix/132: the presenting process (source) reads each frame back into a shared section, the owner (sink) shows it in a subsurface
+  of its top-level. `dlls/winewayland.drv/wayland_remote.c` has the protocol in its header comment; design, costs, limits: issue 132.
+- The owner pulls everything with `NtOpenProcess(PROCESS_DUP_HANDLE)` + `NtDuplicateObject`; a unix fd travels between two Wine
+  processes as a Wine handle (`wine_server_fd_to_handle` in one, `NtDuplicateObject` + `wine_server_handle_to_fd` in the other:
+  the fd refers to the same file description, here a socketpair end; the handle_to_fd result is not close-on-exec).
+- The event thread is a prepare_read / poll loop now, so driver code can wait on its own fds there
+  (`wayland_remote_get_poll_fds` / `_process_events`). Objects with listeners that the event thread dispatches (wl_buffer) must be
+  destroyed in that thread, or a handler can run on freed data.
+- GL on NVIDIA: a second EGL context made current on the same window surface reads the back buffer the client just rendered
+  (after glFinish in the client context); a wl_egl_window that is resized but never swapped still gets its new size.
+  `wl_surface.set_buffer_transform(FLIPPED_180)` on a subsurface flips GL's bottom-up rows on mutter 50.
+- Not clipped: a sink covers siblings that are above its client window in Win32 z-order (Inventor: the Home page MDI child covers
+  the active document). Owner-side changes are only followed when the source presents again. Both are M2 in the issue.
+- Probes: `tests/r132/xp.c` (host / foreign / child, cycles, resize, busy owner, role flip), `tests/r132/evil.c` (hostile source),
+  `tests/r132/{geo,leak,run2}.sh` + `pix.py` (scenarios with screenshot colour boxes; `env.sh` = their environment).
+
 
 ## Build
 Superseded: with the local package prefix (tools/sysroot.sh, CODE.md) libxkbregistry-dev is present and winewayland.drv builds in the normal tree; the stand-in below is not needed.
@@ -11,7 +49,7 @@ installed; only libxkbregistry.so.0). Workaround without installs: separate tree
 (the header dir/symlink are not in git; recreate from the rxkb_* prototypes used in wayland_keyboard.c).
 Full build ~10 min with -j40. Rebuild after wine-src moves: `make -j40` in the tree.
 
-## Start
+## Start (old host; the script works unchanged on the new one)
 `x/wayland.sh start` -> `gnome-shell --headless --wayland --no-x11 --wayland-display wayland-wine
 --virtual-monitor 1920x1080` inside `dbus-run-session`, with a private pipewire and
 XDG_RUNTIME_DIR=/tmp/wl-xdg (wiped on start), then x/winj.py (input). Never touches the user's real
@@ -33,7 +71,7 @@ Wine needs no registry setting: with DISPLAY unset and WAYLAND_DISPLAY set the g
 - Ubuntu's shell starts in the Activities overview; wayland.sh sends Escape once.
 - Not available: grim/ydotool/wtype/weston-info/eglinfo (not needed). `vkcube` is X11 only.
 
-## GPU
+## GPU (old host)
 mutter composites in software: it creates gbm renderers on all four /dev/dri/renderD128-131 but logs
 "Not hardware accelerated" and disables dma-buf sharing (nvidia-drm modeset is off; /sys/module
 parameter unreadable). Consequences for clients:
@@ -50,7 +88,7 @@ Hardware rendering under Wayland would need the compositor on an NVIDIA GPU with
 (root: kernel module param) or a compositor built for EGLStreams/GBM on NVIDIA. For the GPU Inventor
 test keep using the X displays.
 
-## Compositor globals (mutter 42)
+## Compositor globals (mutter 42, old host)
 Missing: zwlr_data_control (clipboard limited), xdg_toplevel_icon, wp_fractional_scale,
 wp_alpha_modifier, cursor_shape, pointer_warp (-> SendInput/SetCursorPos mouse moves cannot warp the host
 pointer), xdg_wm_dialog_v1 (mutter 47+), xdg-foreign v2 (mutter 44+). Present: linux_dmabuf, viewporter,
@@ -124,12 +162,39 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
   driver sends keys for the compositor-focused (disabled) window.
 - "Other process" is decided by pid, not by "no win_data in this process": an in-process owner can lose its win_data while
   owned windows live on (thread exit without DestroyWindow; the server even keeps the dead owner handle, 158).
-- Under win_data_mutex only plain server requests are safe; anything taking win32u's user lock (GetWindowLong, window text,
-  GW_OWNER...) can deadlock against a surface flush (157, already present on integ: `rv rapid 300`).
+- Under win_data_mutex nothing that takes a win32u lock may be called: see "Lock order" below (157).
 - mutter hides the children of a minimized parent; the driver's minimize state desyncs from the compositor (156), so an owned
   window shown while its owner is "minimized" stays invisible.
 - `tests/wl_xowner.sh` (WINE_BUILD=...): all wl_xowner cases with pixel checks; 28 PASS on fix/134, `self` fails on integ.
   Current compositors (GNOME 50, KDE, sway; xdg-foreign v2): vmwl/results-134.md. Review probes: inst/134-review/rv.c.
+
+## Lock order (157; fix/157)
+win32u's locks come first, the driver's window data last:
+`client surfaces_lock (win32u window.c)` -> `user lock` -> `window surface lock` -> `win_data_mutex` -> `pointer / keyboard /
+text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
+- Why this way round: win32u calls the surface flush with the window pointer (= user lock) held (`apply_window_pos` ->
+  `update_surface_region` -> `window_surface_set_shape`), and the client surface callbacks (update, detach, present) with its
+  client `surfaces_lock` held; in this driver all of them need win_data (window contents and the wayland_surface live there).
+  Upstream a334c147f81 states the same rule. winex11 is the other way round (NtUser* calls under its win data lock
+  everywhere, its flush never takes it): don't copy patterns from there.
+- So with `wayland_win_data_get()` held (or pointer.mutex etc.): no `NtUserGetWindowLongW`, `NtUserGetWindowRelative`,
+  `NtUserGetAncestor`, `NtUserIsWindowVisible`, `NtUserInternalGetWindowText`, `NtUserGetIconInfo`, `NtUserClipCursor`,
+  `update_client_surfaces`, no window surface lock / flush / `NtUserExposeWindowSurface`, no `send_message`. Everything that goes
+  through `get_win_ptr` / `get_user_handle_ptr` takes the user lock, for windows of other processes too. Read what is
+  needed before taking the lock (as `WAYLAND_WindowPosChanged` does for managed, owner, styles and text) and call back
+  into win32u after releasing it.
+- Fine under win_data_mutex: server requests (`NtUserGetProp` / `SetProp` / `RemoveProp`, atoms,
+  `NtUserGetLayeredWindowAttributes`, `NtUserPostMessage`, `NtUserGetForegroundWindow`), NtGdi region/bitmap calls, and the
+  monitor functions (`NtUserMonitorFromRect`, `NtUserGetMonitorInfo`: display lock only).
+- A surface that must be destroyed while win32u has to be called (role change: client surfaces are detached with
+  `update_client_surfaces`) is taken out of the win data under the lock and destroyed after the release.
+- Check tool: `tests/r157/lockorder-debug.patch` (debug only, apply to the worktree): win32u reports each acquisition of its
+  user / display / client surfaces / window surface locks to the driver, which prints `LOCKORDER held -> acquired` + backtrace
+  when the thread holds a driver mutex, and every new pair of driver mutexes; `tests/r157/lockorder.py LOG...` folds them.
+  Expected after 157: only `win_data -> win32u:display`, `win_data -> pointer/keyboard/text_input`, `seat -> data_device`.
+- Stress: `inst/134-review/rv.exe rapid N`, `tests/r157/lockstress.c` (threads changing styles, text, owners, roles, layered
+  attributes, GL child, short-lived threads); `tests/r157/batch.sh COMPOSITOR BUILD RUNS` runs them in the vmwl session
+  under a watchdog (`g-run.sh`: gdb backtraces of a hung run).
 
 ## Inventor 2027 under Wayland (wine-src 04293594c50, prefix inv4, 2026-10-03)
 Result: starts in ~15-20 s to an idle main window, ribbon/dialogs/menus/tooltips/3D viewport (wined3d GL on llvmpipe) work;

@@ -317,8 +317,11 @@ launches; previous device-limit errors do not authorize pausing another device.
   `r130/xisel.py DISPLAY [N]`: us per XISelectEvents on the root (grows with the windows that have XI2 selections);
   `r130/xiwins.py DISPLAY N hold`: N stand-in XI2 windows (aged-session repro); `r130/xres.py DISPLAY [MIN]`: X resources
   per client pid (X-Resource) (130). `r131/winlist.c [IMAGE] [raw]`: all windows of the session per process/thread/class/
-  parent, hidden too; `r132/xp.c`: cross-process present probe (`xp.exe host`, then `foreign|child|hidden|visible [HWND]
-  interval=N cycle=N follow=1 ...`: quadrant image + moving bar, ms per Present, STALL watchdog; 132, 163); `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
+  parent, hidden too; `r132/xp.c`: cross-process present probe (`xp.exe host [busy=N flip=N pw= ph=]`, then
+  `foreign|child|hidden|visible [HWND] interval=N cycle=N follow=1 hold=N ...`: quadrant image + moving bar, ms per Present, STALL
+  watchdog, handle counts; 132, 163, 166); `r132/evil.c`: hostile source for winewayland's cross-process surfaces (bad handles, sizes,
+  rects, floods; the owner must survive; 132); `r132/{run2,geo,leak}.sh` + `pix.py`: both topologies / geometry and lifetime
+  steps / 200-cycle leak check on the host Wayland session, judged by colour boxes in screenshots; `r131/comp_windows.c`: thread windows around CreateSwapChainForComposition (Win11 none; 131);
   `r131/comp_probe.c`: what a composition swapchain (D3D11, D3D12) answers to the window-related calls and invalid
   descs; `r131/comp_threads.c`: process windows when it is created/released/outlived across threads (131).
   `r133/idle.c [-v] [-x EXE] [NAME..]`: WaitForInputIdle scenarios, child threads scripted per scenario (which

@@ -1,5 +1,5 @@
 # 162 wined3d GL renderer: WebView2's hardware-path GPU process dies at a Chromium CHECK (skia_output_surface_impl.cc:1277)
-Status: draft · Found in: 132 M0 (Inventor on Wayland; reproduced on X) · Component (guess): wined3d GL backend / d3d11 format caps
+Status: draft · Found in: 132 M0 (old host: wined3d GL on llvmpipe, Wayland and X; does NOT happen with wined3d GL on NVIDIA EGL, new host 2026-10-04) · Component (guess): wined3d GL backend on Mesa/llvmpipe, d3d11 format caps
 
 ## Symptom
 With `WINE_D3D_CONFIG=renderer=gl` on llvmpipe every WebView2 GPU process started on the hardware path dies ~2 s after start;
