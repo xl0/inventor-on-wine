@@ -333,7 +333,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
 - integ = b5d75449ffe (pushed) = e00a74f6590 + 165 (2 commits) + 132 (4 commits, winewayland only);
   build/ = wine-11.18-537-gb5d75449ffe, all four prefixes on it. Full regress vs the new-host
   master baseline: 0 worse of 1757 (1649 pass / 80 fail / 28 crash); suite on inv 13/13.
-- 157 (winewayland lock order) resumed in the VM.
+- 157 fixed on fix/157 (5 winewayland commits on e00a74f6590): rule "win32u's locks first, the
+  driver's window data last, then pointer/keyboard/text_input"; win32u calls moved out of the
+  locked regions (styles/title, cursor clipping, client-surface updates on role change, cursor
+  info, IME rect). Stress in vmwl: 0 hangs in 100 runs on GNOME/KDE/sway (unfixed: 18 of 20 on
+  GNOME), 0 protocol errors, wl_xowner 26/26. Narrow races accepted and documented (title set from
+  another thread during the role change; surface re-creation gap). Now: rebase onto integ with 132,
+  lock-order check of 132's sink code with the debug build, re-run; then adversarial review.
+  vmwl on the new host: no nested bwrap → one read-only virtiofsd per shared path (README).
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
   to a subsurface; handles pulled by the owner (no names, no server change), independent of the
