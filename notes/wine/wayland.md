@@ -180,7 +180,7 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 - `tests/wl_xowner.sh` (WINE_BUILD=...): all wl_xowner cases with pixel checks; 28 PASS on fix/134, `self` fails on integ.
   Current compositors (GNOME 50, KDE, sway; xdg-foreign v2): vmwl/results-134.md. Review probes: inst/134-review/rv.c.
 
-## Lock order (157; fix/157)
+## Lock order (157; branch fix/157, not on integ yet)
 win32u's locks come first, the driver's window data last:
 `client surfaces_lock (win32u window.c)` -> `user lock` -> `window surface lock` -> `win_data_mutex` -> `pointer / keyboard /
 text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
@@ -203,7 +203,7 @@ text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
 - Check tool: `tests/r157/lockorder-debug.patch` (debug only, apply to the worktree): win32u reports each acquisition of its
   user / display / client surfaces / window surface locks to the driver, which prints `LOCKORDER held -> acquired` + backtrace
   when the thread holds a driver mutex, and every new pair of driver mutexes; `tests/r157/lockorder.py LOG...` folds them.
-  Expected after 157: only `win_data -> win32u:display`, `win_data -> pointer/keyboard/text_input`, `seat -> data_device`.
+  Expected after 157: only `win_data -> win32u:display`, `win_data -> pointer/keyboard/text_input/seat`, `seat -> data_device`.
 - Stress: `inst/134-review/rv.exe rapid N`, `tests/r157/lockstress.c` (threads changing styles, text, owners, roles, layered
   attributes, GL child, short-lived threads); `tests/r157/batch.sh COMPOSITOR BUILD RUNS` runs them in the vmwl session
   under a watchdog (`g-run.sh`: gdb backtraces of a hung run).

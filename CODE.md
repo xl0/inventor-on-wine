@@ -422,8 +422,11 @@ launches; previous device-limit errors do not authorize pausing another device.
   `xwd -id WIN` of a single window is fine.
 - `vm/input.py click X Y | key COMBO | type TEXT` — VM input over QMP.
 - `vmwl/` — Linux Wayland test VM (Ubuntu 26.04; GNOME 50 / KDE Plasma 6 / sway; qemu, SSH :2223, VNC :5911,
-  scripts reuse `vm/shot.sh` / `vm/input.py` via `VM_DIR`). Runs the host's `wt/wayland-build` from a read-only
-  virtio-fs share. See `vmwl/README.md`; protocol tables `vmwl/globals-*.txt`.
+  scripts reuse `vm/shot.sh` / `vm/input.py` via `VM_DIR`). Runs host builds (`build/` by default, more with `VMWL_BIND`) from
+  read-only virtio-fs shares, one virtiofsd per path. See `vmwl/README.md`; protocol tables `vmwl/globals-*.txt`.
+  `tests/r157/`: winewayland lock-order tools (157): `lockstress.c` (multi-thread window state stress), `batch.sh` /
+  `g-run.sh` / `g-utest.sh` (stress matrix and conformance units in the guest, watchdog + gdb backtraces),
+  `lockorder-debug.patch` + `lockorder.py` (debug build that reports win32u locks taken under driver mutexes).
   Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
   `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
