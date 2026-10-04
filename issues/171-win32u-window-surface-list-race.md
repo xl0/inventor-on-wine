@@ -149,3 +149,14 @@ Leads to finish first:
 3. `destroy_window` reads `win->current_drawable` after `release_win_ptr`.
 4. The new test waits INFINITE everywhere: a stalled thread hangs the test instead of failing it.
 Not checked: winewayland/winemac callbacks, lifetime/refcount paths, hot-path cost, anything that needs running.
+
+Second pass of the review (2026-10-04, still reading only):
+- Lead 1 closed: the winex11 flush fallback `NtUserPostMessage(WM_X11DRV_SET_HIDDEN)` takes no user lock
+  (get_user_entry is a lock-free read of the shared session; put_message_in_queue is the send_message server
+  request). Same conclusion as the 173 worker, reached independently. Possible exception with `+msg` tracing only
+  (SPY_GetMsgStuff may look up the window class): unread.
+- Combined 171 + 173 order, no cycle found by reading: client surfaces_lock → win_data_mutex → user lock →
+  dce.c surfaces_lock → surface mutex → leaves. It holds only because `try_set_window_hidden` is a trylock:
+  pin that with a comment at winex11.drv/window.c ~2855 naming the cycle a blocking lock would close.
+- Still open: everything under "Not checked" above; quickest debug build = scratch copy of wt/173-dbg
+  (tests/r173/lockorder-debug.patch) with 171 cherry-picked.
