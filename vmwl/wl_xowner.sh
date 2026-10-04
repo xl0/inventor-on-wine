@@ -4,6 +4,7 @@
 # vmwl/shot.sh, clicks by vmwl/input.py, Wine runs in the guest from the /host share. PASS/FAIL per check on stdout.
 #   vmwl/wl_xowner.sh COMPOSITOR [BUILD]     (BUILD default build; output vmwl/results/COMPOSITOR-<build>/)
 cd "$(dirname "$0")/.."
+eval "$(tools/sysroot.sh env)"  # numpy, PIL from the local package prefix
 C=${1:?compositor name}; B=${2:-build}
 W=/host/$B/wine; SRV=/host/$B/server/wineserver
 OUT=$PWD/vmwl/results/$C-$(basename $B); mkdir -p $OUT

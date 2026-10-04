@@ -116,13 +116,15 @@ static DWORD WINAPI two_proc(void *arg)
 static DWORD WINAPI gl_proc(void *arg)
 {
     PIXELFORMATDESCRIPTOR pfd = {sizeof(pfd), 1, PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER, PFD_TYPE_RGBA, 32};
-    HDC dc = GetDC(G); HGLRC rc; int i, fmt = ChoosePixelFormat(dc, &pfd);
+    HDC dc = GetDC(G); HGLRC rc; int i, fmt = ChoosePixelFormat(dc, &pfd); BOOL (WINAPI *swap_interval)(int);
     if (!fmt || !SetPixelFormat(dc, fmt, &pfd) || !(rc = wglCreateContext(dc)) || !wglMakeCurrent(dc, rc))
     {
         lg("gl: no context (err %lu), thread idle", GetLastError());
         InterlockedDecrement(&running);
         return 0;
     }
+    /* with an interval the swap waits for a frame callback, forever while F is hidden or minimized (issue 163) */
+    if ((swap_interval = (void *)wglGetProcAddress("wglSwapIntervalEXT"))) swap_interval(0);
     for (i = 0; i < N; i++)
     {
         glClearColor((i & 1) ? 1.0f : 0.0f, 0.5f, (i & 2) ? 1.0f : 0.0f, 1.0f);

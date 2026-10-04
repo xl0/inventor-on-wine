@@ -7,7 +7,7 @@ B=/host/$1; TAG=$2; RUNS=$3; T=$4; EXE=/host/$5; shift 5
 export WINEPREFIX=$HOME/wp-$(basename $B) WINEDEBUG=${WINEDEBUG:--all}
 OUT=$HOME/r157/$TAG; mkdir -p $OUT
 sudo sysctl -q kernel.yama.ptrace_scope=0   # gdb attaches to non-children (lost at guest reboot)
-if [ ! -d $WINEPREFIX ]; then WINEDLLOVERRIDES="mscoree,mshtml=" $B/wine wineboot -i >$OUT/wineboot.log 2>&1; fi
+WINEDLLOVERRIDES="mscoree,mshtml=" $B/wine wineboot -u >$OUT/wineboot.log 2>&1   # creates the prefix, or updates it for a new build
 ok=0; hang=0; bad=0
 for i in $(seq $RUNS); do
   log=$OUT/run-$i.log
@@ -23,4 +23,4 @@ for i in $(seq $RUNS); do
   else bad=$((bad + 1)); echo "run $i: exited without finishing: $(tail -n 2 $log | tr '\r\n' '  ')"
   fi
 done
-echo "$TAG: ok=$ok hang=$hang bad=$bad of $RUNS; wayland errors: $(cat $OUT/run-*.log | grep -a -c -iE 'wl_display@1\.error|protocol error|Lost connection')"
+echo "$TAG: ok=$ok hang=$hang bad=$bad of $RUNS; wayland errors: $(cat $OUT/run-*.log | grep -a -c -iE 'wl_display[@#]1\.error|[a-z_0-9]+[@#][0-9]+: error [0-9]+:|protocol error|Lost connection')"
