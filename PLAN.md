@@ -252,23 +252,31 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Now (2026-10-04, late)
-- Sandbox restarted with the user's AppArmor change: bare `hostname`/`lsblk`/`who` print, Xorg runs
-  under the plain sandbox label. All four prefixes and X servers are up on build/ = integ
-  b5d75449ffe (pushed, verified: regress 0 worse vs the h26 baseline, suite 13/13).
-- Running (resumed agents):
-  - 157 worker: finish verification of fix/157 (integ + 7 commits, tip 750bb757812; the role change
-    has no gap any more — surface replaced under the lock, client subsurfaces carry a serial),
-    evaluate a deferred re-show for 170's 0-2 ms case; then a short re-review, merge.
-  - 173 worker: finish fix/173 (3 commits: NtUserDrawIconEx draws without the user lock; BadWindow
-    on replaced X windows; xinerama/display inversion — all upstream bugs), debug build with 171
-    cherry-picked, regress, Inventor on inv2; then adversarial review.
-  - 171 reviewer: continue the review of fix/171 (win32u window-surface race, 3 commits).
-  171 and 173 depend on each other's lock rules (171 adds user lock → dce.c surfaces_lock; winex11's
-  rule is window data → user lock, with a trylock in the flush): both are asked about the combination.
-- After these: merge round (157+170, 171, 173) with regress + suite, push. Then 167 (Wayland z-order
-  of in-process client surfaces), UI pass 3, the warning fix for 41d9173ca57 at the next rebase.
-- Two confined stray swtpm processes (3008138, 3008605) can only be killed from outside the sandbox.
+## Paused for a reboot (2026-10-04, late) — resume from here
+Everything is stopped (prefixes, X servers, VMs, Wayland session, workers). After the reboot:
+`tools/prefix.sh start inv` (inv2, inv3, inv4) brings X and the prefixes up; `vm/run.sh` and
+`vmwl/run.sh` for the VMs when needed. AppArmor: programs in the sandbox no longer pick up
+per-binary profiles (user's local rules), bare `hostname`/`lsblk`/`who` work.
+- integ = b5d75449ffe (pushed) = build/ (wine-11.18-537): verified, regress 0 worse vs the h26
+  baseline, suite 13/13. Contains 130, 131, 133, 134, 140, 141, 165, 132.
+- fix/157 (integ + 7 commits, tip 750bb757812): winewayland lock order + part of 170. Code done;
+  verification of the final tip half done — remaining steps in the issue ("State at pause, review
+  round") and in the coordinator's resume message: KDE batch, wl_xowner, debug-build pass, user32
+  tests, host-session checks (first frame after show, 132's clip/geo/flip, sink stress, seq.c),
+  issue table + draft 170 update; 170's 0-2 ms hide/show: first a throwaway roundtrip experiment,
+  then maybe a deferred re-show. Then a short re-review (serial instead of the gap), merge.
+- fix/171 (3 commits, tip 784c189d22e): win32u window-surface race, upstream bug. Fix complete;
+  review only read so far (notes at the end of the issue): no cycle found in the combined 171+173
+  lock order as long as winex11's `try_set_window_hidden` stays a trylock (pin with a comment);
+  everything that needs a build/run, lifetime paths, cost, the test's INFINITE waits still open.
+- fix/173 (3 commits, tip 6635a80202b): winex11/win32u deadlock (NtUserDrawIconEx), BadWindow on
+  replaced X windows, xinerama/display inversion — all upstream. Remaining: full stress incl.
+  ulwrace, debug build with 171 (wt/173-dbg has it cherry-picked and built; force the flush
+  fallback), regress units both arches, Inventor on inv2, notes; then adversarial review.
+- Then: merge round (157+170, 171, 173) with regress + suite, push; 167 (Wayland z-order of
+  in-process client surfaces); UI pass 3; warning fix for 41d9173ca57 at the next rebase.
+- Resume the same agents with SendMessage if this session survives, else new workers from the
+  issue files. Two stray confined swtpm processes die with the reboot.
 
 ## New host (2026-10-04): Ubuntu 26.04.1, kernel 7.0, reinstalled — survey
 Project data is intact (same path and user; ZFS now, 1.4 T free): prefixes, VM disks, builds, worktrees,
