@@ -353,7 +353,14 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   already has a buffer committed" on a quick hide/show of a toplevel with a GL child; 6 of 6 on
   unfixed integ) and 171 (win32u, driver-independent: two threads changing one window's surface →
   NULL write in register_window_surface with dce.c's surfaces_lock held, the fault is swallowed
-  and the process hangs later) — 171 has an Opus fix worker (wt/171, X11 repro, inv4).
+  and the process hangs later).
+- 171 fixed on fix/171 (3 commits, tip 784c189d22e), in adversarial review: upstream bug (master
+  faults 10 of 10). register_window_surface() now runs before release_win_ptr(), so the surface
+  list changes under the lock that protects win->surface (new edge: user lock → dce surfaces_lock);
+  a surface installed during destroy is dropped; user32:win test (passes on Windows). Probe: 46 of
+  50 fault on build/, 199 of 200 clean on the fix (the one death is 173's BadWindow). Windows:
+  cross-thread UpdateLayeredWindow is legitimate and immediate. Draft 172: a fault inside a win32u
+  syscall is swallowed by design (handle_syscall_fault) — at most a WARN is possible.
   vmwl on the new host: no nested bwrap → one read-only virtiofsd per shared path (README).
 - 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
   process reads frames back into a shared section, the owner's Wayland event thread attaches them
@@ -384,8 +391,7 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   158-163 (see issues/).
 - AppArmor (user, 2026-10-04): local overrides for the `hostname` and `Xorg` profiles
   (/data/box/apparmor-local-overrides.md): bare `hostname` prints again; Xorg servers need a
-  restart to stop logging — :98 and :100 restarted, :99 (inv2) and :101 (inv4) when their workers
-  are done (stop the prefix, kill that display's Xorg/openbox/x11vnc by PID, `prefix.sh start`).
+  restart to stop logging — :98, :100, :101 restarted, :99 (inv2) when the 173 worker is done (stop the prefix, kill that display's Xorg/openbox/x11vnc by PID, `prefix.sh start`).
 - ssh from inside the sandbox fails on the system config ("Bad owner or permissions on
   /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf": root-owned files look unowned in the user
   namespace). Fixed on our side: both repos use `core.sshCommand = ssh -F /dev/null`, and
