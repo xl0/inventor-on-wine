@@ -324,8 +324,17 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   133 probes as expected; connect 20.5-22 s on both; identical err-line sets; WebView2 helpers run.
   One open item → draft 165 (Opus worker, inv3): a wined3d `wined3d_not_from_cs` assertion box,
   seen once on the new build, not reproduced, cause unknown (ours with 131, or upstream/host).
-- Resumed on the new host: 157 (winewayland lock order; VM) and 132 M1 (cross-process surfaces;
-  host session on gnome-shell 50, inv2; told to re-check whether the session is GPU-rendered now).
+- 157 (winewayland lock order) resumed in the VM.
+- 132: M1 built on fix/132 (4 commits, winewayland only, +998 lines; all gates pass): the presenting
+  process reads frames back into a shared section, the owner's Wayland event thread attaches them
+  to a subsurface; handles pulled by the owner (no names, no server change), independent of the
+  owner's message pump. On the new host the Wayland session is GPU-rendered (mutter and Wine's
+  EGL on NVIDIA): WebView2's hardware path survives there (162 and 163 are Mesa/llvmpipe-only);
+  Vulkan stalls in vkAcquireNextImageKHR on this session (draft 166), so Wayland = renderer=gl.
+  Cost at 1678x884 on NVIDIA: ~0.9-4 ms per frame in the source, 3.75 ms compositor upload.
+  Inventor on Wayland: Home page, trial popup and Assistant show content. NOT mergeable alone:
+  remote surfaces aren't clipped by sibling windows, so the Home page covers open documents.
+  Worker continues with M2 (owner-side clipping/visibility, idle source, slot limits); review after.
 - Next: adversarial reviews for 157, 132 and 165 when they report; UI pass 3 (areas pass 2 missed);
   warning fix for 41d9173ca57 at the next rebase of integ; drafts not started: 142-151, 156,
   158-163 (see issues/).
