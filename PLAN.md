@@ -338,7 +338,13 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
   server requests per evaluation in the sink's event thread, none per frame; rect clip + hide),
   16 sinks per source pid. Inventor on Wayland: Home page hides behind an open document and returns
   on the Home tab; Assistant docked/undocked/closed; popup; resize/maximize; hello/part/asm/drawing/
-  view pass. In adversarial review (transport security, threading, protocol errors).
+  view pass. Review back: memory safety of the transport is sound; reproduced: a source could name
+  a window it doesn't own and paint over it (any prefix process, one posted message). Decision:
+  the client window must belong to the source pid and be rooted in the posted top-level — so only
+  topology B (the source's own child, what WebView2 does) is carried; a swapchain on another
+  process' window stays blank on Wayland as before. Also: POLLOUT backpressure in the new poll loop
+  (affects every winewayland process), drain the wake socket, slot limits per top-level, size cap.
+  Worker applying; then merge (a second look by the coordinator at the authorization hunk).
   Found on the way, pre-existing → draft 167: in-process GL client surfaces ignore window z-order
   on Wayland (a part's 3D view stays on top of a drawing opened after it): blocks multi-document
   work; same family as 145 (tooltip under the viewport). Next Wayland fix after 157.
