@@ -252,6 +252,26 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
+## Paused for a sandbox restart (2026-10-04, evening) — resume from here
+The user changed the host's AppArmor setup for bwrap (programs in the sandbox no longer pick up
+per-binary profiles: local `priority=1 … ix` rules for bwrap-userns-restrict) and restarts the
+sandbox. Workers were told to stop and write "State at pause" into their issue files.
+- integ = b5d75449ffe (pushed), build/ = wine-11.18-537 on it, verified (regress 0 worse, suite 13/13).
+- fix/157 (winewayland lock order, rebased on integ): review follow-ups in progress (role-change
+  NULL surface crash, audit of event paths, sinks detach, title, cursor perf, docs, + 170 fix).
+- fix/171 (win32u window-surface race, 3 commits): adversarial review interrupted — partial report
+  in the reviewer's last message / inst/171-review/; continue or restart the review.
+- fix/173 (winex11 deadlock): worker just started (upstream-or-ours, table, rule).
+After the restart:
+1. Check the AppArmor change from inside: bare `hostname`, `lsblk`, `who` print; then drop the
+   workarounds that are no longer needed (notes/worker.md quirk note; deps/swtpm copy in vm/run.sh
+   can stay, it is harmless).
+2. Start the prefixes (`tools/prefix.sh start inv` … inv4; X servers too if they died), the
+   Windows VM if needed (`vm/run.sh`).
+3. Resume 157, 173 and the 171 review (SendMessage to the same agents, else new workers from the
+   issue files). Then: merge 157 (+170) and 171 after review, verification round (regress vs the
+   h26 baselines + suite), push. Then 167 (Wayland z-order of in-process client surfaces), UI pass 3.
+
 ## New host (2026-10-04): Ubuntu 26.04.1, kernel 7.0, reinstalled — survey
 Project data is intact (same path and user; ZFS now, 1.4 T free): prefixes, VM disks, builds, worktrees,
 login.txt, git state as in the pause section below. Nothing of ours is running.
