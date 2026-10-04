@@ -252,8 +252,11 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
-## Paused for a reboot (2026-10-04, late) — resume from here
-Everything is stopped (prefixes, X servers, VMs, Wayland session, workers). After the reboot:
+## Now (2026-10-04, after the reboot)
+Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
+continue from the items below. The user is testing on the laptop: the licence seat may leave the
+server at any time → workers do Inventor-free work first and skip Inventor checks on a licensing
+error (no clicks). Background, as written at the pause:
 `tools/prefix.sh start inv` (inv2, inv3, inv4) brings X and the prefixes up; `vm/run.sh` and
 `vmwl/run.sh` for the VMs when needed. AppArmor: programs in the sandbox no longer pick up
 per-binary profiles (user's local rules), bare `hostname`/`lsblk`/`who` work.
