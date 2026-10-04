@@ -189,8 +189,9 @@ text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
 - Why this way round: win32u calls the surface flush with the window pointer (= user lock) held (`apply_window_pos` ->
   `update_surface_region` -> `window_surface_set_shape`), and the client surface callbacks (update, detach, present) with its
   client `surfaces_lock` held; in this driver all of them need win_data (window contents and the wayland_surface live there).
-  Upstream a334c147f81 states the same rule. winex11 is the other way round (NtUser* calls under its win data lock
-  everywhere, its flush never takes it): don't copy patterns from there.
+  Upstream a334c147f81 states the same rule. `flush_window_surfaces` also holds dce.c's `surfaces_lock` across every driver
+  flush, so that lock is before win_data too. winex11 takes its own win data lock before the user lock in most places
+  and has the matching deadlock (173): don't copy patterns from there.
 - So with `wayland_win_data_get()` held (or pointer.mutex etc.): no `NtUserGetWindowLongW`, `NtUserGetWindowRelative`,
   `NtUserGetAncestor`, `NtUserIsWindowVisible`, `NtUserInternalGetWindowText`, `NtUserGetIconInfo`, `NtUserClipCursor`,
   `update_client_surfaces`, no window surface lock / flush / `NtUserExposeWindowSurface`, no `send_message`. Everything that goes
@@ -200,14 +201,25 @@ text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
 - Fine under win_data_mutex: server requests (`NtUserGetProp` / `SetProp` / `RemoveProp`, atoms,
   `NtUserGetLayeredWindowAttributes`, `NtUserPostMessage`, `NtUserGetForegroundWindow`), NtGdi region/bitmap calls, and the
   monitor functions (`NtUserMonitorFromRect`, `NtUserGetMonitorInfo`: display lock only).
-- A surface that must be destroyed while win32u has to be called (role change: client surfaces are detached with
-  `update_client_surfaces`) is taken out of the win data under the lock and destroyed after the release.
+- A surface that changes its role is destroyed and replaced under the lock, as before; the driver no longer calls
+  `update_client_surfaces` for it. Each wayland_surface has a `serial`, and `wayland_client_surface_attach` re-creates a client
+  subsurface that was made for another surface of the toplevel (win32u updates the client surfaces after WindowPosChanged).
+  Invariant kept: pointer / keyboard / text input focus on a window implies its win data has a surface, except for the
+  moment between a handler reading the focus and locking the win data (handlers check for a NULL surface).
+- The flush can block with these locks held: `wayland_buffer_queue_get_free_buffer` waits in `wl_display_dispatch_queue` for a
+  buffer release when all three buffers are busy (with the user lock on the `update_surface_region` path, dce.c's
+  `surfaces_lock` in `flush_window_surfaces`). `WAYLAND_CreateWindowSurface` dispatches the queue of the previous surface under
+  win_data (`window_surface_release` -> `wayland_buffer_queue_destroy`); its listeners only free buffers.
+- Buffers are not committed to a surface without a role (hidden window): the flush returns "not flushed" and the contents go
+  out with the first configure after the window is shown (170).
 - Check tool: `tests/r157/lockorder-debug.patch` (debug only, apply to the worktree): win32u reports each acquisition of its
   user / display / client surfaces / window surface locks to the driver, which prints `LOCKORDER held -> acquired` + backtrace
   when the thread holds a driver mutex, and every new pair of driver mutexes; `tests/r157/lockorder.py LOG...` folds them.
   Expected after 157: only `win_data -> win32u:display`, `win_data -> pointer/keyboard/text_input/seat`, `seat -> data_device`.
-- On a GPU compositor (host session) lockstress also hits 170 (protocol error when a toplevel with a GL child is shown again)
-  and 171 (win32u surface list race, hang on dce.c's surfaces_lock): not lock order problems. `tests/r157/sinkstress.sh` =
+- On a GPU compositor (host session) lockstress also hit 170 (protocol error when a toplevel with a GL child is shown again;
+  still fatal when it is shown within ~2 ms of the hide) and 171 (win32u surface list race, hang on dce.c's surfaces_lock;
+  `lockstress ... noxulw` avoids the trigger): not lock order problems. Pointer and key input during a stress:
+  `tests/r157/jitter.py host|vm SECS` (relative motion; `JITTER=1` for batch.sh / sinkstress.sh). `tests/r157/sinkstress.sh` =
   lockstress + 132's sources, `tests/r157/r132.sh` = 132's probes on another build.
 - Stress: `inst/134-review/rv.exe rapid N`, `tests/r157/lockstress.c` (threads changing styles, text, owners, roles, layered
   attributes, GL child, short-lived threads); `tests/r157/batch.sh COMPOSITOR BUILD RUNS` runs them in the vmwl session

@@ -1,5 +1,5 @@
 # 157 winewayland: deadlock between win32u's user lock and the driver's win_data_mutex (two threads showing/hiding windows)
-Status: fixed on fix/157 (5 commits, rebased onto integ b5d75449ffe with 132; old tip kept as fix/157-v1), verified in the VM and with 132's probes, awaiting review · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
+Status: review round in progress, paused (see State at pause, review round): fix/157 = 7 commits on integ b5d75449ffe, verification of the new series incomplete · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
 app with two UI threads changing window visibility can hang for good
 
 ## Symptom
@@ -244,3 +244,98 @@ Debug build of the rebased tree on the host session (132's clip/geo/flip + 4 sin
 `tests/r132/{env,geo,clip,run2}.sh` take `R132_PREFIX` / `R132_OUT` (defaults unchanged) so the probes can run on another
 build without touching inst/132. WAYLAND_DEBUG=1 cannot be used with them: the trace lands in the same file as the
 probe's handle line and splits it (the scripts then start `wl_winctl.exe` without a window and hang).
+
+## State at pause, review round (2026-10-04, sandbox restart)
+Branch `fix/157` = integ b5d75449ffe + 7 commits, tree clean, nothing half-applied; `wt/157-build` is a full build of that
+tip (version stamp one amend old). Earlier tips: `fix/157-v1` (first series), `fix/157-v2` = 7fb257635be (the reviewed one),
+`fix/157-surface-per-show` = 7ef19cf2795 (rejected experiment for 170, see item 7).
+```
+166dc20fe8c winewayland: Get the window styles and text with the window data unlocked.
+4d2aff975a9 winewayland: Reapply the cursor clipping with the window data unlocked.
+3ed44f42f3e winewayland: Don't update the client surfaces with the window data locked.
+a8f1a76a26c winewayland: Get the cursor info before locking the pointer.
+0046202e1aa winewayland: Lock the window data before the text input.
+74a086bfff1 winewayland: Check that the window has a surface when the pointer moves.
+750bb757812 winewayland: Don't commit buffers to surfaces without a role.
+```
+Design change against v2 (items 1, 2, 6): the surface that changes its role is destroyed and replaced under the lock again,
+as on integ; there is no gap, no stale surface and no second pass. What had to leave the locked region was only the
+`update_client_surfaces` call: it is gone. Each wayland_surface has a `serial`; `wayland_client_surface_attach` re-creates a
+client subsurface made for another surface of the toplevel (win32u updates client surfaces right after WindowPosChanged),
+and `wayland_surface_reconfigure_subsurface` only places a popup above the owner's client surface if that is attached to
+the owner's current surface. Sinks (132) are detached by `wayland_surface_destroy` under the lock as on integ.
+
+### Review items
+1. Fault in relative_pointer_v1_relative_motion: DONE. The state "data exists, surface NULL, focus still set" no longer
+   exists (focus is cleared in the same locked region that removes the surface); NULL check added anyway (74a086bfff1) for the
+   window that loses its surface between the handler reading the focus and locking the data (`!surface` path, on integ too).
+   Audit of every `data->wayland_surface` user (grep, 27 sites): only wayland_pointer.c relative motion lacked the check.
+   Checked: pointer motion / enter (wayland_set_cursor, motion_internal), relative motion (fixed), button / axis / leave
+   (no surface use), WAYLAND_ClipCursor, keyboard enter, SetIMECompositionRect, xdg_surface / xdg_toplevel configure, scale
+   handler, exported_handle / imported_destroyed, reconfigure_subsurface, client surface attach / present / update, sinks
+   (remote_sink_update), window.c entries (configure_window, SetLayeredWindowAttributes, SetWindowIcons, SetWindowStyle,
+   SetWindowText, SysCommand, UpdateLayeredWindow, set_window_surface_contents, get_mapped_toplevel). No touch / tablet
+   or frame-callback listeners in the driver. Noted, not changed (on integ too): WAYLAND_ClipCursor uses the wl_surface
+   after releasing win_data and calls wayland_win_data_release() on a possibly NULL data.
+   Verified: reviewer's `rf-run.sh 157 TAG 1500 25` 5/5 DONE, faults 0, proto 0 (twice: v3-1..5 and v4-1..5,
+   inst/157-review/rf-v4-*.out); `gl` variant 2/2 (600 flips, ~220k swaps); GL child visible after each of 5 role flips
+   (screenshots, 15000 px each time).
+2. Second thread creating a surface in the gap: DONE by removing the gap (see design change); nothing remaining of it.
+   Still open, older than 157: a popup with the subsurface role keeps its wl_subsurface when its owner's surface is replaced
+   (role change of the owner): `wayland_surface_make_subsurface` only compares the owner HWND. `owner->serial` is there to
+   fix it; not done.
+3. Title: DONE in 166dc20fe8c. The toplevel is created without a title; after the release the text is read and set unless
+   `surface->has_title` (set by every set_title, cleared with the xdg_toplevel) says a title was set since: a concurrent
+   pSetWindowText wins in every order.
+4. Cursor info only when the pointer is on the window: DONE in a8f1a76a26c (early return before get_icon_info; the enter
+   handler sets the stored cursor, the check under pointer.mutex stays).
+5. Docs: notes/wine/wayland.md lock order section updated (dce.c surfaces_lock, blocking in the buffer queue, 173 pointer
+   instead of "winex11 gets away with it", serial mechanism, 170) — uncommitted hunks of mine are in this commit; the
+   "since 171" line in that file is another worker's. NOT DONE: the same corrections in this issue's rule section and call
+   table above (still says winex11 "gets away with it"; rows for wayland_buffer_queue_get_free_buffer blocking in
+   wl_display_dispatch_queue with the user lock / dce.c surfaces_lock held, and WAYLAND_CreateWindowSurface dispatching a
+   buffer queue under win_data, are missing; rows 5/6 and the "Fix" / "Staleness" sections describe v1/v2).
+6. Commit message of the client surface commit: DONE (3ed44f42f3e says what replaced the detach and that the scale handler
+   changed); no second pass or `return f()` any more.
+7. Draft 170: PARTLY. 750bb757812 makes `wayland_surface_reconfigure` return FALSE for a surface without a role, so nothing
+   is committed to a hidden surface (the reviewer's piece). Host session, `lockstress glhide N HIDE_MS`:
+   hidden 5 ms: integ 3/3 fatal, fix 5/5 + 9/9 DONE with 0 protocol errors; hidden 0-2 ms (the default): still fatal, fix
+   2/2 and 10/10 before. Trace (inst/157/r3/glhide-trace.out): no buffer on the hidden surface any more; the NULL commit of
+   the hide itself is not applied by mutter 0.5 ms later when get_xdg_surface arrives (toplevel commits queued behind the GL
+   subsurface's pending commits). The robust fix, a new wl_surface whenever a window becomes a toplevel, is on
+   `fix/157-surface-per-show`: glhide 3000 10/10 DONE, but popups with the subsurface role are orphaned when their owner is
+   re-shown (`wl_subsurface::place_above ... not a valid parent or sibling`, sink stress 6/6 fatal) — needs the item 2
+   leftover plus re-homing and repaint of those popups. Not merged into fix/157. Draft 170 itself is NOT updated yet.
+   First frame after show: 3/3 fully painted 0.3 s after ShowWindow on the surface-per-show build; the rerun on the
+   final tip was invalid (a full-screen yellow window of unknown origin covered the screen): TO REDO.
+
+### Verification of the final tip: what ran, what did not
+- vmwl, `JITTER=1 tests/r157/batch.sh` (relative pointer motion through the PS/2 mouse + shift presses over QMP, ~2300
+  events/s; guest IRQ counts confirm them): sway rapid 300 5/5, rapid 3000 5/5, lockstress 3/3; GNOME rapid 300 10/10,
+  rapid 3000 10/10, lockstress 1/1 (4 more not run); 0 hangs, 0 protocol errors. NOT RUN: GNOME wl_xowner, KDE batch,
+  KDE wl_xowner (`inst/157/results3/`).
+- host session: roleflip + jitter and glhide as above. seq.c vs integ was only compared for the surface-per-show build
+  (differences = its extra surface per show + run-to-run noise); TO REDO on the final tip (`inst/157-review/seq-run.sh 157
+  TAG`, `seqcmp.py seq-v3-integ.req ...`).
+- INVALID, to redo: 132's clip/geo/flip on the final tip (run `fix4`: the same full-screen yellow window in every
+  screenshot, then x/wshot.sh failed with "Cannot spawn a message bus when AT_SECURE is set": the host session was
+  broken or shared at that point; clip and flip were identical to integ, geo within noise, on the surface-per-show build
+  earlier); sink stress with jitter (`JITTER=1 LSFLAGS=noxulw tests/r157/sinkstress.sh`): the one run (k1) "hung" because
+  of a probe bug of mine (the GL thread's loop bound had become N*100; all five mutexes free in the dump) — fixed in
+  tests/r157/lockstress.c, inst/157/lockstress.exe rebuilt, not rerun.
+- Not done: debug build (lockorder-debug.patch) on the final tip; user32:win / msg under Wayland on the final tip.
+
+### Remaining, in order
+1. Host session (check first that nothing else uses it, `tests/wl_winlist.exe`): first-frame-after-show, 132's probes
+   (`tests/r157/r132.sh wt/157-build TAG` vs inst/157/r132/integ), sink stress with jitter x6, seq.c comparison.
+2. vmwl with `JITTER=1`: GNOME lockstress x5 + wl_xowner, KDE rapid 300 x5 / lockstress x3 + wl_xowner.
+3. Debug build pass on the final tip (rapid, lockstress, r132, roleflip): expect the pairs listed in notes/wine/wayland.md.
+4. Item 5: bring this file's rule section, call table, fix and staleness sections in line with the final series.
+5. Item 7: update draft 170 (two variants, what 750bb757812 covers, the side branch and what it lacks); decide with the
+   coordinator whether the surface-per-show fix is wanted (it needs the popup re-homing).
+6. Final report.
+
+### Environment at pause
+VM powered off (qemu and its virtiofsd processes gone), host Wayland session stopped, my wineservers stopped, scratch
+prefixes deleted (inst/157 17 MB). New helpers: `tests/r157/jitter.py host|vm`, `JITTER=1` / `LSFLAGS=noxulw` in
+sinkstress.sh and batch.sh, `lockstress glhide N [HIDE_MS]`, `lockstress ... noxulw`.

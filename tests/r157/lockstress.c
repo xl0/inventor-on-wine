@@ -1,7 +1,9 @@
 /* winewayland lock-order stress (issue 157): several threads change window state at once.
  * Build: x86_64-w64-mingw32-gcc -O1 -o lockstress.exe lockstress.c -lopengl32 -lgdi32 -luser32
- *   lockstress N [SEED] [nogl]     N operations per thread; prints "DONE" when every thread finished
- *   lockstress glhide N            one thread hides/shows a toplevel N times, another swaps on its GL child
+ *   lockstress N [SEED] [nogl] [noxulw]   N operations per thread; prints "DONE" when every thread finished
+ *                                  noxulw: no UpdateLayeredWindow on a window of another thread (win32u race, issue 171)
+ *   lockstress glhide N [HIDE_MS]  one thread hides/shows a toplevel N times, another swaps on its GL child;
+ *                                  the window stays hidden HIDE_MS (default: 0, 1 or 2 ms) (issue 170)
  * Threads: main (A main window, D owned popup, F popup flipping managed/unmanaged with a GL child G,
  * L layered popup, C child <-> toplevel), two (B main, E popup owned by A), gl (SwapBuffers on G),
  * poke (style/text/layered/position changes and painting on the other threads' windows),
@@ -10,13 +12,14 @@
 #include <windows.h>
 #include <GL/gl.h>
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define NOZ (SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)
 
 static HWND A, D, F, L, C, G, B, E;
-static int N, use_gl = 1;
+static int N, gl_swaps, use_gl = 1, cross_ulw = 1;
 static volatile LONG running, ops, stop;
 static DWORD t0;
 
@@ -127,7 +130,7 @@ static DWORD WINAPI gl_proc(void *arg)
     }
     /* with an interval the swap waits for a frame callback, forever while F is hidden or minimized (issue 163) */
     if ((swap_interval = (void *)wglGetProcAddress("wglSwapIntervalEXT"))) swap_interval(0);
-    for (i = 0; i < N * 100 && !stop; i++)
+    for (i = 0; i < gl_swaps && !stop; i++)
     {
         glClearColor((i & 1) ? 1.0f : 0.0f, 0.5f, (i & 2) ? 1.0f : 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -155,7 +158,7 @@ static DWORD WINAPI poke_proc(void *arg)
         case 2: sprintf(text, "direct %u", r); DefWindowProcA(hwnd, WM_SETTEXT, 0, (LPARAM)text); break;
         case 3: ShowWindowAsync(hwnd, (r & 512) ? SW_HIDE : SW_SHOWNA); break;
         case 4: SetLayeredWindowAttributes(L, 0, 100 + r % 150, LWA_ALPHA); break;
-        case 5: update_layered(L, r); break;
+        case 5: if (cross_ulw) update_layered(L, r); break;
         case 6: PostMessageA(hwnd, WM_SYSCOMMAND, (r & 512) ? SC_MINIMIZE : SC_RESTORE, 0); break;
         case 7: paint(hwnd, r); break;
         case 8: RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN); break;
@@ -202,23 +205,30 @@ int main(int argc, char **argv)
     if (argc > 2 && !strcmp(argv[1], "glhide"))
     {
         /* one UI thread hiding and showing a toplevel while another thread swaps on its GL child (issue 170) */
+        int hide_ms = argc > 3 ? atoi(argv[3]) : -1;   /* time the window stays hidden; default 0..2 ms */
         N = atoi(argv[2]);
+        gl_swaps = INT_MAX;   /* until the main thread is done */
         F = mk("F hide/show", RGB(0, 0, 255), WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_CLIPCHILDREN, 0, 160, 180, 260, 180, NULL);
         G = mk("G gl child", RGB(64, 64, 64), WS_CHILD | WS_VISIBLE, 0, 20, 40, 120, 90, F);
         pump(1000);
         running = 1;
-        CreateThread(NULL, 0, gl_proc, NULL, 0, NULL);
+        th[0] = CreateThread(NULL, 0, gl_proc, NULL, 0, NULL);
         for (i = 0; i < N && running; i++)
         {
-            ShowWindow(F, SW_HIDE); pump(i % 3);
+            ShowWindow(F, SW_HIDE); pump(hide_ms < 0 ? i % 3 : hide_ms);
             ShowWindow(F, SW_SHOWNA); pump(i % 5);
         }
         stop = 1;
+        WaitForSingleObject(th[0], 5000);   /* a thread killed in a swap can hang the process exit */
         lg("DONE %d hide/show, %ld swaps", i, ops);
         return 0;
     }
-    N = argc > 1 ? atoi(argv[1]) : 300;
-    if (argc > 3) use_gl = 0;
+    gl_swaps = N = argc > 1 ? atoi(argv[1]) : 300;
+    for (i = 3; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "nogl")) use_gl = 0;
+        if (!strcmp(argv[i], "noxulw")) cross_ulw = 0;
+    }
     A = mk("A main", RGB(255, 0, 0), WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 60, 60, 420, 320, NULL);
     D = mk("D owned by A", RGB(0, 255, 0), WS_POPUP | WS_CAPTION | WS_VISIBLE, 0, 120, 140, 300, 200, A);
     F = mk("F flips", RGB(0, 0, 255), WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN, 0, 160, 180, 260, 180, A);
