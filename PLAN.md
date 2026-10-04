@@ -271,6 +271,10 @@ login.txt, git state as in the pause section below. Nothing of ours is running.
 - Licensing: /etc/machine-id is new, so the host's Autodesk device id (disk serial + machine UUID +
   user, see 152) has very likely changed: the first Inventor start registers this machine as a new
   device. Not started yet; needs the user's go-ahead.
+- ssh from inside the sandbox fails on the system config ("Bad owner or permissions on
+  /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf": root-owned files look unowned in the user
+  namespace). Fixed on our side: both repos use `core.sshCommand = ssh -F /dev/null`, and
+  vm/winrun.sh, vmwl/ssh.sh, run.sh, transplant.sh pass `-F /dev/null`.
 - Claude Code 2.1.289.
 
 ## Paused for a reboot (2026-10-03) — resume from here

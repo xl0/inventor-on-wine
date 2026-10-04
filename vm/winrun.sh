@@ -10,7 +10,7 @@ exe=$(realpath "$1"); shift
 cd "$(dirname "$0")"
 id=${WINRUN_ID:-main}; tmo=${WINRUN_TIMEOUT:-600}
 exec 9>"winrun-$id.lock"; flock 9
-o=(-i id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+o=(-i id_ed25519 -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
    -o BatchMode=yes -o LogLevel=ERROR)
 name=$(basename "$exe")
 d="C:\\t\\$id"

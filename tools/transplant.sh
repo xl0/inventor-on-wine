@@ -25,7 +25,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 T=$ROOT/inst/transplant
 PFX=$ROOT/prefixes/inv-vm
-SSH=(ssh -i "$ROOT/vm/id_ed25519" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+SSH=(ssh -i "$ROOT/vm/id_ed25519" -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
      -o BatchMode=yes -o LogLevel=ERROR -o ConnectTimeout=10)
 vm() { "${SSH[@]}" -p "$1" dev@127.0.0.1 "${@:2}"; }
 mkdir -p "$T"

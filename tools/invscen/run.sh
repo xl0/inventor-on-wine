@@ -97,7 +97,7 @@ if [ -n "$VM" ]; then
 	d='C:\t\scen\'$S
 	rc=0; WINRUN_ID=scen WINRUN_TIMEOUT=${INVSCEN_TIMEOUT:-1800} vm/winrun.sh $X "$d" || rc=$?
 	mkdir -p inst/invscen/ref && rm -rf inst/invscen/ref/$S
-	scp -rq -i vm/id_ed25519 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes \
+	scp -rq -i vm/id_ed25519 -F /dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes \
 		-o LogLevel=ERROR -P 2222 "dev@127.0.0.1:C:/t/scen/$S" inst/invscen/ref/ || true
 	exit $rc
 fi
