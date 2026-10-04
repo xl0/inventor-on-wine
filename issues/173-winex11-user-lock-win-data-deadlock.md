@@ -122,22 +122,37 @@ a stack with user_lock / get_win_data except 157 (Wayland) and 171. The conditio
 a DC made dirty by a window change, while another thread is in WindowPosChanged of a top-level window) needs two threads
 with windows; nothing we have captured from Inventor shows it.
 
-## State at pause (2026-10-04 17:15, sandbox restart)
+## State at pause (2026-10-04, second pause: machine reboot; nothing new on fix/173 since the first one)
 Done: upstream-or-ours, repro, table, rule, three commits on fix/173 (worktree clean), size-move table, part of the stress.
-inv2 is back on build/ (x/prefixes.tsv unchanged), Inventor closed, lease released; my Xvfb :1410-:1416 and scratch
-wineservers are stopped. Builds: wt/173-build = fix/173 tip (win32u + winex11 rebuilt); wt/173-dbg (detached: integ + debug
-patch uncommitted + the three commits cherry-picked) / wt/173-dbg-build = the debug build.
+inv2 was not leased again and is on build/; my Xvfb servers and scratch wineservers are stopped (killed by PID).
+Builds: wt/173-build = fix/173 tip. wt/173-dbg (detached) = integ + the three 173 commits + fix/171's three commits
+(49738642551, af812239de0, 784c189d22e cherry-picked) + the debug patch uncommitted (= tests/r173/lockorder-debug.patch);
+wt/173-dbg-build is built from that (win32u, winex11, user32 tests) but nothing has been run on it yet.
+Second session, before the reboot (10 minutes of stress, lanes killed, no summary lines): visual_race on fix without a WM
+13 started, 12 DONE, 0 X errors (1 killed mid-run); integ on :1414 7 of 7 X_GetProperty BadWindow; the 171 worker's
+`ulwrace.exe destroy 2000 1 - x` on integ 2 of 2 X_GetProperty BadWindow; it did not get to run on the fix build.
+`inst/173/x.sh start` now brings up :1410, :1414, :1416 (no WM) and :1411, :1415 (openbox).
 Remaining, in order:
-1. Stress: `inst/173/batch.sh fix icon 25 30 tests/r173/iconlock.exe 8 icon`, `... fix vr 15 30 tests/r173/visual_race.exe 10`
-   (50 clean runs each way; x.sh starts Xvfb :1410 / :1411+openbox; the scripts are in inst/173/, copies in tests/r173/), `inst/173/ls.sh fix 1410 ls 1 2 3 4 5 6`,
-   `ls.sh fix 1411 ls 7..12` (lockstress 15000 nogl), contrast `ls.sh integ ...` seeds 2-9; the 171 worker's
-   `tests/r171/ulwrace.exe destroy 2000 1 - x` on the fix build (8 of 10 BadWindow on build/).
-2. Debug build + fix/171 cherry-picked (edge user -> dce surfaces_lock): lockstress, ulwrace; expect no new pair into win_data.
+1. Stress (scripts in inst/173/, copies in tests/r173/), fix on :1410/:1411, integ contrast on :1414/:1415:
+   `inst/173/batch.sh fix vr 25 30 tests/r173/visual_race.exe 10`,
+   `inst/173/batch.sh fix ulw 10 150 tests/r171/ulwrace.exe destroy 2000 1 - x` (the fix build has no 171 fix: a FAULT /
+   NULL write in register_window_surface there is 171, not this issue),
+   `inst/173/ls.sh fix 1410 ls 1 2 3 4 5 6`, `inst/173/ls.sh fix 1411 ls 7 8 9 10 11 12` (lockstress 15000 nogl),
+   `D="1414 1415" inst/173/batch.sh integ vr 10 ...`, `inst/173/ls.sh integ 1414 ls 2 3 4 5 6 7 8 9`.
+2. Debug build with fix/171 (built, see above): lockstress, ulwrace, iconlock; expect no new pair into win_data.
+   Open question from the coordinator: the flush fallback `NtUserPostMessage( hwnd, WM_X11DRV_SET_HIDDEN )` (bitblt.c, 062)
+   runs with dce.c's surfaces_lock and the surface mutex held; with 171's edge user -> dce surfaces_lock it must not take
+   the user lock. Read so far: NtUserPostMessage -> get_window_thread -> get_user_object_thread -> get_user_entry (shared
+   handle table entry, no user_lock in those three), then is_exiting_thread and put_message_in_queue: NOT read to the end,
+   NOT shown with the debug build. To force it: a faint-alpha layered window (all alpha < 16, then not) updated while
+   another thread holds the window data (e.g. in WindowPosChanged), look for a pair `dce.c:&surfaces_lock ->` or
+   `dce.c:&surface->mutex -> sysparams.c:&user_mutex` in the fold. If it can take the user lock: set a flag in the flush
+   and post after the surface is unlocked, or always post from the window's thread.
 3. `tools/regress.sh unit` for user32:win msg input dce sysparams monitor clipboard, win32u:win32u, d3d9:device,
    opengl32:opengl, both arches, on wt/173-build vs the h26 baseline (only the x86_64 debug-build runs exist).
-4. Inventor on inv2: debug build session (only start + hello/tlb were logged: `inst/173/inv/dbg.folded`, no forbidden
-   pair), then wt/173-build: `INV=inv2 tools/invscen/run.sh all` 13/13, rubber-band fps A/B vs build/ (inst/round2/m.sh,
-   P=inv2), xdotool drag / resize of the main window and a dialog (061 check).
+4. Inventor on inv2 (lease it): debug build session (only start + hello/tlb were logged: `inst/173/inv/dbg.folded`, no
+   forbidden pair), then wt/173-build: `INV=inv2 tools/invscen/run.sh all` 13/13, rubber-band fps A/B vs build/
+   (inst/round2/m.sh, P=inv2), xdotool drag / resize of the main window and a dialog (061 check).
 5. notes/wine/window-surfaces.md: the winex11 rule (not written yet); CODE.md line for tests/r173.
 
 ## Weak spots
