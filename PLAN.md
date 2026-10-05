@@ -373,6 +373,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   alone is pulled back; multi-tag dialogs collapse), and follow child-window owners via GA_ROOT.
   Reviewer's tested variant v3; worker applying. Merge after (coordinator reads the delta).
 
+- 173 reworked and ON INTEG (local tip b8f013d4fbb = b5d75449ffe + 171 (3) + 173 (6); not pushed,
+  build/ still b5d75449ffe): NtUserDrawIconEx draws from private bitmap copies on non-memory DCs
+  (lock kept for memory DCs) + a threaded cursoricon test (passes on Windows; the first version
+  failed it with 34 % wrong draws); BadWindow fixes; xinerama order; trylock comment. Collision
+  probes 0 bad, deadlock repro 50/50 clean, 10 units 0 worse, 077 table identical. Window-DC icon
+  draws cost 25-60 µs instead of 14-16. Inventor not run on it (seat). Read by the coordinator.
+  Root-caused drafts from it: 182 (libX11 bug: XID refill races when threads allocate ids on the
+  shared gdi_display — winex11 creates a GC per memory DC; aborts the process), 184 (ConfigureNotify
+  mapped through the old host parent after an X window recreation; one-line experiment fixes it),
+  183 (set_window_text use-after-free, by reading; no symptom in a stress).
+- 182 + 184 (Opus worker, wt/182): Wine-side fix for the XID race (it could abort real apps),
+  proper fix for 184, an upstream libX11 report text for the user to file.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
