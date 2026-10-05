@@ -477,6 +477,18 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Running: Sonnet worker on inv2 doing the Inventor checks 175 / 181 / 173 still owed; the 174
   worker on inv3 (does the user's resize problem still reproduce on the new integ? bounded).
   User: wrap up — finish what is started (177 review, 191, these checks), no new issues.
+- 174, Inventor round on the server (awesome + picom, 144 DPI, Vulkan): the user's persistent stale
+  picture did NOT reproduce, on build/ (0 of 72) or on build-next (0 of 50). Found instead: after
+  a WM-driven resize the window jumps back to an earlier size of the drag when the application
+  falls behind (build/ 9 of 34 throttled; probe frame.exe rgnpost 27 of 30, build-next 20 of 20
+  plus a 1 px creep per resize). Cause (traced, upstream code): a SetWindowPos that moves nothing
+  (update_window_state, SetWindowRgn) between the WM's resize and the posted state change makes
+  sync_window_position request the stale Win32 rect. Fix on fix/174 (d09a8c4d1ce on cffd27540ee,
+  6 lines: early return when Win32 didn't move the window and no request is pending) → 0 of 20,
+  Inventor 0 of 26. In adversarial review (Opus, may use inv3). Known hole: the same inside a
+  state update (4 of 2854 in a trace). Whether this explains the user's picture is unproven; the
+  data list to collect on the laptop is at the end of issues/174. Fact: Inventor has one client X
+  window (the graphics view); ribbon, browser, tabs are in the window surface.
 - 177 fixed, reviewed ("merge as is", no defect found), ON INTEG (local tip b1e7b97cfed = pushed
   cffd27540ee + 1; not built/regressed yet: build-next is in use by the Inventor checks).
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
