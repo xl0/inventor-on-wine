@@ -17,6 +17,6 @@ Same with and without 175's fix (inst/175/minloop-awesome.txt). openbox: SC_MINI
 winex11 restores a managed window through Iconic -> Withdrawn -> Normal (the Mutter workaround in
 window_set_wm_state); awesome may manage the re-mapped window as minimized again (`_NET_WM_STATE_HIDDEN` or
 WM_HINTS initial state still on the window), and Wine follows the WM_STATE Iconic it then gets.
-Windows ground truth to take first: are owned windows hidden for ShowWindow(SW_MINIMIZE) as for SC_MINIMIZE, and
-is the whole owner chain hidden (`owned.exe auto` checks both; the VM was not reachable during 175).
+The owned windows staying visible for SW_MINIMIZE and the second-level dialog never being hidden are win32u's
+part, on every WM (draft 180, with the Windows ground truth); what is specific to awesome is the failed restore.
 Inventor relevance: its own minimize button is SC_MINIMIZE; under awesome the user restores from the WM.

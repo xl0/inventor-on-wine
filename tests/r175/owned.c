@@ -133,8 +133,8 @@ static void report(const char *what)
 {
     RECT rc;
     int i;
-    printf("report %s: active %s foreground %s\n", what, idx(GetActiveWindow()) < 0 ? "-" : defs[idx(GetActiveWindow())].name,
-           idx(GetForegroundWindow()) < 0 ? "-" : defs[idx(GetForegroundWindow())].name);
+    printf("report %s: active %s foreground %s\n", what, !GetActiveWindow() || idx(GetActiveWindow()) < 0 ? "-" : defs[idx(GetActiveWindow())].name,
+           !GetForegroundWindow() || idx(GetForegroundWindow()) < 0 ? "-" : defs[idx(GetForegroundWindow())].name);
     for (i = 0; i < COUNT; i++)
     {
         if (!wnd[i]) continue;

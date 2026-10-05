@@ -76,10 +76,18 @@ Plain X clients (tests/r175/xtransient.c: parent, transient, transient of the tr
 |---|---|---|---|
 | awesome 4.3 | never moved: `awful.ewmh.tag` gives a transient its parent's tags only when it is mapped; `c:move_to_tag`, Mod4+Shift+N and a pager `_NET_WM_DESKTOP` message move one client (parent 1, child 0, grandchild 0) | frame unmapped, client IsUnviewable, WM_STATE stays Normal | only PropertyNotify `_NET_WM_DESKTOP`; Win32 state unchanged |
 | openbox 3.6 | the whole transient tree moves, whichever member is asked (1,1,1) | WM_STATE Iconic | winex11 minimizes the window (SC_MINIMIZE; also on a plain desktop switch) and restores it when it is shown again; win32u hides the direct owned windows meanwhile |
-| mutter, KWin | move transients with their parent (their documented behaviour; not run: the Linux VM was in use) | stay mapped | - |
-Baseline (integ) with the probe: awesome leaves every managed owned window on the old tag (20 of 20 moves; a
-dialog created while the owner is on the other tag appears with the owner, then stays there when the owner comes
-back). openbox moves them, but see "Not fixed here".
+| mutter, KWin | not run (the Linux VM was in use). From their sources as I remember them — both move a window's transients along on a workspace change and keep windows of other workspaces mapped; treat as unverified | | |
+Baseline (integ) with the probe: awesome leaves every managed owned window on the old tag (each move of the
+baseline runs; a dialog created while the owner is on the other tag appears with the owner, then stays there when
+the owner comes back). openbox moves them, but see "Not fixed here".
+
+## Windows ground truth (Win11 VM, `owned.exe auto`: 0 failures; Wine: 8, see draft 180)
+Minimizing the owner (ShowWindow(SW_MINIMIZE) and WM_SYSCOMMAND SC_MINIMIZE alike) hides every window in its
+owner chain — the layered popup, dialogs, tool window, the WS_EX_NOACTIVATE / plain popups and the dialog owned
+by a dialog (WM_SHOWWINDOW 0 / SW_PARENTCLOSING each) — and restoring shows them again (SW_PARENTOPENING).
+Hiding the owner (SW_HIDE) leaves them visible. So on Windows an owned window is never on screen without its
+minimized owner's windows staying behind. Virtual desktops: an owned window is on its owner's desktop (the
+premise of this issue, Windows' documented behaviour; not probed, the VM run has no virtual-desktop step).
 
 ## The outline
 The window that draws it is awesome's frame around the popup: awesome gives every client a 1 px border
@@ -141,7 +149,7 @@ tests/r175/scen.sh (owned.exe; owner moved between desktops 0 and 1 ten times ea
 openbox: pager message; screen checked by window colours):
 | | base | fix |
 |---|---|---|
-| awesome | all 6 managed owned windows left behind on 2 of 2 moves away | 20 moves, 0 left behind; old tag shows only the override-redirect noact/plain |
+| awesome | all 5 managed owned windows left behind on 2 of 2 moves away (base runs: 2 moves) | 20 moves, 0 left behind; old tag shows only the override-redirect noact/plain |
 | awesome + picom | same | same; bar never visible, no border |
 | openbox, openbox + picom | sub left on the old desktop on every move away | 1 of 10 (the first) |
 Dialog created while the owner is on the other desktop: on the owner's desktop, and now comes back with it
@@ -150,8 +158,12 @@ same as base; clicks on owner / dialog / tool window activate them (X and Win32)
 touched by a tag move. Close: 0 X windows left.
 Border (tests/r175/barpix.sh, awesome + picom): base `000000 03c903 ... 000000` with no frame opacity; fix all
 `00c800`, frame and client opacity 1, also after SC_MINIMIZE + awesome restore.
-062 check (tests/layered_splitter.sh drag / move / cycle, 4 WM configs, base vs fix) and 077 table
-(tests/sizemove_scen.sh): see the numbers below.
+062 check (tests/layered_splitter.sh drag / move / cycle x 4 WM configs x base / fix, inst/175/ls062.txt): same
+drags, splits and clicks in all 24 runs; bar on screen without a compositor 030303 (both), openbox + picom 00c800
+(both), awesome + picom base 03c903 -> fix 00c800. Screenshot in the middle of a Mod4+drag and after the drop
+(inst/175/middrag.sh, awesome + picom): base two black columns 6 px apart (398/404, then 518/524), fix none.
+077 table (tests/sizemove_scen.sh, 8 scenarios x awesome / openbox, inst/175/sm077.txt): ENTER/EXITSIZEMOVE
+pairs and WM_WINDOWPOSCHANGED counts identical base vs fix in all 16.
 tools/regress.sh unit, 2 runs per arch: user32:win 4 failures (baseline b5d75449ffe-h26: 4), user32:msg 1 (1),
 user32:input pass (pass), i386 and x86_64: 0 worse.
 
@@ -171,5 +183,7 @@ user32:input pass (pass), i386 and x86_64: 0 worse.
 - awesome's default placement rule moves new floating clients (the splitter too) to free screen space; Inventor
   re-places its splitters on layout changes only. Not seen as a problem in 077's Inventor run (maximized);
   check with a restored Inventor window.
-- Windows ground truth for "owned windows are hidden with a minimized owner" (owned.exe auto) not taken: the
-  Windows VM kept disappearing 3-6 minutes after start (somebody else restarting it), SSH never came up.
+- win32u doesn't hide owned windows like Windows when the owner is minimized (draft 180); that is what leaves
+  windows on screen in the two items above, not the desktop handling.
+- Moving an owned window alone (awesome: Mod4+Shift+N with a dialog or floating pane focused) is not undone;
+  it rejoins its owner the next time the owner changes tag.
