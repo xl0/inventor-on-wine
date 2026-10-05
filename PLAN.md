@@ -442,6 +442,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   WM_PAINT for a moved GPU child (re-measure in Inventor). Regress of the new tip
   (build-next/ = wine-11.18-564-gd8e4d0f72d2): 0 worse of 1757 (1649 pass / 80 fail / 28 crash).
 
+- 182 + 184 fixed on fix/182 (3 commits on b8f013d4fbb; cherry-pick cleanly onto d8e4d0f72d2), in
+  adversarial review; they go into the NEXT round (the current 27 commits wait only for the seat).
+  182: cause confirmed with an instrumented libX11 (`_XLockDisplay` refills the XID, then may wait
+  for a sequence sync with the display unlocked); Wine now takes XLockDisplay around every
+  id-allocating request on shared displays (42 sites via helpers). Chosen over a driver mutex
+  because NVIDIA's EGL allocates ids on gdi_display inside the library. dcchurn 60 of 60 (integ:
+  46 of 60 abort); cost not measurable (5.95 vs 5.94 µs per DC). libX11 report + patch ready in
+  issues/attachments/182-* for the user to file. 184: the owner drops the stale host parent at the
+  first position event; lost positions under openbox 70 of 720 → 0 of 720.
+  Not closed: 177 (reachable on plain integ too). New drafts: 188 (BitBlt from a window DC while
+  another thread replaces the surface), 190 (libX11 XOpenIM double free when threads create their
+  first windows together), 191 (XIC destroyed by another thread during XFilterEvent).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
