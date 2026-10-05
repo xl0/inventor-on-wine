@@ -295,6 +295,16 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   thread detach vs a thread holding the display lock in create_shm_image; hangs in 5-30 % of
   loaded stress runs on every build) — both X11-relevant, to be handed out after the 173 review.
 
+- 157 verified on its final tip (integ + 7 commits, 750bb757812): VM GNOME/KDE/sway rapid +
+  lockstress with pointer/key jitter 0 hangs, 0 protocol errors; wl_xowner 26/26 on KDE and GNOME;
+  host session: roleflip + jitter 8/8, GL child visible after flips 5/5, first frame after show
+  5/5, 132's clip/flip identical to integ, sink stress 6/6, debug build: only allowed lock pairs.
+  In a focused re-review of the changed design (surface serial instead of the role-change gap).
+  170: hides ≥ 5 ms fixed by the last commit; a 0-2 ms hide/show stays fatal — a wl_display.sync
+  roundtrip before get_xdg_surface does not help (5/5 fatal), so a deferred show wouldn't either;
+  remaining routes: a new wl_surface per show (needs re-homing of subsurface popups) or keeping the
+  xdg objects of hidden windows.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
