@@ -433,6 +433,10 @@ launches; previous device-limit errors do not authorize pausing another device.
   `g-run.sh` / `g-utest.sh` (stress matrix and conformance units in the guest, watchdog + gdb backtraces),
   `lockorder-debug.patch` + `lockorder.py` (debug build that reports win32u locks taken under driver mutexes).
   `r132.sh` (132's probes on any build, host session), `sinkstress.sh` (lockstress with 132's sources in its windows).
+  `tests/r173/`: the same for winex11 (173): `iconlock.c` (user lock vs window data deadlock), `visual_race.c` (X window
+  recreated by another thread: BadWindow), `flushpost.c` (forces the surface flush's posted retry), `lockorder-debug.patch` +
+  `lockorder.py` (all win32u + winex11 mutex pairs with call chains, X errors with backtraces), `run.sh` / `batch.sh` /
+  `ls.sh` / `x.sh` (watchdog runner, batches without a WM and with openbox, own Xvfb displays; they live in inst/173/).
   Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
   `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
