@@ -353,6 +353,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   flips with a presenting GL child (Clutter criticals, child drawn on the owner; compositor-side,
   the driver's requests are legal).
 
+- 171 reworked and ON INTEG (local, 3 commits → tip 818f1e8f9b6; not pushed, build/ not rebuilt —
+  the struct gained a field and WINE_GDI_DRIVER_VERSION is 112, so the next rebuild is a full one):
+  registration counter on the surface, registration stays outside the user lock; a surface set
+  during destroy is released in free_window_handle; bounded user32:win test (5/5 on Windows x86 and
+  x64). ulwrace race 200/200 (integ 27/30 fault), the review's deadlock probe 10/10 done, no
+  USER-call stall (max 0.5 ms), 8 units 0 worse. Remaining hangs in the heavier stresses are 177
+  (Xlib) and 176 (window DC updated under a surface lock) — upstream, drafts. On Windows the whole
+  user32:win had 2 test_topmost failures in 20 fix runs (0 in 18 integ runs), unattributed: check
+  before upstreaming. Diff read by the coordinator (the reviewer's own variant; no second review).
+- Windows VM: qemu 10.2 segfaults within minutes when the virtio-fs device is attached (one
+  worker's observation: stable for a whole session without it). vm/run.sh: the share is now opt-in
+  (VFS=1); winrun.sh works over ssh and needs none.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the

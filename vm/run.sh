@@ -2,7 +2,7 @@
 # Windows reference VM. Usage: vm/run.sh [install]
 #   VNC 127.0.0.1:5901, SSH 127.0.0.1:2222 (user dev, key vm/id_ed25519),
 #   HMP monitor vm/mon.sock, QMP vm/qmp.sock (vm/input.py). `install` attaches the Windows + unattend ISOs.
-#   vm/share/ is exported over virtio-fs (tag "share"); virtiofsd exits with QEMU.
+#   VFS=1: vm/share/ exported over virtio-fs (tag "share"); off by default, see below.
 set -euo pipefail
 cd "$(dirname "$0")"
 # One instance only: a second start used to take the sockets, pid file and TPM state away from the running VM.
@@ -21,11 +21,17 @@ mkdir -p tpm
 [ -x ../deps/swtpm ] || cp /usr/bin/swtpm ../deps/swtpm
 ../deps/swtpm socket --tpm2 --tpmstate dir=tpm --ctrl type=unixio,path=tpm/sock --daemon --terminate
 
-# Unprivileged virtiofsd: no uid switching, bwrap already confines it.
-mkdir -p share; rm -f vfs.sock
-../deps/virtiofsd-v1.14.0/target/x86_64-unknown-linux-musl/release/virtiofsd \
-  --socket-path=vfs.sock --shared-dir=share --sandbox=none --log-level=${VFS_LOG:-warn} >vfs.log 2>&1 &
-until [ -S vfs.sock ]; do sleep 0.1; done
+# virtio-fs share (vm/share, tag "share"): opt-in with VFS=1. With qemu 10.2 the VM died (qemu segfault) within
+# minutes whenever the device was attached; without it it stays up. winrun.sh copies over ssh and needs no share.
+vfs=()
+if [ -n "${VFS:-}" ]; then
+  # Unprivileged virtiofsd: no uid switching, bwrap already confines it.
+  mkdir -p share; rm -f vfs.sock
+  ../deps/virtiofsd-v1.14.0/target/x86_64-unknown-linux-musl/release/virtiofsd \
+    --socket-path=vfs.sock --shared-dir=share --sandbox=none --log-level=${VFS_LOG:-warn} >vfs.log 2>&1 &
+  until [ -S vfs.sock ]; do sleep 0.1; done
+  vfs=(-chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=share)
+fi
 
 extra=()
 if [ "${1:-}" = install ]; then
@@ -48,7 +54,7 @@ qemu-system-x86_64 \
   -cpu host,hv_relaxed,hv_vapic,hv_spinlocks=0x1fff,hv_time,hv_vpindex,hv_synic,hv_stimer \
   -smp 16 -m 32G \
   -object memory-backend-memfd,id=mem,size=32G,share=on -numa node,memdev=mem \
-  -chardev socket,id=vfs,path=vfs.sock -device vhost-user-fs-pci,chardev=vfs,tag=share \
+  "${vfs[@]}" \
   -chardev socket,id=tpm,path=tpm/sock -tpmdev emulator,id=tpm0,chardev=tpm -device tpm-crb,tpmdev=tpm0 \
   -drive file="$DISK",if=none,id=disk0,cache=unsafe,discard=unmap \
   -device nvme,drive=disk0,serial=winref0,bootindex=1 \
