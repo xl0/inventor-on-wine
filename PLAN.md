@@ -366,6 +366,13 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   worker's observation: stable for a whole session without it). vm/run.sh: the share is now opt-in
   (VFS=1); winrun.sh works over ssh and needs none.
 
+- 175 review done: commit 2 (opacity 1) fine — on base an alpha-0 window under awesome + picom is
+  drawn fully opaque, not only bordered; "unmanaged" rejection confirmed. Commit 1 must act only on
+  a real change of the owner's desktop, move only owned windows that were on the owner's previous
+  desktop (else a tool window parked on another monitor jumps to the owner's screen; a dialog moved
+  alone is pulled back; multi-tag dialogs collapse), and follow child-window owners via GA_ROOT.
+  Reviewer's tested variant v3; worker applying. Merge after (coordinator reads the delta).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
