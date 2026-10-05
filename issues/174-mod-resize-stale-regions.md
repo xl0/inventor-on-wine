@@ -198,7 +198,8 @@ WM_WINDOWPOSCHANGING still gets its rect requested.
 Checks: 077's table (`inst/130/sm.sh`, awesome and openbox, with and without picom; inst/174/sm/fix.txt) identical to
 the reference in all four setups; 130's root-window XI2 selection is not touched (no change in mouse.c / event.c);
 Inventor on the fix build: table above, application-side SetWindowPos of the frame still moves the X window;
-regress user32 / win32u / winex11.drv: see inst/174/regress.log (running when this was written).
+regress user32 / win32u / winex11.drv (52 units, both arches) vs the integ cffd27540ee baseline: 0 real differences
+(user32:win fails 4 on both in the re-runs; inst/174/regress-compare.txt).
 Not closed: the same request can still go out when the no-move SetWindowPos happens *inside* a state update that
 applies an older WM rect while a newer one has already been recorded (X events handled inside the application's
 WM_SIZE; 4 of 2854 state updates in the traced session handled ConfigureNotify inside). Closing it needs the driver to
