@@ -424,9 +424,12 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   unconditionally. awesome ± picom 0 of 20 left behind; openbox: a second-level dialog once in 10
   (draft 179, not a missed follow). Minimize/restore under awesome: base 1 of 352 incomplete,
   patched 6 of 624 (p = 0.43; draft 178's race). Opacity commit unchanged. Inventor not checked.
-- integ local = b5d75449ffe + 171 (3) + 173 (6) + 157 (7) + 175 (2) = tip ed0755113c0. Building it
-  in build-next/ and running the full regress now; the Inventor suite needs the seat, then push
-  and rebuild build/. Still to come into this round: 181 (corrections), 182/184.
+- integ local = b5d75449ffe + 171 (3) + 173 (6) + 157 (7) + 175 (2) = tip ed0755113c0.
+  build-next/ = wine-11.18-555-ged0755113c0; full regress vs the h26 master baseline: 1648 pass /
+  80 fail / 28 crash / 1 timeout — the only difference is i386 amstream:amstream timing out in the
+  loaded full run (8 of 8 pass in unit mode on build-next, build/ and master: load flake).
+  Regress half done; the Inventor suite needs the seat, then push and rebuild build/.
+  Still to come into this round: 181 (corrections), 182/184.
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
