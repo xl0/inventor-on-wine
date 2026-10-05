@@ -154,20 +154,38 @@
 - A fault in Unix-side code inside a syscall is not a crash: ntdll returns the exception code to the PE caller
   and mutexes held stay locked (172). A hang on a Unix mutex whose owner isn't in the locked region: rerun
   with `WINEDEBUG=+seh` and grep `handle_syscall_fault`.
-- Offscreen client surfaces (181, probes tests/r174/): the toplevel X window only holds a copy, refreshed by a full
-  driver present and by fix/061 on Expose. Not refreshed: a child that moved without resizing (`move_window_bits()` copies
-  in the window surface, DCX_WINDOW), the strip a child grew by until its next full present, and GDI drawing on the
-  window: a DC of a window with a client surface has no window surface and draws on the toplevel X window directly
-  (`update_visible_region()` / `X11DRV_GetDC`), so the offscreen X window never gets it. wined3d presents partial
-  rectangles of COPY-effect swapchains that way (`swapchain_blit_gdi()`, WPF's dirty rectangles), from its command stream
-  thread; gdi_display is only flushed by `X11DRV_ProcessEvents`, a surface flush or a full present, so such a present
-  can stay invisible until an X event reaches the process.
+- Offscreen client surfaces (181, probes tests/r174/ and tests/r181/gpuchild.c): the toplevel X window only holds a
+  copy of the offscreen X window, made at each full driver present. What refreshes it otherwise (fix/181):
+  an Expose presents the exposed region again (fix/061; only that region since 181), a child that moved without
+  resizing is presented again at its new place and invalidated (`update_client_surfaces()`), and `move_window_bits()`
+  also copies on the host window what the window surface doesn't paint (internal `DCX_CLIENTSURFACES` DC: no
+  surface, visible region minus the surface clip region), which is all that moves a GPU child of *another* process
+  when its container moves. Windows: a plain move keeps the bits, a child that a resized sibling covered first gets
+  WM_PAINT instead (186).
+- GDI on a window with a client surface (client DC, not DCX_WINDOW) has no window surface and draws on the toplevel
+  X window directly (`update_visible_region()` / `X11DRV_GetDC`), so the offscreen X window never gets it. wined3d
+  presents partial rectangles of COPY-effect swapchains that way (`swapchain_blit_gdi()`, WPF's dirty rectangles),
+  from its command stream thread, on the DC it got when the swapchain was created. Three traps (181): a DC that was
+  valid before the window got its pixel format flag kept the window surface (drawing lands under the client surface,
+  never visible) until something invalidated it - `update_window_state()` now does; gdi_display is only flushed by
+  `X11DRV_ProcessEvents` when the thread has X events (upstream d3cb94b543e), a surface flush or a full present, so
+  such drawing stayed in Xlib's buffer - `add_device_bounds()` now flushes; and an Expose (no compositing manager)
+  over such drawing brings back the last *full* frame there (open, needs partial presents to reach the offscreen
+  window: wined3d keeping the front buffer, or DCs of these windows drawing into it).
+- A window DPI-scaled by Wine (unaware application, scaled monitor) has a scaled window surface and a host window
+  with other coordinates: direct GDI on its client surfaces is misplaced upstream, and 181's bits move is skipped.
 - Hardware WPF = one wined3d swapchain (Vulkan surface, offscreen X window) per HwndSource, a new one per size; software
   WPF (`RenderOptions.ProcessRenderMode`, per-target `RenderMode`) BitBlts from the render thread into the window
   surface and behaves like any GDI child. Client surfaces of a process: X windows below its 1x1 unnamed dummy parent in
   `xwininfo -root -tree`.
-- win32u answers a present to a swapchain whose extent no longer matches the window with VK_SUBOPTIMAL_KHR after
-  presenting the old-size image; wined3d then recreates the swapchain but shows nothing new until the next Present (181).
+- win32u answers vkAcquireNextImageKHR / vkQueuePresentKHR on a swapchain whose extent no longer matches the window
+  with VK_SUBOPTIMAL_KHR; the present still shows the old-size image, unscaled, the rest of the window undefined.
+  wined3d (fix/181) recreates the swapchain when the acquire says so and only then presents; it used to present, then
+  recreate, and show nothing new until the next Present. GL has no such status: the GLX drawable follows the X window,
+  whose resize request (`client_surface_update_geometry()`, gdi_display) must have reached the server before the frame
+  is rendered (XSync there since 181).
+- A blt-model present from WM_SIZE of a *top-level* window that just grew can miss the new strip on Windows too (1 of
+  6 on Win11): not a reference for anything.
 - A WM resize is X first: ConfigureNotify (awesome: a real one mapped one pixel off, then the synthetic one) and the
   Expose events of the new area are handled before Win32 knows the size; under a compositing manager these are the only
   Expose events a mapped window gets. awesome's frame ConfigureNotify also yields a GravityNotify whose posted

@@ -376,6 +376,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   prefer the other GPUs. The user's WM (awesome 4.3, no compositor): kill that display's
   openbox by PID, `DISPLAY=:N awesome -c x/awesome-rc.lua`; `awesome-client`
   (DBus) can script it (e.g. `c.maximized = false`). awesome lacks _NET_WM_MOVERESIZE (061, 076).
+  Back to openbox: it keeps the `_NET_NUMBER_OF_DESKTOPS` awesome left on the root window (9), so
+  `DISPLAY=:N xdotool set_num_desktops 4` after starting it; `tests/r175/wm.sh :N awesome|openbox [picom]`
+  does the whole swap (awesome on a private D-Bus session, `tests/r175/ac.sh :N LUA`).
   Licensing (152, observed 2026-10-03): every prefix is served by its OWN AdskLicensingService. The service
   listens on the address saved in `C:\ProgramData\Autodesk\AdskLicensingService\AdskLicensingService.data`
   (`{"Addr":"127.0.0.1:PORT"}`; port busy at start -> new port, file rewritten), and the SDK in Inventor
@@ -464,6 +467,15 @@ launches; previous device-limit errors do not authorize pausing another device.
   `partial` = dirty-rectangle present after each resize), `drive.sh` (N Mod / Alt + right-button drags of a corner or
   `xdotool windowsize` steps on any display, screenshot after each), `check.py` (screen vs. the layout for the X window's
   size, per child), `wstate.c` (another process' top-level: rects, region, children with pending update rects; `redraw`).
+  `tests/r181/`: what the screen shows of a GPU-presented window (181): `gpuchild.c` (`grow` = one ResizeBuffers +
+  Present per resize, `move` = moved without presenting, `movesib` = a sibling grows over it and presents first,
+  `partial` = D3D9 COPY-effect presents of a 40x40 rectangle + a cover window; options `top d3d9 flip below nudge`;
+  every check reads the screen from another process so the checker flushes nothing; exit 0 = ok, Win11 results in the
+  issue), `env.sh TAG` (fix | base | master: build dir + scratch prefix inst/181/pfx-TAG, `w` = that wine),
+  `run.sh TAG vulkan|gl MODE..` (parks the pointer: input repairs some cases); `accept.sh` / `accept-wpf.sh` / `all.sh`
+  (174's drive.sh probes + gpuchild, 30 resizes each, on :98 as it is), `xmove.sh` (host moves a panel with another
+  process' D3D child), `quick.sh` / `rep.sh` (061 / 078 / cross-process probes; they need a 96 DPI prefix), `fps.sh`,
+  `sw.sh` (gpuchild on an own Xvfb :1470 with lavapipe).
   Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
   `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
