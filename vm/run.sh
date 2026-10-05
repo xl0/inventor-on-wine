@@ -5,6 +5,11 @@
 #   vm/share/ is exported over virtio-fs (tag "share"); virtiofsd exits with QEMU.
 set -euo pipefail
 cd "$(dirname "$0")"
+# One instance only: a second start used to take the sockets, pid file and TPM state away from the running VM.
+# Workers share this VM: never kill it because "it isn't yours"; shut it down from inside the guest when all are done.
+if [ -f qemu.pid ] && tr '\0' ' ' < "/proc/$(cat qemu.pid)/cmdline" 2>/dev/null | grep -q -- "-name winref "; then
+  echo "winref VM already running (pid $(cat qemu.pid))"; exit 0
+fi
 # Big images live outside /home (no redundancy there: RAID0); everything else stays here.
 DATA=${WINE_DATA:-/data/users/xl0/wine} DISK=$DATA/win.qcow2
 

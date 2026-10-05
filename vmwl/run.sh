@@ -6,6 +6,11 @@
 #   guest; default "build" = the integ build). The virtiofsd processes exit with QEMU.
 set -euo pipefail
 cd "$(dirname "$0")"
+# One instance only: a second start used to take the sockets, pid file and TPM state away from the running VM.
+# Workers share this VM: never kill it because "it isn't yours"; shut it down from inside the guest when all are done.
+if [ -f qemu.pid ] && tr '\0' ' ' < "/proc/$(cat qemu.pid)/cmdline" 2>/dev/null | grep -q -- "-name vmwl "; then
+  echo "vmwl VM already running (pid $(cat qemu.pid))"; exit 0
+fi
 DISK=${WINE_DATA:-/data/users/xl0/wine}/vmwl-disk.qcow2  # big image outside /home
 ROOT=$(realpath ..)
 

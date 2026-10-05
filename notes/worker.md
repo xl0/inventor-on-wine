@@ -99,6 +99,10 @@ squashed screenshots, black xwd -root windows (036), stuck XTEST keys, `make dll
   per-binary profiles (local `priority=1 … ix` rules for the bwrap profile), so `hostname`,
   `lsblk`, Xorg, swtpm behave normally. Capabilities and nested user namespaces (nested bwrap)
   stay denied.
+- The VMs are shared: `vm/run.sh` (Windows) and `vmwl/run.sh` (Linux) do nothing when their VM is
+  already up. Use it as it is (your own `WINRUN_ID`), don't restart it, never kill a qemu, virtiofsd
+  or swtpm you didn't start in this very command, and leave it running when you finish unless your
+  brief gives you the VM exclusively.
 - `WINEDLLOVERRIDES="mscoree,mshtml="` is for `wineboot` only: set it on that one command, never
   `export` it. Inventor started with mscoree disabled dies ~6 s after start (CommonUI.dll+0x60b90,
   issue 152); `tools/invscen/run.sh` refuses to start it that way.
