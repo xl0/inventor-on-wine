@@ -1,6 +1,7 @@
 # 174: Main-window regions stay black or stale after Awesome Mod+mouse resize
 
-Status: open · Owner: worker-174 · Branch: fix/174 (wt/174, d09a8c4d1ce on integ cffd27540ee: the jump-back only)
+Status: open (the user's picture is unexplained) · the jump-back is fixed, reviewed and on integ (4 commits,
+e786948f119..da01d16c73b, see "Review of the jump-back fix" at the end) · Owner: worker-174
 **State (2026-10-05, after three rounds):** the user's persistent picture is not reproduced. The ~5 s wrong picture
 after large grows is real on screen but was only seen while the screen was sampled after the release; without sampling
 0 long cases in ~185 drags, and in every capture Inventor's main thread sits in its normal message pump with nothing
@@ -304,3 +305,40 @@ Not done: Home / Assistant panes closed, input at +1.5 s, a controlled with / wi
 Next step: fresh session, `round.sh` with heal.py replaced by one screenshot at +2 s (and the reverse), 5 grows each;
 if only the sampled runs are slow, look at Xorg / awesome during the 5 s (is the final ConfigureNotify sent late:
 `xev -id` on the frame, or winex11 `+event` timestamps against the release) instead of at Inventor.
+
+## Review of the jump-back fix (2026-10-05, inst/174-review/) — merge after fixes, done
+On integ as four commits: e786948f119 (post WM_WINE_WINDOW_STATE_CHANGED when a _MOTIF_WM_HINTS request is done),
+0598cc27966 (the fix, = d09a8c4d1ce), c9bbac3e20c (the hole: `update_rect`), da01d16c73b (only for mapped windows with
+a completed WM_STATE). The tree equals the one the reviewer tested (`all-three.diff` on d09a8c4d1ce).
+- **Why the fix alone was not enough.** "The Win32 side is about to be told" was not always true: nothing is delivered
+  while `mwm_hints_serial` is pending, and `handle_mwm_hints_notify()` was the only such handler that didn't post the
+  state-change message afterwards; upstream is saved by the next WindowPosChanged re-requesting the Win32 rect, which
+  the fix removes. Reproduced (`t9.sh`: awesome maximizes while the thread is busy 800 ms): fix alone 3 of 3 left X at
+  1,25 1598x974 and Win32 at 0,26 1600x974 until un-maximize; build-next heals at the next no-move SetWindowPos; with
+  e786948f119 consistent at once. `t8.sh` (X server paused, WS_MAXIMIZEBOX toggle + SWP_FRAMECHANGED): fix alone 4 of 4
+  X at the WM's size, Win32 at the old one, for good.
+- **No window manager / hidden windows.** A managed window's `wm_state_serial` never clears without a WM, so Win32 is
+  never told; a rect set by another X client then stayed (X 640x420, Win32 492x316). da01d16c73b keeps the old
+  re-request there.
+- **The hole** needs no extra SetWindowPos: X events handled inside WM_WINDOWPOSCHANGING / WM_SIZE of a state update are
+  enough (the update's own WindowPosChanged stores the older rect as desired). `hole.sh` under openbox: runs ending at
+  the WM's final size build-next 0 of 5, fix alone 0 of 5, with c9bbac3e20c 5 of 5 (both hold modes); awesome 6 of 6.
+  Limit: nested updates applied out of order fall back to the old request (stale but consistent).
+- **Deliberate behaviour changes, accepted:** an explicit SetWindowPos with the current rect made before Win32 learned
+  of a WM change no longer snaps the window back (the WM's rect wins); a no-move call that changes the visible rect
+  (first SetWindowRgn, decoration toggle) still requests the stale position.
+- **Corrections to the text above.** The 1 px creep is not new on build-next: build/ creeps the same (86,86 →
+  -160,-160 in 20 resizes), master too. Cause: `host_window_map_point()` ignores the frame's border width (awesome: 1),
+  so every real ConfigureNotify maps 1 px up-left until the synthetic one corrects it; a stale request in between
+  moves the window. The fix removes the trigger, the mapping bug remains (draft 194). Upstream master 4e819f054dd has
+  the stale-request bug (`t1.sh` 3 of 3).
+- **Checked.** 077 table identical in all 38 cases (awesome / openbox, ± picom); 130 moveloop identical; 175 scen
+  identical; 184 vstate 0 of 360; a 115-check scenario battery per WM differs from build-next only in the intended
+  lines; 52 regress units equal (user32:win is batch-dependent, not build-dependent). Inventor: suite 13 of 13, rubber
+  119 fps, awesome + picom at 144 DPI Mod4 drags 0 of 10 off-size, border drags 0 of 6, throttled 0 of 10 (build-next
+  throttled also 0 of 10 at this sample size). The final set was run in Inventor under openbox only.
+- **Not verified:** mutter, KWin; the final three-patch set in Inventor under awesome; tooltip / dialog placement.
+- **For upstream:** send e786948f119 first (standalone omission), then the fix with da01d16c73b folded in, then
+  c9bbac3e20c; subject and comment lines are over length.
+- Pre-existing bugs met on the way: draft 194.
+
