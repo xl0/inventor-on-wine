@@ -274,6 +274,16 @@ Both work with probes (awesome + picom on the headless NVIDIA displays; a WPF pr
 the Inventor-free .NET prefix) and must not start Inventor until the user says the licence seat is
 free again — then tell both workers (SendMessage) so they do their Inventor checks.
 
+- 173 done on fix/173 (5 commits, tip 1b6964ae62d), in adversarial review: upstream bugs —
+  NtUserDrawIconEx drew with the user lock held (deadlock vs winex11's window data; repro hangs
+  10/10 on integ, 8/9 on master, 0/50 on the fix); BadWindow deaths when another thread's
+  set_window_visual replaced the X window (PropertyNotify handlers and SetWindowText: 0 of 55 on
+  the fix, up to 10/10 before); a xinerama/display inversion. With 171 on top the lock graph has no
+  cycle (debug build, stress + an Inventor suite 13/13); the flush's posted retry takes no user lock
+  (forced ~11000 times). Regress units 0 worse, 077 table identical. NOT done: Inventor on the
+  plain fix build (suite, fps A/B, drag/resize) — the server got "Device limit reached" (the seat
+  is on the laptop); nothing was clicked in that dialog.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
