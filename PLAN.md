@@ -536,7 +536,8 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   ToUnicodeEx-from-a-non-owner path hit a freed XIC more easily (probe 5 of 16 → 26 of 32
   hangs); the reviewer's tested follow-up (ToUnicodeEx keeps the window data locked, 0 of 16)
   went in before it. +synchronous gdistress 5–7 hangs of 40 → 0; xicrace → 0; typing identical.
-  build-next/ = wine-11.18-572-g12ef0899477; full regress and Inventor suite running.
+  build-next/ = wine-11.18-572-g12ef0899477: full regress 0 real of 1757 (1 flaky, d2d1 timeout
+  on both), Inventor suite 13/13, dwgloop 10/10 → integ PUSHED (cffd27540ee..12ef0899477).
 - 190 fixed on fix/191 commit 2 (675c332fddc: recursive mutex around XOpenIM / XCloseIM / font
   sets / IM callbacks; libX11 reallocs a process-wide IM list unlocked) — NOT MERGING:
   it staggers thread starts and thereby exposes draft 193 (libXext frees its global XGE record
