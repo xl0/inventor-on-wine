@@ -431,6 +431,16 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Regress half done; the Inventor suite needs the seat, then push and rebuild build/.
   Still to come into this round: 181 (corrections), 182/184.
 
+- 181 corrected and ON INTEG (local, 9 commits → tip d8e4d0f72d2; integ = b5d75449ffe + 27):
+  `presented` flag on client surfaces (no re-present of a surface without an image; cleared when it
+  grows or switches on/offscreen), flush only after image blits (GDI speed and Xorg CPU back at
+  base; direct GDI primitives on such windows stay unflushed → draft 189), clip selected
+  unconditionally (an upstream bug reproduced: fullscreen frame clipped to the former window rect),
+  the DCX flag off the syscall, DC invalidation only when the pixel-format flag reaches the server.
+  36 acceptance runs 0 bad (awesome ± picom, both renderers, 144 DPI), 119 units 0 worse, fps equal.
+  Driver version now 113. Not fixed: D3D9 + Vulkan on lavapipe after a resize. Kept: one extra
+  WM_PAINT for a moved GPU child (re-measure in Inventor). Regress of the new tip running.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
