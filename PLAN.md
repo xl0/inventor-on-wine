@@ -260,6 +260,20 @@ commits or screenshots). Read-only mode may remain after expiry.
   GPU passthrough (needs intel_iommu=on), data disk on spare NVMe,
   wined3d d3d11 suite crash on NVIDIA headless (only if it bites real apps)
 
+## User feedback on integ b5d75449ffe (laptop, X11, 2026-10-04) and what was started
+"In my quick testing on X11 I did not really run into any issues." Two reports after that:
+- 174 (Opus worker, wt/174, display :98 / inv): after an awesome Mod+mouse resize parts of the main
+  window keep the OLD layout (ribbon width, browser pane height, status bar) with black/stale areas
+  until hover or the next resize; the viewport does resize. Hypothesis to test: the size-move end
+  (077/130) is detected before the WM's last ConfigureNotify, so the app finishes its size-move at
+  an intermediate size. Regression-or-old unknown.
+- 175 (Opus worker, wt/175, display :100 / inv3): moving Inventor to another virtual desktop
+  (awesome tag) leaves the splitter popup's outline on the old one (owned layered popup not
+  following its owner; transient-for / _NET_WM_DESKTOP / managed-or-not to be established).
+Both work with probes (awesome + picom on the headless NVIDIA displays; a WPF probe in a copy of
+the Inventor-free .NET prefix) and must not start Inventor until the user says the licence seat is
+free again — then tell both workers (SendMessage) so they do their Inventor checks.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
