@@ -4,29 +4,38 @@ Ubuntu 24.04 x86_64, 16 logical CPUs, 58 GiB RAM. Local setup is Wine-only:
 no reference VM. The server environment and populated prefixes described below
 are not present here.
 
-Inventor is closed; the last CJK comparison session exited 0. Findings are
-handed to the main agent: [124](issues/124-open-dialog-resize-coreclr-crash.md)
-(Open-dialog resize/navigation failure and captured crash) and
-[125](issues/125-format-text-preview-cjk-richedit.md) (Format Text preview).
-No further local tests are requested. Keep crash data private and preserve
-matching binaries before rebuilding for another test.
+Inventor is running for user-requested interactive retesting on `b5d75449ff`,
+with private GDB crash capture armed. The sketch-text check looked good, but
+the user subsequently reported persistent main-window resize artifacts:
+misplaced/stale image fragments and black bands. Inventor was not stopped by
+the debugger; picom still uses GLX/VSync/`--no-use-damage`.
+Confirmed Awesome Mod+mouse resizing: hovering over black areas redraws icons,
+and another resize restores the full window after transient glitches.
+This suggests missed repaint/invalidation, not a confirmed root cause.
+Report and reviewed screenshot:
+[174](issues/174-mod-resize-stale-regions.md).
+This build includes the server fixes for
+[124](issues/124-open-dialog-resize-coreclr-crash.md)'s breadcrumb-triggered
+crash and [125](issues/125-format-text-preview-cjk-richedit.md)'s preview issues.
+The original core's 126 mapped Wine binaries were copied and hash-verified in
+`inst/local/debug-20261002-142809-crashcapture/matching-binaries-d7799da4d5/`
+before rebuilding. Keep that archive and all crash data private.
 
 **Licensing:** the laptop and server share one active-device seat. Coordinate
 launches; previous device-limit errors do not authorize pausing another device.
 
-- `wine-src/`: partial clone of `xl0/wine`, `integ` at `d7799da4d5`.
+- `wine-src/`: partial clone of `xl0/wine`, `integ` at `b5d75449ff`.
   Tracks `gh/integ`; `origin` points to WineHQ. No rebase onto newer upstream.
 - `build/`: `../wine-src/configure --enable-archs=i386,x86_64` succeeds with
   GCC/MinGW 13. Only notice: legacy OSS audio unavailable (ALSA/Pulse work).
   Configuration logs: `configure.out`, `config.log`.
-  Version: `wine-11.18-494-gd7799da4d5`. Latest broad rebuild took 22m52s
+  Version: `wine-11.18-537-gb5d75449ff`. Latest rebuild took 1m48s
   with the resource limits below.
-  Log/resource report: `build/rebuild-20261002-132901{.log,-resources.txt}`.
+  Log/resource report: `build/rebuild-20261004-203437{.log,-resources.txt}`.
   Issue 084's shell and WinSupport.dll probes pass against the unchanged prefix.
-  32/64-bit console, caption GUI and Vulkan D3D11 present/readback smoke pass,
-  as do the relevant DComp Device3 and D3D11 VideoContext1 interface queries:
-  `build/smoke-d7799da4d5.log`. Cross-process and cross-apartment COM proxy
-  checks also pass in both architectures (`build/qi_remote{32,64}-d7799da4d5.log`).
+  Current 32/64-bit console and Vulkan D3D11 present/readback smoke pass:
+  `build/smoke-b5d75449ff.log`. Prior caption GUI, DComp interface and
+  cross-process/cross-apartment COM checks passed on `d7799da4d5`.
   Both local prefixes were stopped before rebuilding.
 - `prefixes/smoke`: isolated user folders, no Mono/Gecko; smoke runs disable
   them and winemenubuilder. Test wineserver stopped. Graphics probe success
@@ -53,7 +62,8 @@ launches; previous device-limit errors do not authorize pausing another device.
   Setup logs: `inst/local/{installer,browser-setup}.log`.
   Corefonts is installed; Arial files/registration verified, Segoe UI absent.
   [083](issues/083-wpf-keytip-font-fallback.md) records the earlier .NET 10.0.9
-  WPF key-tip FailFast and installation workaround; exact trigger/fix unverified.
+  WPF key-tip FailFast and installation workaround. The server's fix is now
+  in the build; explicit local key-tip verification remains pending.
   [046](issues/046-startup-crash-setwindowsubclass.md) has the distinct old-build
   subclass crash evidence.
   [084](issues/084-content-center-documents-shell-path.md) passes both local

@@ -1,28 +1,36 @@
-# Local workstation: handoff and deferred verification
+# Local workstation: interactive verification
 
 Keep the working Wine-only setup ready for user-driven testing. Implementation
 and further diagnosis are handed to the main agent. Preserve the private crash
 evidence and matching binaries; keep system Wine and unrelated prefixes untouched.
 The server results below are reference material, not local completion status.
 
-- [ ] Triage [124](issues/124-open-dialog-resize-coreclr-crash.md): Open-dialog
-  Awesome-resize repaint/navigation failure and captured CoreCLR crash.
-  Keep the symptoms distinct until linked; preserve private evidence and binaries.
+- [x] User reports "Everything looks good" on `b5d75449ff` after checking
+  sketch text. Treat this as interactive feedback, not a scripted regression run.
+- [ ] Investigate [174](issues/174-mod-resize-stale-regions.md)'s persistent
+  main-window resize artifacts. Screenshot attached; debugger is not holding a fatal exception,
+  and picom's known-good settings remain active. Confirmed Mod+mouse resize:
+  hover redraws icons in black areas, and another resize restores the window.
+  Investigate missed repaint/invalidation rather than assuming an app hang.
+
+- [ ] Verify [124](issues/124-open-dialog-resize-coreclr-crash.md)'s merged fix:
+  Open dialog, previews, breadcrumb navigation and Awesome Mod+mouse resizing.
+  Matching old binaries are archived privately; new crash capture is armed.
 
 - [x] CJK comparison and screenshot handed off in
   [123](issues/123-cjk-fallback-via-fontconfig.md).
-- [ ] Main agent to investigate [125](issues/125-format-text-preview-cjk-richedit.md):
-  preview-only boxes, early wrapping and tiny dots after re-editing. Text
-  orientation is not yet distinguished from the camera/sketch orientation.
+- [ ] Verify [125](issues/125-format-text-preview-cjk-richedit.md)'s merged fixes:
+  Chinese preview in the default font and re-editing without tiny dots.
+  Wrapping follows the sketch text-box width; orientation remains unverified.
 
-**Licensing:** Inventor is closed. Coordinate the shared single-device seat
-before another user-requested launch; no further local test campaign is requested.
+**Licensing:** one user-requested local Inventor session is running.
+Coordinate the shared single-device seat; do not start additional instances.
 
 - [x] Dedicated Inventor 2027.1 prefix installed, including native .NET 4.8,
   Gecko, pinned Edge/WebView2 and isolated user folders. Interactive document
   and sketch use reached.
-- [x] Built `d7799da4d5` with local memory limits; 32/64-bit console, GUI and
-  COM proxy checks, Vulkan readback and DComp/VideoContext1 queries pass.
+- [x] Built `b5d75449ff` with local memory limits; 32/64-bit console and Vulkan
+  readback smoke pass. Launched Inventor for interactive testing.
 - [x] NVIDIA-primary single-X-screen desktop resolved reported lag; picom
   GLX/VSync with `--no-use-damage` eliminated reported viewport tearing.
 - [x] Verified 084 fix on the laptop's original missing-ShellFolder state:
