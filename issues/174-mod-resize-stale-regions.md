@@ -1,9 +1,11 @@
 # 174: Main-window regions stay black or stale after Awesome Mod+mouse resize
 
-Status: open · Owner: worker-174 · Branch: fix/174 (wt/174, no commits) · **cause not found**: Inventor could not be run
-on the server (seat in use) and no probe reproduces stale GDI / software-WPF panes. Size-move ordering (077 / 130) ruled
-out as far as probes can; three defects of GPU-presented children found on the way are draft
-[181](181-offscreen-client-surface-stale-after-move-resize.md). See "Server investigation" below.
+Status: open, partly fixed · Owner: worker-174 · Branch: fix/174 (wt/174, d09a8c4d1ce on integ cffd27540ee)
+The persistent stale picture of the report was **not reproduced** on the server, neither on build/ (b5d75449ffe, the
+user's build) nor on build-next (cffd27540ee), Inventor at 144 DPI under awesome + picom. What was found and fixed in
+Inventor: under load the window jumps back to an earlier size of a WM drag (stale configure request). 181's fixes
+(merged) cover GPU-presented children. To be confirmed by the user on a build with 181 + fix/174; data to ask for is
+at the end. See "Inventor round (2026-10-05)".
 
 ## Environment
 
@@ -142,3 +144,81 @@ does not), `xrdb -query | grep -i dpi` and the prefix's LogPixels.
   content of that place), not black.
 - Harness: `drive.sh` under openbox lets the window grow off the screen after ~10 drags (those samples are reported as
   "not fully on screen" and don't count).
+
+## Inventor round (2026-10-05, inv3 on :100, seat on the server)
+Setup: awesome 4.3 + picom 12.5 (`--config /dev/null --backend glx --vsync --no-use-damage`), Xft.dpi 144 and LogPixels
+144, NVIDIA, Vulkan renderer, part with a sketch in edit (invscen `uilat`), window restored to 1300x800. Driver
+`inst/174/i/inv-drive.sh` (Mod4 + right drags of a corner or left drags of Inventor's own border; pointer moved away;
+screenshot, then `wstate.exe redraw` and a second screenshot: pixels that differ = content that was not on screen;
+final X size against the last pointer position). Shots and result files: inst/174/i/.
+
+| build | what | stale after settling | window not at the dragged size |
+|---|---|---|---|
+| build/ b5d75449ffe | Mod drags br / tl, 20-150 steps, part tab | 0 of 24 | 0 |
+| build/ | Inventor's own border (win32u loop) | 0 of 6 | 0 |
+| build/ | Home tab active (WebView2) | 0 of 8 | not evaluated (minimum size) |
+| build/ | Inventor pinned to one CPU, with 0 / 1 / 2 busy loops on it | 0 of 34 | 1 of 6 / 5 of 20 / 3 of 8 (+ 1 of 6 in the traced run) |
+| build-next cffd27540ee | Mod drags, part and Home, unthrottled and throttled | 0 of 50 | 1 of 42 throttled |
+| fix/174 (cffd27540ee + d09a8c4d1ce) | Mod drags, border drags, throttled (2 loops) | 0 of 26 | 0 of 26 |
+A throttled Inventor needs up to ~10 s to finish repainting after a drag (white viewport, tab strip at two places, old
+ribbon width at 3 s: inst/174/i/b-many-15-a.png); it always got there without input, so that is slowness, not the
+report's state.
+
+Facts about Inventor (measured): with a part open its process has one client X window, the graphics view (1678x787 at
+241,200 when maximized); ribbon, browser, tab strip and status bar are in the window surface (software WPF / GDI), so
+181's defects 2 and 3 don't apply to them. The frame has a rectangular window region of its own size (`wstate`:
+region type 2). WebView2's GPU processes have their own client windows in Inventor's toplevel (Home, Assistant).
+
+### Defect found: the window jumps back to an earlier size of the drag (fixed on fix/174)
+Timeline (build/, `WINEDEBUG=+x11drv,+event,+cursor`, Inventor pinned to one busy CPU; inst/174/i/b-tr-cfg.txt, lines
+from inst/invscen/inv3/inventor.log of that run):
+- 43613.38-.41: the thread gets to its X queue late and handles 407 events in one go; every ConfigureNotify is an
+  "unexpected config", the last one (60,40)-(1360,840) = the size the pointer was released at. The driver's current /
+  pending / desired rect are that; the Win32 rect is still (60,40)-(1496,903), one WM_WINE_WINDOW_STATE_CHANGED per
+  event is posted.
+- .437: `X11DRV_WindowPosChanging hwnd 0x204e0, swp_flags 0x181f`: win32u's `update_window_state()` for the frame (a
+  child window was created / destroyed, got a pixel format, or another process posted WM_WINE_UPDATEWINDOWSTATE for
+  its client surface): a SetWindowPos that moves nothing, with the old Win32 rect.
+- .441: `window_set_config ... requesting config (60,40)-(1496,903)`: `sync_window_position()` passes the Win32 rect
+  to `window_set_config()`, which sees it differs from the pending (= the WM's) rect and asks for it. awesome honours
+  configure requests of floating clients: the window is 1436x863 again.
+- .443 on: the posted state changes find `configure_serial` set and do nothing; the reply matches; X and Win32 agree on
+  the stale size. The content is consistent, the window is just not where the user left it; while the drag is still
+  going on the next motion resizes it again (visible as jumping).
+110 such no-move SetWindowPos on the frame in that session, 4 during the 6 drags. Same mechanism upstream (the code is
+upstream's); also with any application SetWindowPos that doesn't move the window (SetWindowRgn from a posted message:
+probe `frame.exe rgnpost` on Xvfb + awesome: build/ 27 of 30, build-next 20 of 20 resizes end at a stale size and the
+window creeps by a pixel per resize, up to 300 px off screen; fix/174 0 of 20, no creep).
+
+Fix d09a8c4d1ce `winex11: Don't request the old window rect again when the Win32 rect didn't change.`:
+`sync_window_position()` returns before `window_set_config()` when the window is managed, the visible rect is the one
+from before the call, no state update is being applied (`state_locks`) and nothing of ours is waiting
+(desired == pending). Inside a state update the old behaviour stays, so an application that refuses the WM's rect in
+WM_WINDOWPOSCHANGING still gets its rect requested.
+Checks: 077's table (`inst/130/sm.sh`, awesome and openbox, with and without picom; inst/174/sm/fix.txt) identical to
+the reference in all four setups; 130's root-window XI2 selection is not touched (no change in mouse.c / event.c);
+Inventor on the fix build: table above, application-side SetWindowPos of the frame still moves the X window;
+regress user32 / win32u / winex11.drv: see inst/174/regress.log (running when this was written).
+Not closed: the same request can still go out when the no-move SetWindowPos happens *inside* a state update that
+applies an older WM rect while a newer one has already been recorded (X events handled inside the application's
+WM_SIZE; 4 of 2854 state updates in the traced session handled ConfigureNotify inside). Closing it needs the driver to
+remember which rect the running update delivers.
+
+### Other observations (not pursued)
+- With a region set, awesome and a cross-process `ShowWindow(SW_RESTORE)` + `SetWindowPos` of the maximized frame
+  (`wstate.exe pos=`): Win32 restores, the X window stays maximized (_NET_WM_STATE_MAXIMIZED_*), build-next and fix
+  alike; un-maximizing through the WM first (Mod4+m) works.
+- fix/077 sends an ENTER / EXIT pair to a window whose placement ConfigureNotify arrives while a button is held for
+  another window's WM drag (seen with two probe windows).
+- `tools/prefix.sh stop` kills everything that has the prefix in its environment, also a WM started from a shell that
+  had run `prefix.sh env`.
+
+### If the user still sees stale regions on a build with 181 + fix/174: data to ask for (laptop, while it is stale)
+1. A screenshot, then `xwininfo -root -tree > tree.txt` and `xprop -id <Inventor window>`.
+2. `wine tests/r174/wstate.exe "Autodesk Inventor" tree` (Win32 rect, region, children, pending update rects), then the
+   same with `redraw` and a second screenshot (does everything come back?).
+3. Does moving the pointer over the *viewport only* repair anything; does the window keep the size it was dragged to.
+4. `xrdb -query | grep -i dpi`, `wine reg query "HKCU\Control Panel\Desktop" /v LogPixels`, awesome's layout for
+   that tag (floating or tiled), which corner / edge was dragged, CPU load at the time (the debugger was attached).
+5. If it can be made to happen again: Inventor started with `WINEDEBUG=+timestamp,+x11drv,+event,+cursor` (the log
+   compresses well) and the time of the stale resize.

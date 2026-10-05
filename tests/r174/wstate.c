@@ -1,5 +1,5 @@
 /* wstate.c: state of another process' top-level window after a resize (174).
- * Usage: wstate.exe TITLE-PREFIX [tree] [redraw]
+ * Usage: wstate.exe TITLE-PREFIX [tree] [redraw] [pos=X,Y,W,H]
  * Prints the window / client rect, the window region, and with `tree` every visible descendant
  * (class, rect in the top-level's client coordinates, update rect if any). `redraw` then invalidates
  * the whole tree (RedrawWindow with RDW_ALLCHILDREN), to tell content the application never painted
@@ -61,6 +61,13 @@ int main( int argc, char **argv )
     for (i = 2; i < argc; i++)
     {
         if (!strcmp( argv[i], "tree" )) EnumChildWindows( top, child_proc, 0 );
+        if (!strncmp( argv[i], "pos=", 4 ))
+        {
+            int x, y, w, h;
+            if (sscanf( argv[i] + 4, "%d,%d,%d,%d", &x, &y, &w, &h ) != 4) return 2;
+            if (IsZoomed( top )) ShowWindow( top, SW_RESTORE );
+            SetWindowPos( top, 0, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE );
+        }
         if (!strcmp( argv[i], "redraw" ))
             RedrawWindow( top, NULL, 0, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN );
     }

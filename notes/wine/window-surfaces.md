@@ -223,3 +223,10 @@
   Expose events of the new area are handled before Win32 knows the size; under a compositing manager these are the only
   Expose events a mapped window gets. awesome's frame ConfigureNotify also yields a GravityNotify whose posted
   WM_WINE_WINDOW_STATE_CHANGED applies the new size before fix/077's WM_ENTERSIZEMOVE (35-60 % of resizes, 174).
+- winex11 config tracking vs. WM-initiated changes (174): a ConfigureNotify the driver didn't ask for sets current =
+  pending = desired to the WM's rect at once; Win32 follows when the posted WM_WINE_WINDOW_STATE_CHANGED is handled.
+  Until then every `X11DRV_WindowPosChanged` carries the old Win32 rect, and upstream's `sync_window_position()`
+  requested it (`window_set_config()` compares with pending), undoing the WM's change under WMs that honour configure
+  requests. win32u calls it without the application doing anything: `update_window_state()` (flags 0x181f) after a
+  child is created / destroyed, gets a pixel format, or on WM_WINE_UPDATEWINDOWSTATE from another process. fix/174
+  skips the request when the rect didn't change outside a state update.

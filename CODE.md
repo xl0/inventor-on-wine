@@ -478,7 +478,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   aware), `wpf.cs` + `build-wpf.sh` (the same in WPF 4.8: one window or a WinForms frame hosting child HwndSources; `sw`,
   `partial` = dirty-rectangle present after each resize), `drive.sh` (N Mod / Alt + right-button drags of a corner or
   `xdotool windowsize` steps on any display, screenshot after each), `check.py` (screen vs. the layout for the X window's
-  size, per child), `wstate.c` (another process' top-level: rects, region, children with pending update rects; `redraw`).
+  size, per child; `SIZE` = the window didn't end at the dragged size), `wstate.c` (another process' top-level: rects,
+  region, children with pending update rects; `redraw`, `pos=X,Y,W,H`). `frame.exe rgn` / `rgnpost`: SetWindowRgn after
+  each layout / from a posted message (stale configure request, fix/174). Inventor driver: inst/174/i/inv-drive.sh.
   `tests/r181/`: what the screen shows of a GPU-presented window (181): `gpuchild.c` (`grow` = one ResizeBuffers +
   Present per resize, `move` = moved without presenting, `movesib` = a sibling grows over it and presents first,
   `partial` = D3D9 COPY-effect presents of a 40x40 rectangle + a cover window, `fsclip` = DPI-unaware top-level going

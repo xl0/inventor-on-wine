@@ -15,6 +15,9 @@
  *            what became invalid, as most real windows do (check.py: BORDER=0)
  *   thread   the GDI children are painted by another thread some ms after WM_PAINT / WM_SIZE, the way
  *            WPF's render thread presents in software mode (implies plain)
+ *   rgn      SetWindowRgn( whole window ) after each layout, as MFC's frames with an own caption do (Inventor)
+ *   rgnpost  the same from a message posted in WM_SIZE (a SetWindowPos that doesn't move the window, handled
+ *            after the X events that came in during the layout)
  *   dpi      DPI aware, sizes scaled by the system DPI (check.py: SCALE=1.5 at 144 DPI)
  * Build: x86_64-w64-mingw32-gcc -O2 -o frame.exe frame.c -ld3d11 -lgdi32 -luuid */
 #define COBJMACROS
@@ -33,7 +36,7 @@ static int scale = 96; /* system DPI when DPI aware */
 static DWORD start;
 static int enter, leave, depth, defer, slow, pump, nogpu, plain, late_size, early_size, layouts;
 static DWORD exit_time;
-static int threaded;
+static int threaded, set_rgn;
 static LONG need_paint[3];
 static HANDLE paint_event;
 static HWND frame, ribbon, browser, status, view;
@@ -122,6 +125,8 @@ static void layout(void)
     MoveWindow( browser, 0, RIBBON_H, BROWSER_W, rc.bottom - RIBBON_H - STATUS_H, TRUE );
     MoveWindow( status, 0, rc.bottom - STATUS_H, rc.right, STATUS_H, TRUE );
     MoveWindow( view, BROWSER_W, RIBBON_H, rc.right - BROWSER_W, rc.bottom - RIBBON_H - STATUS_H, TRUE );
+    if (set_rgn == 1) SendMessageA( frame, WM_APP, 0, 0 );
+    else if (set_rgn) PostMessageA( frame, WM_APP, 0, 0 );
 }
 
 static int check_child( HWND hwnd, const char *name, int x, int y, int w, int h, char *buf )
@@ -230,6 +235,13 @@ static LRESULT CALLBACK frame_proc( HWND hwnd, UINT msg, WPARAM wp, LPARAM lp )
         if (!frame) break;
         if (!defer || !depth) layout();
         return 0;
+    case WM_APP:
+    {
+        RECT rc;
+        GetWindowRect( hwnd, &rc );
+        SetWindowRgn( hwnd, CreateRectRgn( 0, 0, rc.right - rc.left, rc.bottom - rc.top ), TRUE );
+        return 0;
+    }
     case WM_TIMER:
         if (wp == 3) { KillTimer( hwnd, 3 ); state(); }
         return 0;
@@ -261,6 +273,8 @@ int main( int argc, char **argv )
         else if (!strcmp( argv[i], "popup" )) popup = 1;
         else if (!strcmp( argv[i], "plain" )) plain = 1;
         else if (!strcmp( argv[i], "thread" )) threaded = plain = 1;
+        else if (!strcmp( argv[i], "rgn" )) set_rgn = 1;
+        else if (!strcmp( argv[i], "rgnpost" )) set_rgn = 2;
         else if (!strcmp( argv[i], "dpi" )) { SetProcessDPIAware(); scale = GetDpiForSystem(); }
         else if (!strncmp( argv[i], "slow=", 5 )) slow = atoi( argv[i] + 5 );
     }

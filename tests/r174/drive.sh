@@ -3,7 +3,7 @@
 # Start frame.exe (WINEPREFIX, WINEBUILD set), let the WM resize it N times with MOD + right-button
 # drags of a corner (CORNER=br|tl|tr|bl, default br; bigger by a varying amount, then back), and after each one
 # compare the screen with the layout for the X window's size (check.py) and print the probe's STATE
-# line (174). OUT.log = probe log, OUT.res = one line per resize, OUT-bad-N.png = failing screens.
+# line (174); SIZE = the X window didn't end at the size of the last pointer position. OUT.log = probe log, OUT.res = one line per resize, OUT-bad-N.png = failing screens.
 # HOLD_MS: pause between the last motion and the release. BTN=1 moves instead (control).
 # DXMUL=0: only the height changes (default: the width by twice as much). DMUL=N: N times bigger drags
 # (default +-40..130 px high). START_SLEEP=0 POLL=0.02: first drag as soon as the window exists. XSIZE=1: resize with xdotool windowsize steps instead (no grab, no size-move).
@@ -22,9 +22,9 @@ for _ in $(seq 50); do WID=$(xdotool search --name "^${TITLE:-r174_frame}\$" 2>/
 sleep ${START_SLEEP:-1.5}
 geo() { set -- $(xwininfo -id $WID | awk '/Absolute upper-left X/{x=$4}/Absolute upper-left Y/{y=$4}/Width/{w=$2}/Height/{h=$2}END{print x,y,w,h}'); X=$1 Y=$2 GW=$3 GH=$4; }
 ms() { awk -v m=$1 'BEGIN{printf "%.3f", m/1000}'; }
-: >$OUT.res; bad=0
+: >$OUT.res; bad=0 sizebad=0
 for k in $(seq 1 $CNT); do
-	geo
+	geo; size=
 	if [ $((k % 2)) = 1 ]; then d=$(( ((k * 37) % 90 + 40) * ${DMUL:-1} )); else d=$((-d)); fi   # +40..130 px, then back
 	dx=$((d * ${DXMUL:-2})); dy=$d
 	# the corner the WM resizes is the one nearest to the pointer; sx / sy: which way makes the window bigger
@@ -38,12 +38,15 @@ for k in $(seq 1 $CNT); do
 	fi
 	echo "#### resize $k d=$dx,$dy from ${GW}x$GH" >>$OUT.log
 	xdotool $cmd
-	sleep 1.6
+	sleep ${SETTLE:-1.6}
+	want="$((GW+dx))x$((GH+dy))"
 	geo
+	wd=$((GW-${want%x*})); hd=$((GH-${want#*x}))  # the WM's corner is a pixel or two off the pointer
+	[ -n "$XSIZE" ] || [ ${wd#-} -le 3 -a ${hd#-} -le 3 ] || { size=" SIZE ${GW}x$GH not $want"; sizebad=$((sizebad+1)); }
 	$W/x/shot.sh $OUT-shot.png $N >/dev/null
 	pix=$(python3 $W/tests/r174/${CHECK:-check.py} $OUT-shot.png $X $Y $GW $GH $GPU) || { bad=$((bad+1)); cp $OUT-shot.png $OUT-bad-$k.png; }
-	echo "$k x11 ${GW}x$GH+$X+$Y | $pix | $(grep STATE $OUT.log | tail -1 | cut -c8-)" >>$OUT.res
+	echo "$k x11 ${GW}x$GH+$X+$Y$size | $pix | $(grep STATE $OUT.log | tail -1 | cut -c8-)" >>$OUT.res
 done
-echo "RESULT $bad bad of $CNT" >>$OUT.res
+echo "RESULT $bad bad of $CNT, $sizebad not at the size of the last motion" >>$OUT.res
 kill $P 2>/dev/null; wait $P 2>/dev/null
 tail -1 $OUT.res
