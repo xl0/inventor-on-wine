@@ -442,8 +442,8 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   WM_PAINT for a moved GPU child (re-measure in Inventor). Regress of the new tip
   (build-next/ = wine-11.18-564-gd8e4d0f72d2): 0 worse of 1757 (1649 pass / 80 fail / 28 crash).
 
-- 182 + 184 fixed on fix/182 (3 commits on b8f013d4fbb; cherry-pick cleanly onto d8e4d0f72d2), in
-  adversarial review; they go into the NEXT round (the current 27 commits wait only for the seat).
+- 182 + 184 fixed on fix/182 (3 commits on b8f013d4fbb; cherry-pick cleanly onto d8e4d0f72d2), first
+  version (the paragraph's end has the final state).
   182: cause confirmed with an instrumented libX11 (`_XLockDisplay` refills the XID, then may wait
   for a sequence sync with the display unlocked); Wine now takes XLockDisplay around every
   id-allocating request on shared displays (42 sites via helpers). Chosen over a driver mutex
@@ -454,13 +454,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Not closed: 177 (reachable on plain integ too). New drafts: 188 (BitBlt from a window DC while
   another thread replaces the surface), 190 (libX11 XOpenIM double free when threads create their
   first windows together), 191 (XIC destroyed by another thread during XFilterEvent).
-  Review (inst/182-review/): commits 2 and 3 merge as is; commit 1 needs a pre-sync in
-  lock_xid_alloc (Xlib's 65K sequence sync otherwise waits for its reply inside the user lock: the
-  177 shape with a new holder, hang 5 of 5 in plain Xlib, UI p99 0.3 → up to 8 ms), the
-  `synchronous` flag latched, get_dummy_parent re-checked under the lock. Worker reworking on
-  integ d8e4d0f72d2; the fix is the reviewer's tested patch → coordinator reads and merges.
-  Decision: user lock kept (not the reviewer's hook-only variant, which misses xcb-only bursts).
-  libX11 report goes to the existing xorg/lib/libx11 issue #10 (same assertion, open since 2010).
+  Reviewed, reworked, ON INTEG (local, 5 commits → tip cffd27540ee; integ = b5d75449ffe + 32;
+  first version kept as fix/182-v1). The review (inst/182-review/) required a pre-sync in
+  lock_xid_alloc: Xlib's 65K sequence sync otherwise waits for its reply inside the user lock
+  (the 177 shape with a new holder). Also: `synchronous` latched at init, get_dummy_parent
+  re-checked under the lock. With the pre-sync Xlib's own sync never fires (56 / 485 → 0 / 0).
+  Decision: user lock kept over the reviewer's hook-only variant (misses xcb-only bursts) and over
+  a driver mutex (NVIDIA EGL hole). Accepted cost: next to a thread allocating ~250K ids/s on a
+  CPU-contended host, another drawing thread's p99 goes 0.35–0.5 → 2.4–6.5 ms (Xlib's locks are
+  not fair; quiet host: equal). An abort of the process is worse; revisit if a real app shows it.
+  Weak spots left: Xcursor's first use does round trips under the lock; glXCreateWindow/Pbuffer
+  and NVIDIA GL allocators are outside it. libX11 report is now a comment for xorg/lib/libx11
+  issue #10 (same assertion, open since 2010) — the user's to file.
+  build-next/ = wine-11.18-569-gcffd27540ee; full regress running.
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
