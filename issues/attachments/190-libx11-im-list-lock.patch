@@ -1,0 +1,143 @@
+--- a/modules/im/ximcp/imInt.c
++++ b/modules/im/ximcp/imInt.c
+@@ -40,36 +40,34 @@
+ static Xim 		*_XimCurrentIMlist  = (Xim *)NULL;
+ static int		 _XimCurrentIMcount = 0;
+ 
++/* the list is shared by all displays and threads */
++extern LockInfoPtr	 _Xi18n_lock;
++
+ static Bool
+ _XimSetIMStructureList(
+     Xim		  im)
+ {
+     register int  i;
+     Xim		 *xim;
++    Bool	  ret = True;
+ 
+-    if(!(_XimCurrentIMlist)) {
+-	if(!(_XimCurrentIMlist = Xmalloc(sizeof(Xim))))
+-	    return False;
+-	_XimCurrentIMlist[0] = im;
+-	_XimCurrentIMcount   = 1;
+-    }
+-    else {
+-	for(i = 0; i < _XimCurrentIMcount; i++) {
+-	    if(!( _XimCurrentIMlist[i])) {
+-		_XimCurrentIMlist[i] = im;
+-		break;
+-	    }
++    _XLockMutex(_Xi18n_lock);
++    for(i = 0; i < _XimCurrentIMcount; i++) {
++	if(!( _XimCurrentIMlist[i])) {
++	    _XimCurrentIMlist[i] = im;
++	    break;
+ 	}
+-	if(i >= _XimCurrentIMcount) {
+-	    if(!(xim = Xrealloc(_XimCurrentIMlist,
+-					 ((i + 1) * sizeof(Xim)))))
+-		return False;
++    }
++    if(i >= _XimCurrentIMcount) {
++	if((xim = Xrealloc(_XimCurrentIMlist, ((i + 1) * sizeof(Xim))))) {
+ 	    _XimCurrentIMlist			  = xim;
+ 	    _XimCurrentIMlist[_XimCurrentIMcount] = im;
+ 	    _XimCurrentIMcount++;
+-	}
++	} else
++	    ret = False;
+     }
+-    return True;
++    _XUnlockMutex(_Xi18n_lock);
++    return ret;
+ }
+ 
+ void
+@@ -77,12 +75,14 @@
+ {
+     register int  i;
+ 
++    _XLockMutex(_Xi18n_lock);
+     for(i = 0; i < _XimCurrentIMcount; i++) {
+ 	if(_XimCurrentIMlist[i] == im) {
+ 	    _XimCurrentIMlist[i] = NULL;
+ 	    break;
+ 	}
+     }
++    _XUnlockMutex(_Xi18n_lock);
+     return;
+ }
+ 
+@@ -90,33 +90,37 @@
+ _XimServerDestroy(Xim im_2_destroy)
+ {
+     register int  i;
+-    Xim		  im;
++    Xim		  im = NULL;
+     XIC		  ic;
+ 
++    /*
++     * Only continue if this im is still in the list; take it out of
++     * the list before the callbacks run (without the lock).
++     */
++    _XLockMutex(_Xi18n_lock);
+     for(i = 0; i < _XimCurrentIMcount; i++) {
+-	if(!(im = _XimCurrentIMlist[i]))
+-	    continue;
+-	/*
+-	 * Only continue if this im is the one to be destroyed.
+-	 */
+-	if (im != im_2_destroy)
+-	    continue;
+-
+-	if (im->core.destroy_callback.callback)
+-	    (*im->core.destroy_callback.callback)((XIM)im,
+-			im->core.destroy_callback.client_data, NULL);
+-	for (ic = im->core.ic_chain; ic; ic = ic->core.next) {
+-	    if (ic->core.destroy_callback.callback) {
+-		(*ic->core.destroy_callback.callback)(ic,
+-			ic->core.destroy_callback.client_data, NULL);
+-	    }
++	if (_XimCurrentIMlist[i] && _XimCurrentIMlist[i] == im_2_destroy) {
++	    im = _XimCurrentIMlist[i];
++	    _XimCurrentIMlist[i] = NULL;
++	    break;
+ 	}
+-	_XimResetIMInstantiateCallback( im );
+-	(void)im->methods->close((XIM)im);
+-	Xfree(im);
+-	_XimCurrentIMlist[i] = NULL;
++    }
++    _XUnlockMutex(_Xi18n_lock);
++    if (!im)
+ 	return;
++
++    if (im->core.destroy_callback.callback)
++	(*im->core.destroy_callback.callback)((XIM)im,
++		    im->core.destroy_callback.client_data, NULL);
++    for (ic = im->core.ic_chain; ic; ic = ic->core.next) {
++	if (ic->core.destroy_callback.callback) {
++	    (*ic->core.destroy_callback.callback)(ic,
++		    ic->core.destroy_callback.client_data, NULL);
++	}
+     }
++    _XimResetIMInstantiateCallback( im );
++    (void)im->methods->close((XIM)im);
++    Xfree(im);
+ }
+ 
+ #ifdef XIM_CONNECTABLE
+--- a/src/xlibi18n/lcConv.c
++++ b/src/xlibi18n/lcConv.c
+@@ -253,9 +253,10 @@
+     static XrmQuark QChar, QCharSet, QCTCharSet = (XrmQuark) 0;
+ 
+     if (QCTCharSet == (XrmQuark) 0) {
+-	QCTCharSet = XrmStringToQuark(XlcNCTCharSet);
++	/* other threads test QCTCharSet without a lock: set it last */
+ 	QCharSet = XrmStringToQuark(XlcNCharSet);
+ 	QChar = XrmStringToQuark(XlcNChar);
++	QCTCharSet = XrmStringToQuark(XlcNCTCharSet);
+     }
+ 
+     from_type = XrmStringToQuark(from);

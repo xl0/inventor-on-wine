@@ -85,8 +85,8 @@
   GravityNotify, ReparentNotify, `get_event_win_data`). The host window parent (`data->parent`: WM frame / embedder,
   owner-thread data) cannot be released by the other thread, which only sets `parent_invalid`; the new window is a
   child of the root until its ReparentNotify, so the owner drops the stale parent at the first position event (184).
-  Still open: the surface flush draws into the old window (an X error, harmless since 177), the window's XIC is destroyed from the
-  wrong thread (191).
+  Still open: the surface flush draws into the old window (an X error, harmless since 177). The window's XIC is
+  left to the owner thread since 191 (`xic_invalid`, xlib-locking.md).
 - Lock-order debug build: tests/r173/lockorder-debug.patch (+ lockorder.py, cycles.py) reports every win32u / winex11
   mutex taken while another is held, with the call chain, and X errors with a backtrace; repros tests/r173/iconlock.c,
   visual_race.c, flushpost.c. Never relink a .so of a build while a test process runs on it (the process dies silently).
@@ -105,7 +105,8 @@
   too (NVIDIA's EGL allocates ids on the Display inside eglCreatePbufferSurface / eglMakeCurrent, called by win32u);
   a mutex of our own would not. Find allocators with tests/r182/debug-build.patch (hooks the Display's
   `resource_alloc`) + xidsites.py.
-- Threads that create their first window at the same time race in libX11's XOpenIM (global IM list, 190).
+- Threads that create their first window at the same time race in libX11's XOpenIM (global IM list, 190: winex11
+  serializes it since then) and, when no other thread display exists, in libXext's XGE record (193, open).
 - Owned windows and the window manager (175): winex11 manages a top-level when it is activated on show, has a caption
   or thick frame, is `WS_POPUP|WS_SYSMENU`, a fullscreen popup, `WS_EX_APPWINDOW`, or owns a managed window
   (`is_window_managed`; a managed window's owner is made managed too); tool-window / layered styles don't matter. Every

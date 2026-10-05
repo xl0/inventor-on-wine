@@ -1,0 +1,19 @@
+diff --git a/dlls/winex11.drv/mouse.c b/dlls/winex11.drv/mouse.c
+index d269d79206e..261512dc0b7 100644
+--- a/dlls/winex11.drv/mouse.c
++++ b/dlls/winex11.drv/mouse.c
+@@ -1977,6 +1977,14 @@ void x11drv_xinput2_load(void)
+ #undef LOAD_FUNCPTR
+ 
+     xinput2_available = XQueryExtension( gdi_display, "XInputExtension", &xinput2_opcode, &event, &error );
++    if (xinput2_available)
++    {
++        /* keep one display registered with libXext's generic event code for the lifetime of the process:
++         * it frees its global record when the last such display is closed, while other threads may be
++         * registering theirs */
++        int major = 2, minor = 2;
++        pXIQueryVersion( gdi_display, &major, &minor );
++    }
+ 
+     /* Until version 1.10.4 rawinput was broken in XOrg, see
+      * https://bugs.freedesktop.org/show_bug.cgi?id=30068 */

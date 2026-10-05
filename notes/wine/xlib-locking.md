@@ -62,3 +62,29 @@ A debug-info build is in `inst/182/x11-build` (`X11LIB=.../src/.libs inst/177/ru
   switches XShm off. XESetWireToError is not called on any display.
 - 182's rules stay: id-allocating requests inside `lock_xid_alloc`, a reply read before locking every 32768
   requests (window-surfaces.md).
+- Input methods (190, 191; libX11 1.8.13 = git master 6d4432b for these files). An XIM and its XICs belong to the
+  thread that owns the display: `XFilterEvent` walks `display->im_filters` inside the display lock, but
+  `_XUnregisterFilter` (XUnsetICFocus, XSetICFocus of another IC, XDestroyIC, XCloseIM) changes it with no lock, and
+  the filter itself runs unlocked with the IC as its argument, so no libX11 fix makes a cross-thread XDestroyIC safe.
+  winex11 since 191: an XIC is created and destroyed only in `X11DRV_get_ic` / `destroy_whole_window` of the owner
+  thread; another thread that recreates the X window (set_window_visual) sets `xic_invalid` and the owner replaces
+  the XIC at its next focus or key event (XNClientWindow can't be changed after creation). Still cross-thread:
+  `XmbLookupString` from X11DRV_ToUnicodeEx when the focus window's thread is not the top-level's.
+  Process-wide Xlib state without a lock, hit by threads that share no Display: the list of open IMs (`_XimOpenIM`
+  reallocs it: heap corruption, 190), the instantiate callback list, the compose table cache, lazily initialized
+  quarks in `open_indirect_converter` (XOpenIM / XCreateFontSet fail in one of the threads), function statics of
+  `_XimLocalFilter`. winex11 since 190: XCreateFontSet / XOpenIM / XRegisterIMInstantiateCallback / XCloseIM /
+  XFreeFontSet under `xim_mutex` (xim.c, recursive, leaf). XOpenIM parses the Compose file each time (12 ms) unless
+  `~/.compose-cache/` exists. Plain Xlib probes: tests/r191/xfilter.c, ximopen.c, xthreads.c (for a libX11 built with
+  -fsanitize=thread: inst/191/x11-build-tsan).
+- libXext frees its global XGE record when the last display registered with it (XIQueryVersion; winex11: every thread
+  display, not gdi_display) is closed, unlocked, while another thread may be registering: heap corruption or a fault
+  under `_Xglobal_lock` in processes without a long-lived window thread (193, tests/r191/xgeclose.c).
+- An own libX11 build must find the locale data, or Wine runs without any input method on it (`warn:xim:xim_init X does
+  not support locale`) and XIM bugs can't show: configure `--prefix=/usr` (never install it) as inst/191/x11-build-*
+  do; inst/182/x11-build* and inst/177/x11-build-fixed have a private prefix (`XLOCALEDIR=/usr/share/X11/locale` helps).
+  Variants in inst/191: -base, -fixed (191's patch), -190 (190's patch), -instr (reports XIM calls and filter list
+  changes by a thread other than the one filtering the display: `X191OWNER` lines), -tsan, -asan.
+- Heap damage in a Unix library of a Wine process: `LD_PRELOAD=tests/r191/guardmalloc.so GUARDMALLOC_ONLY=app.exe`
+  (own pages per block, nothing reused) faults at the bad access and prints the three stacks; glibc's own checks only
+  fire later, in another thread, and a fault inside a syscall is swallowed (172).

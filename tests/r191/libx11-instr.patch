@@ -1,0 +1,332 @@
+--- a/modules/im/ximcp/imInt.c
++++ b/modules/im/ximcp/imInt.c
+@@ -32,6 +32,7 @@
+ #include <X11/Xatom.h>
+ #include <X11/Xlib.h>
+ #include <X11/Xmd.h>
++#include <stdio.h>
+ #include "Xlibint.h"
+ #include "Xlcint.h"
+ #include "Ximint.h"
+@@ -235,6 +236,7 @@
+     }
+ 
+ Error4 :
++    fprintf(stderr, "X190: _XimOpenIM Error4 (im_open or list)\n");
+     _XimImSportRec[i].im_free(im);
+     Xfree(im);
+     return NULL;
+--- a/modules/im/ximcp/imLcIm.c
++++ b/modules/im/ximcp/imLcIm.c
+@@ -644,11 +644,11 @@
+     _XimInitialResourceInfo();
+     if(_XimSetIMResourceList(&im->core.im_resources,
+ 		 		&im->core.im_num_resources) == False) {
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 1\n"); goto Open_Error; }
+     }
+     if(_XimSetICResourceList(&im->core.ic_resources,
+ 				&im->core.ic_num_resources) == False) {
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 2\n"); goto Open_Error; }
+     }
+ 
+     _XimSetIMMode(im->core.im_resources, im->core.im_num_resources);
+@@ -656,40 +656,40 @@
+     _XimGetCurrentIMValues(im, &im_values);
+     if(_XimSetLocalIMDefaults(im, (XPointer)&im_values,
+ 		im->core.im_resources, im->core.im_num_resources) == False) {
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 3\n"); goto Open_Error; }
+     }
+     _XimSetCurrentIMValues(im, &im_values);
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCompoundText, lcd, XlcNMultiByte)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 4\n"); goto Open_Error; }
+     private->ctom_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCompoundText, lcd, XlcNWideChar)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 5\n"); goto Open_Error; }
+     private->ctow_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCompoundText, lcd, XlcNUtf8String)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 6\n"); goto Open_Error; }
+     private->ctoutf8_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCharSet, lcd, XlcNMultiByte)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 7\n"); goto Open_Error; }
+     private->cstomb_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCharSet, lcd, XlcNWideChar)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 8\n"); goto Open_Error; }
+     private->cstowc_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNCharSet, lcd, XlcNUtf8String)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 9\n"); goto Open_Error; }
+     private->cstoutf8_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNUcsChar, lcd, XlcNChar)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 10\n"); goto Open_Error; }
+     private->ucstoc_conv = conv;
+ 
+     if (!(conv = _XlcOpenConverter(lcd,	XlcNUcsChar, lcd, XlcNUtf8String)))
+-	goto Open_Error;
++	{ fprintf(stderr, "X190: _XimLocalOpenIM fails at step 11\n"); goto Open_Error; }
+     private->ucstoutf8_conv = conv;
+ 
+     private->base.treeused = 1;
+--- a/src/FilterEv.c
++++ b/src/FilterEv.c
+@@ -65,6 +65,50 @@
+ 
+ extern long const _Xevent_to_mask[];
+ 
++/* issue 191 instrumentation: who walks the filter list, and a wider race window */
++#include <stdlib.h>
++#include <pthread.h>
++Display *volatile _X191_walk_display;
++volatile unsigned long _X191_walk_thread;
++/* the thread that filters a display's events owns its input methods and contexts */
++#include <stdio.h>
++#include <execinfo.h>
++static struct { Display *display; unsigned long thread; } _X191_owner[256];
++static void _X191_set_owner(Display *display)
++{
++    unsigned int i = ((unsigned long)display >> 4) & 255, n;
++    for (n = 0; n < 256; n++, i = (i + 1) & 255) {
++	if (_X191_owner[i].display == display || !_X191_owner[i].display) {
++	    _X191_owner[i].thread = (unsigned long)pthread_self();
++	    _X191_owner[i].display = display;
++	    return;
++	}
++    }
++}
++void _X191_check(Display *display, const char *what);
++void _X191_check(Display *display, const char *what)
++{
++    unsigned int i = ((unsigned long)display >> 4) & 255, n;
++    static int reports;
++    for (n = 0; n < 256 && _X191_owner[i].display; n++, i = (i + 1) & 255) {
++	if (_X191_owner[i].display != display) continue;
++	if (_X191_owner[i].thread != (unsigned long)pthread_self()) {
++	    void *bt[24];
++	    fprintf(stderr, "X191OWNER: %s on display %p by thread %lx, events filtered by thread %lx\n",
++		    what, (void *)display, (unsigned long)pthread_self(), _X191_owner[i].thread);
++	    if (__sync_fetch_and_add(&reports, 1) < 40) backtrace_symbols_fd(bt, backtrace(bt, 24), 2);
++	}
++	return;
++    }
++}
++static void _X191_delay(void)
++{
++    static int loops = -1;
++    volatile int i;
++    if (loops < 0) { const char *e = getenv("X191_DELAY"); loops = e ? atoi(e) : 0; }
++    for (i = 0; i < loops; i++) ;
++}
++
+ /*
+  * Look up if there is a specified filter for the event.
+  */
+@@ -88,11 +132,16 @@
+     else
+ 	mask = _Xevent_to_mask[ev->type];
+ 
++    _X191_set_owner(ev->xany.display);
+     LockDisplay(ev->xany.display);
++    _X191_walk_thread = (unsigned long)pthread_self();
++    _X191_walk_display = ev->xany.display;
+     for (p = ev->xany.display->im_filters; p != NULL; p = p->next) {
++	_X191_delay();
+ 	if (win == p->window) {
+ 	    if ((mask & p->event_mask) ||
+ 		(ev->type >= p->start_type && ev->type <= p->end_type)) {
++		_X191_walk_display = NULL;
+ 		UnlockDisplay(ev->xany.display);
+ 		ret = (*(p->filter))(ev->xany.display, p->window, ev,
+ 				      p->client_data);
+@@ -118,6 +167,7 @@
+ 	if (p->window == 0 && window == 0) {
+ 	    if ((mask & p->event_mask) ||
+ 		(ev->type >= p->start_type && ev->type <= p->end_type)) {
++		_X191_walk_display = NULL;
+ 		UnlockDisplay(ev->xany.display);
+ 		ret = (*(p->filter))(ev->xany.display, p->window, ev,
+ 				      p->client_data);
+@@ -125,6 +175,7 @@
+ 	    }
+ 	}
+     }
++    _X191_walk_display = NULL;
+     UnlockDisplay(ev->xany.display);
+ #endif
+     return(False);
+--- a/src/RegstFlt.c
++++ b/src/RegstFlt.c
+@@ -58,6 +58,22 @@
+ #include "Xlibint.h"
+ #include "Xlcint.h"
+ 
++#include <stdio.h>
++#include <pthread.h>
++#include <execinfo.h>
++extern Display *volatile _X191_walk_display;
++extern volatile unsigned long _X191_walk_thread;
++extern void _X191_check(Display *display, const char *what);
++static Display *volatile _X191_unreg_display;
++static volatile unsigned long _X191_unreg_thread;
++static void _X191_report(const char *what, Display *display)
++{
++    void *bt[24];
++    fprintf(stderr, "X191: thread %lx %s display %p while thread %lx unregisters a filter\n",
++	    (unsigned long)pthread_self(), what, (void *)display, _X191_unreg_thread);
++    backtrace_symbols_fd(bt, backtrace(bt, 24), 2);
++}
++
+ static void
+ _XFreeIMFilters(
+     Display *display)
+@@ -95,7 +111,10 @@
+     rec->end_type = 0;
+     rec->filter = filter;
+     rec->client_data = client_data;
++    _X191_check(display, "_XRegisterFilter");
+     LockDisplay(display);
++    if (_X191_unreg_display == display && _X191_unreg_thread != (unsigned long)pthread_self())
++	_X191_report("registers a filter on", display);
+     rec->next = display->im_filters;
+     display->im_filters = rec;
+     display->free_funcs->im_filters = _XFreeIMFilters;
+@@ -127,7 +146,10 @@
+     rec->end_type = end_type;
+     rec->filter = filter;
+     rec->client_data = client_data;
++    _X191_check(display, "_XRegisterFilter");
+     LockDisplay(display);
++    if (_X191_unreg_display == display && _X191_unreg_thread != (unsigned long)pthread_self())
++	_X191_report("registers a filter on", display);
+     rec->next = display->im_filters;
+     display->im_filters = rec;
+     display->free_funcs->im_filters = _XFreeIMFilters;
+@@ -145,12 +167,24 @@
+ {
+     register XFilterEventList	*prev, fl;
+ 
++    _X191_check(display, "_XUnregisterFilter");
++    if (_X191_unreg_display == display && _X191_unreg_thread != (unsigned long)pthread_self())
++	_X191_report("also unregisters a filter on", display);
++    _X191_unreg_thread = (unsigned long)pthread_self();
++    _X191_unreg_display = display;
+     for (prev = &display->im_filters; (fl = *prev); ) {
+ 	if (fl->window == window &&
+ 	    fl->filter == filter && fl->client_data == client_data) {
++	    if (_X191_walk_display == display && _X191_walk_thread != (unsigned long)pthread_self()) {
++		void *bt[24];
++		fprintf(stderr, "X191: thread %lx unregisters filter %p (window %lx) of display %p while thread %lx is in XFilterEvent\n",
++			(unsigned long)pthread_self(), (void *)fl, window, (void *)display, _X191_walk_thread);
++		backtrace_symbols_fd(bt, backtrace(bt, 24), 2);
++	    }
+ 	    *prev = fl->next;
+ 	    Xfree(fl);
+ 	} else
+ 	    prev = &fl->next;
+     }
++    _X191_unreg_display = NULL;
+ }
+--- a/src/xlibi18n/ICWrap.c
++++ b/src/xlibi18n/ICWrap.c
+@@ -66,6 +66,9 @@
+ #endif
+ #include "Xlibint.h"
+ #include "Xlcint.h"
++extern void _X191_check(Display *display, const char *what);
++#define X191_IC(ic,what) do { if ((ic) && (ic)->core.im) _X191_check((ic)->core.im->core.display, what); } while (0)
++
+ #include "reallocarray.h"
+ 
+ static int
+@@ -232,6 +235,7 @@
+     int     total_count;
+     XIMArg *args;
+     XIC     ic = NULL;
++    if (im) _X191_check(im->core.display, "XCreateIC");
+ 
+     /*
+      * so count the stuff dangling here
+@@ -265,6 +269,7 @@
+ {
+     XIM im = ic->core.im;
+     XIC *prev;
++    X191_IC(ic, "XDestroyIC");
+ 
+     (*ic->methods->destroy) (ic);
+     if (im) {
+@@ -318,6 +323,7 @@
+ 
+     if (!ic->core.im)
+ 	return (char *) NULL;
++    X191_IC(ic, "XSetICValues");
+ 
+     /*
+      * so count the stuff dangling here
+@@ -345,6 +351,7 @@
+ void
+ XSetICFocus(XIC ic)
+ {
++  X191_IC(ic, "XSetICFocus");
+   if (ic && ic->core.im)
+       (*ic->methods->set_focus) (ic);
+ }
+@@ -356,6 +363,7 @@
+ void
+ XUnsetICFocus(XIC ic)
+ {
++  X191_IC(ic, "XUnsetICFocus");
+   if (ic->core.im)
+       (*ic->methods->unset_focus) (ic);
+ }
+@@ -372,6 +380,7 @@
+ char *
+ XmbResetIC(XIC ic)
+ {
++    X191_IC(ic, "XmbResetIC");
+     if (ic->core.im)
+ 	return (*ic->methods->mb_reset)(ic);
+     return (char *)NULL;
+@@ -401,6 +410,7 @@
+ XmbLookupString(XIC ic, XKeyEvent *ev, char *buffer, int nbytes,
+ 		KeySym *keysym, Status *status)
+ {
++    X191_IC(ic, "XmbLookupString");
+     if (ic->core.im)
+ 	return (*ic->methods->mb_lookup_string) (ic, ev, buffer, nbytes,
+ 						 keysym, status);
+--- a/src/xlibi18n/IMWrap.c
++++ b/src/xlibi18n/IMWrap.c
+@@ -57,6 +57,7 @@
+ #ifdef HAVE_CONFIG_H
+ #include <config.h>
+ #endif
++#include <stdio.h>
+ #include "Xlibint.h"
+ #include "Xlcint.h"
+ 
+@@ -116,8 +117,10 @@
+ {
+     XLCd	lcd = _XOpenLC( (char *)NULL );
+ 
+-    if( !lcd )
++    if( !lcd ) {
++	fprintf(stderr, "X190: XOpenIM: _XOpenLC failed\n");
+ 	return( (XIM)NULL );
++    }
+     return (*lcd->methods->open_im) (lcd, display, rdb, res_name, res_class);
+ }
+ 
