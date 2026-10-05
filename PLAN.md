@@ -466,7 +466,10 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Weak spots left: Xcursor's first use does round trips under the lock; glXCreateWindow/Pbuffer
   and NVIDIA GL allocators are outside it. libX11 report is now a comment for xorg/lib/libx11
   issue #10 (same assertion, open since 2010) — the user's to file.
-  build-next/ = wine-11.18-569-gcffd27540ee; full regress running.
+  build-next/ = wine-11.18-569-gcffd27540ee; full regress vs the h26 master baseline: 0 real
+  regressions of 1757 (9 units differed in the loaded run — the 177 worker was building — and all
+  are flaky on rerun on both builds: dxgi, mf, ntdll:change/exception, wininet:http,
+  cryptowinrt). Waiting only for the seat: Inventor suite, push, rebuild build/.
 - 177 (Xlib hang: reader's _XError waits for the user lock that an X11DRV_expect_error region
   holds across a reply wait): Opus worker started on wt/177 (fix/177 off integ cffd27540ee),
   Inventor-free. Wanted: Wine-side fix for every expect_error region with a round trip, libX11
