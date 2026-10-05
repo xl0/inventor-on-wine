@@ -1,11 +1,11 @@
 # 174: Main-window regions stay black or stale after Awesome Mod+mouse resize
 
 Status: open · Owner: worker-174 · Branch: fix/174 (wt/174, d09a8c4d1ce on integ cffd27540ee: the jump-back only)
-**Main lead (2026-10-05, second round, reproduced on the server, not root-caused):** after a large grow by a WM drag
-Inventor's main thread stops handling messages for ~5.0 s: Win32 stays at an intermediate size of the drag with paints
-pending, the process is idle, the X window (already at the final size) shows the old layout and what was under it; then
-everything is repaired at once. Same on build-next and on fix/174; picom only shows what is in the window. See "Heal
-time after a resize". Earlier findings: the jump-back to an earlier size (fixed on fix/174) and 181 (merged).
+**State (2026-10-05, after three rounds):** the user's persistent picture is not reproduced. The ~5 s wrong picture
+after large grows is real on screen but was only seen while the screen was sampled after the release; without sampling
+0 long cases in ~185 drags, and in every capture Inventor's main thread sits in its normal message pump with nothing
+pending in winex11 (see the last section). Fixed on the way: the jump-back to an earlier size (fix/174), GPU-presented
+children (181, merged).
 
 ## Environment
 
@@ -270,3 +270,37 @@ Next step (15 minutes): fresh Inventor, one +450,+250 grow, and during the 5 s: 
 then the same on build/ and on Windows numbers if they exist (none in the notes: the VM reference has no resize
 heal-time measurement; 181's item "pane layout is redone at ~1.5 Hz during a splitter drag, 200 % CPU on both builds"
 is a different, busy, state).
+
+## What the main thread waits on (2026-10-05, third round, inv2 :99, build-next, awesome + picom, 144 DPI)
+Tools: inst/174/h/cap.sh (one grow, per-thread /proc state and syscall at +1.5 / +3 s, heal sampling alongside),
+hunt.sh (grow / shrink pairs without screen sampling; when a trigger fires: screenshot, then gdb with
+tools/gdb/winesyms.py + sehbt.py + main.gdb.py = Unix and PE stack of the main thread, Xlib's queue length of its
+display, winex11's window data of the frame), fresh.sh (new Inventor session, placed at 1001x701).
+- **The thread is not in a nested call.** Every capture (7, on four sessions) shows the main thread in Inventor's
+  ordinary pump: `NtUserWaitMessage` <- FwUI.dll+0x1e88d9 <- FwUI+0x459b6c <- FwUI+0x45a291 <- mfc140u+0x2b19e0 <-
+  Inventor.exe+0x265a. FwUI+0x1e87c0 (Ghidra) is the MFC-style loop: PeekMessage(PM_NOREMOVE) twice, OnIdle until it
+  returns 0, then WaitMessage. No SendMessage, COM call or handle wait, no other process involved; Xlib's queue of
+  the thread's display is empty (qlen 0), winex11's data for the frame has no request pending (configure / WM_STATE /
+  _NET_WM_STATE / MWM serials 0) and rects.visible = desired = pending = current = the X window's final rect.
+- But none of those captures is a confirmed 5 s case: in the two whose screenshot was checked the screen was already
+  right at capture time (trigger "Win32 region != X size at +1.2 s": one hit in ~40 pairs, right 0.5 s later; trigger
+  "main thread's syscall differs from the idle one at +1.2 s": a transient). With the trigger at +3.0 s (only a long
+  case can fire it): **0 hits in 20 pairs, 8 of them the first of a fresh session**.
+- The one long case of this round (5.0 s, cap.sh c3, third grow of a session) has /proc data only: at +1.5 s and +3 s
+  all 467 threads of Inventor sleep; the main thread is in a server wait (read of 16 bytes on its wait fd), at +1.5 s
+  0xe0 bytes deeper in the stack than the pump's WaitMessage, at +3 s at the pump's depth; 10 ticks of CPU in between.
+- **The long cases only ever happened while the screen was being sampled after the release** (heal.py: root XGetImage
+  and XCompositeNameWindowPixmap of the frame every 0.1 s): round.sh 3 of the first 3 grows on fix/174, 3 of the first
+  5 on build-next, cap.sh 1 of 6. Without the sampler: 0 long cases in ~75 pairs of this round and in the ~110
+  unthrottled drags of the first round (one screenshot at +3 s). The checks worker's heal.sh grabs the screen
+  continuously too. So the sampling itself is the prime suspect for the 5 s (how is not known: Inventor is idle, so
+  the candidates are the X server / the WM delivering the last ConfigureNotify late while a client reads the screen,
+  or picom), and the user's report is not explained by it. Not proven: no run of the same sequence with and without
+  the sampler in fresh sessions.
+- 5 s constants (grep): winex11 / win32u have none on this path (clipboard SMTO 5000, screen saver throttle); the
+  server's "queue is hung" limit is 5 s (`is_queue_hung()`: low-level hooks, SMTO_ABORTIFHUNG, IsHungAppWindow). No
+  link to the wait established.
+Not done: Home / Assistant panes closed, input at +1.5 s, a controlled with / without-sampler comparison, build/.
+Next step: fresh session, `round.sh` with heal.py replaced by one screenshot at +2 s (and the reverse), 5 grows each;
+if only the sampled runs are slow, look at Xorg / awesome during the 5 s (is the final ConfigureNotify sent late:
+`xev -id` on the frame, or winex11 `+event` timestamps against the release) instead of at Inventor.
