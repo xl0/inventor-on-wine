@@ -81,13 +81,27 @@
   NtUserDrawIconEx does for non-memory DCs since 173.
 - An X window can be destroyed and recreated by a thread that doesn't own it (set_window_visual: layered attributes,
   UpdateLayeredWindow, WS_EX_LAYERED): X requests on it are only safe with the window data locked, on data->display,
-  after comparing the window if the id came from an event (173: property handlers, SetWindowText). Still open: the
-  surface flush draws into the old window (177), ConfigureNotify maps through a stale host parent (184).
+  after comparing the window if the id came from an event (173: property handlers, SetWindowText; 184: ConfigureNotify,
+  GravityNotify, ReparentNotify, `get_event_win_data`). The host window parent (`data->parent`: WM frame / embedder,
+  owner-thread data) cannot be released by the other thread, which only sets `parent_invalid`; the new window is a
+  child of the root until its ReparentNotify, so the owner drops the stale parent at the first position event (184).
+  Still open: the surface flush draws into the old window (X error -> 177), the window's XIC is destroyed from the
+  wrong thread (191).
 - Lock-order debug build: tests/r173/lockorder-debug.patch (+ lockorder.py, cycles.py) reports every win32u / winex11
   mutex taken while another is held, with the call chain, and X errors with a backtrace; repros tests/r173/iconlock.c,
   visual_race.c, flushpost.c. Never relink a .so of a build while a test process runs on it (the process dies silently).
-- Several threads allocating X resources on gdi_display (a GC per memory DC) can abort the process in libX11
-  (`_XAllocID: Assertion ret != inval_id`, 182).
+- Several threads allocating X resources on one Display (gdi_display: a GC per DC, pixmaps, pictures, cursors) abort
+  the process in libX11 1.8.13 (`_XAllocID: Assertion ret != inval_id`, 182): `LockDisplay` fetches the next id and
+  then may wait for the sequence sync reply with the display unlocked. winex11 rule since 182: a request that
+  allocates an id on gdi_display, or on a thread's display when another thread may use it, is made inside
+  `lock_xid_alloc( display )` / `unlock_xid_alloc( display )` (= XLockDisplay; `create_gc()`, `create_pixmap()`,
+  xrender's `create_picture()` do it; not in synchronous mode). Only requests without a reply belong inside: a thread
+  that waits for a reply with the display's user lock held is half of 177 (as X11DRV_expect_error regions are, also
+  without synchronous mode: `X11DRV_GetImage`). The user lock makes a locked request safe from unlocked allocators
+  too (NVIDIA's EGL allocates ids on the Display inside eglCreatePbufferSurface / eglMakeCurrent, called by win32u);
+  a mutex of our own would not. Find allocators with tests/r182/debug-build.patch (hooks the Display's
+  `resource_alloc`) + xidsites.py.
+- Threads that create their first window at the same time race in libX11's XOpenIM (global IM list, 190).
 - Owned windows and the window manager (175): winex11 manages a top-level when it is activated on show, has a caption
   or thick frame, is `WS_POPUP|WS_SYSMENU`, a fullscreen popup, `WS_EX_APPWINDOW`, or owns a managed window
   (`is_window_managed`; a managed window's owner is made managed too); tool-window / layered styles don't matter. Every

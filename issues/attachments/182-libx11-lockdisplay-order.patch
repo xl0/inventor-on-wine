@@ -1,0 +1,16 @@
+--- a/src/locking.c
++++ b/src/locking.c
+@@ -481,8 +481,12 @@
+ 	    if (ti->error_thread == xthread_self())
+ 		    return;
+ 
+-    _XIDHandler(dpy);
++    /*
++     * Sync first: _XSeqSyncFunction() may wait for a reply with the
++     * display unlocked, and another thread may take the XID then.
++     */
+     _XSeqSyncFunction(dpy);
++    _XIDHandler(dpy);
+ }
+ 
+ /*

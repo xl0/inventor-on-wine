@@ -41,3 +41,25 @@ So here the failing request is known: the flush into an X window that another th
 (set_window_visual), an error winex11 means to ignore on gdi_display. 173's series removes two unlocked uses of a
 replaced window (property reads, window text); this one is the surface flush, which still draws into the old window.
 
+
+## Without synchronous mode, and what 182's fix does to it (182 worker, 2026-10-05)
+- Reachable in normal mode on unmodified integ (b8f013d4fbb, wt/182-base-build): `tests/r182/gdistress.exe 20 6 SEED`
+  under openbox on Xvfb (workers draw on the screen DC and read it back with BitBlt, and recreate a window of the main
+  thread through UpdateLayeredWindow / SetLayeredWindowAttributes) hangs with this pair in 2 of 47 runs; the same on
+  fix/182 in 2 of 45 (alternating runs, `inst/182/ab.sh`; in all fix/182 runs of that kind about 30 of 330).
+  Stacks (`inst/182/out/ab-ob-base-1480-s7-hang.txt`, ...; `inst/182/classify.py` sorts hang dumps):
+  ```
+  thread A: destroy_whole_window (window.c "make sure XReparentWindow requests have completed") -> XSync( gdi_display ) -> _XReply -> _XError -> waits for the user lock
+  thread B: X11DRV_GetImage (bitblt.c, between X11DRV_expect_error and X11DRV_check_error) -> XGetImage -> _XReply -> waits behind A
+  ```
+  So the holder need not be create_shm_image: every X11DRV_expect_error region with a reply in it will do
+  (X11DRV_GetImage = any BitBlt / GetPixel from a DC drawn by the X11 driver), and the reader need not be a flush.
+  With `WINEDEBUG=+synchronous` the same stress hangs 6 of 6 on both builds.
+- 182's fix takes `XLockDisplay( gdi_display )` around every request that allocates a resource id. Those requests have
+  no reply, and in synchronous mode the lock is not taken, so the fix adds no reply wait of its own under the lock.
+  What remains is Xlib's own sequence sync when it falls into a locked `LockDisplay` (about 3 requests in 65000). None
+  of the roughly 40 hang dumps of fix/182 has a holder inside lock_xid_alloc (all X11DRV_GetImage / create_shm_image).
+- A way to close it at the root, not tried: Xlib calls `dpy->async_handlers` for every error before `_XError` takes
+  the user lock (Xlibint.h `_XAsyncHandler`, the mechanism GDK uses for its async requests). A handler on each display
+  that consumes the errors winex11 ignores anyway (ignore_error) would keep the reader out of the user lock; the
+  expected errors of a X11DRV_expect_error region are only read by its own thread.

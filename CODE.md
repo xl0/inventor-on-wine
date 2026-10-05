@@ -452,9 +452,15 @@ launches; previous device-limit errors do not authorize pausing another device.
   `lockorder.py` + `cycles.py` (all win32u + winex11 mutex pairs with call chains, cycle check, X errors with backtraces),
   `run.sh` / `batch.sh` / `ls.sh` / `x.sh` / `sm.sh` (watchdog runner, batches without a WM and with openbox, lockstress loop,
   own Xvfb displays, 077's size-move table without the exported WINEDLLOVERRIDES; they live in inst/173/).
-  `r182/xallocid.c` (plain Xlib: threads creating GCs on one Display, libX11 `_XAllocID` assertion), `r183/settext_race.c`
+  `r182/xallocid.c` (plain Xlib: threads creating GCs on one Display, libX11 `_XAllocID` assertion; modes: all / some
+  threads inside XLockDisplay or a mutex), `r182/gdistress.c` (`gdistress.exe SECS [THREADS] [SEED] [x|n]`: multi-thread
+  GDI / USER stress through the X11 driver: screen and window DCs, brushes, ROPs, xrender text, cursors, regions,
+  cross-thread X window recreation), `r182/debug-build.patch` + `xidsites.py` (173's lock-order debug build + an audit of
+  who allocates X resource ids on which display, with the display locked or not), `r183/settext_race.c`
   (two threads setting one window's text), `r184/vstate.c` (X window recreated from another thread in each window state,
-  `loop N` counts lost positions; 184).
+  `loop N` counts lost positions; 184), `r184/tray.c` (a notification icon, to look at XEmbed docking).
+  inst/182/: runner with gdb stacks + mutex owners (`run.sh`, `mowner.py`), `classify.py` (sorts hang dumps: 177 / 188 /
+  190 / 191), `ab.sh` (stress alternately on two builds), libX11 1.8.13 builds (as is with debug info, fixed, tracing).
   `tests/r175/`: owned windows vs the window manager (175): `owned.c` (owner + owned layered popup / dialogs / tool
   window / unmanaged popups, cross-process dialog; commands from a file; `auto` = Windows semantics around minimize),
   `scen.sh` (owner moved between desktops, who follows, what stays on screen; `pix.py`), `matrix.sh` (4 WM configs,

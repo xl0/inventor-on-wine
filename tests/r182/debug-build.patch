@@ -1,0 +1,326 @@
+diff --git a/dlls/win32u/sysparams.c b/dlls/win32u/sysparams.c
+index b5566465d77..929777b216a 100644
+--- a/dlls/win32u/sysparams.c
++++ b/dlls/win32u/sysparams.c
+@@ -331,6 +331,72 @@ static struct ratio min_ratio( struct ratio x, struct ratio y )
+     return x.num * y.den <= y.num * x.den ? x : y;
+ }
+ 
++/* DEBUG 173: lock order checks */
++#include <execinfo.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <sys/syscall.h>
++
++static __thread struct { void *lock; const char *name; int flags; } dbg_held[64];
++static __thread int dbg_held_count;
++static pthread_mutex_t dbg_mutex = PTHREAD_MUTEX_INITIALIZER;
++static struct { const char *a, *b; void *pc[6]; } dbg_pairs[8192];
++static int dbg_pair_count;
++
++static const char *dbg_name( const char *name ) { const char *p = strrchr( name, '/' ); return p ? p + 1 : name; }
++
++static void dbg_record( const char *a, int a_flags, const char *b, int b_flags )
++{
++    void *bt[28];
++    int i, n = backtrace( bt, ARRAY_SIZE(bt) );
++    void *pc[6] = {0};
++
++    /* pairs with a driver lock: one report per call chain; win32u's own pairs: one per pair */
++    if ((a_flags | b_flags) & 2) for (i = 0; i < 6 && i + 2 < n; i++) pc[i] = bt[i + 2];
++    (pthread_mutex_lock)( &dbg_mutex );
++    for (i = 0; i < dbg_pair_count; i++)
++        if (!strcmp( dbg_pairs[i].a, a ) && !strcmp( dbg_pairs[i].b, b ) && !memcmp( dbg_pairs[i].pc, pc, sizeof(pc) )) break;
++    if (i == dbg_pair_count && dbg_pair_count < ARRAY_SIZE(dbg_pairs))
++    {
++        dbg_pairs[i].a = a; dbg_pairs[i].b = b; memcpy( dbg_pairs[i].pc, pc, sizeof(pc) );
++        dbg_pair_count++;
++        fprintf( stderr, "LOCKORDER pid %d tid %ld: %s%s -> %s%s%s\n", getpid(), syscall( SYS_gettid ),
++                 (a_flags & 2) ? "x11:" : "win32u:", dbg_name( a ), (b_flags & 2) ? "x11:" : "win32u:", dbg_name( b ),
++                 (b_flags & 1) ? " (try)" : "" );
++        fflush( stderr );
++        backtrace_symbols_fd( bt + 2, n - 2, 2 );
++        fprintf( stderr, "LOCKORDER end\n" );
++        fflush( stderr );
++    }
++    (pthread_mutex_unlock)( &dbg_mutex );
++}
++
++void dbg_lock_acquired( void *lock, const char *name, int flags )
++{
++    int i, count = min( dbg_held_count, (int)ARRAY_SIZE(dbg_held) );
++
++    for (i = 0; i < count; i++) if (dbg_held[i].lock == lock) break;
++    if (i == count) /* not a recursive acquisition */
++        for (i = 0; i < count; i++) dbg_record( dbg_held[i].name, dbg_held[i].flags, name, flags );
++    if (dbg_held_count < ARRAY_SIZE(dbg_held))
++    {
++        dbg_held[dbg_held_count].lock = lock;
++        dbg_held[dbg_held_count].name = name;
++        dbg_held[dbg_held_count].flags = flags;
++    }
++    dbg_held_count++;
++}
++
++void dbg_lock_released( void *lock )
++{
++    int i, count = min( dbg_held_count, (int)ARRAY_SIZE(dbg_held) );
++
++    for (i = count - 1; i >= 0; i--) if (dbg_held[i].lock == lock) break;
++    if (i < 0) { fprintf( stderr, "LOCKORDER bad release %p\n", lock ); return; }
++    memmove( &dbg_held[i], &dbg_held[i + 1], (count - i - 1) * sizeof(dbg_held[0]) );
++    dbg_held_count--;
++}
++
+ void user_lock(void)
+ {
+     pthread_mutex_lock( &user_mutex );
+diff --git a/dlls/win32u/win32u_private.h b/dlls/win32u/win32u_private.h
+index 87b2f3bb2f8..cb66fdf93ab 100644
+--- a/dlls/win32u/win32u_private.h
++++ b/dlls/win32u/win32u_private.h
+@@ -27,6 +27,7 @@
+ #include "winbase.h"
+ #include "ntgdi.h"
+ #include "ntuser.h"
++#define DBG_LOCK_FLAGS 0 /* DEBUG 173 */
+ #include "wine/gdi_driver.h"
+ #include "wine/unixlib.h"
+ #include "wine/debug.h"
+diff --git a/dlls/winex11.drv/bitblt.c b/dlls/winex11.drv/bitblt.c
+index 2fd7dfe4c17..aea346543a1 100644
+--- a/dlls/winex11.drv/bitblt.c
++++ b/dlls/winex11.drv/bitblt.c
+@@ -1853,7 +1853,12 @@ static BOOL x11drv_surface_flush( struct window_surface *window_surface, const R
+         if (try_set_window_hidden( window_surface->hwnd, window_surface->shape_hidden ))
+             surface->hidden = window_surface->shape_hidden;
+         else  /* try again from the window's thread */
++        {
++            static LONG dbg_posts; /* DEBUG 173 */
++            LONG n = InterlockedIncrement( &dbg_posts );
++            if (n <= 3 || !(n % 100)) fprintf( stderr, "FLUSHPOST %d hwnd %p hidden %d\n", (int)n, window_surface->hwnd, window_surface->shape_hidden );
+             NtUserPostMessage( window_surface->hwnd, WM_X11DRV_SET_HIDDEN, 0, 0 );
++        }
+     }
+ 
+     if (!put_shm_image( ximage, &surface->image->shminfo, surface->window, surface->gc, rect, dirty ))
+diff --git a/dlls/winex11.drv/brush.c b/dlls/winex11.drv/brush.c
+index c1621ef21bc..78f2b261a0d 100644
+--- a/dlls/winex11.drv/brush.c
++++ b/dlls/winex11.drv/brush.c
+@@ -116,6 +116,7 @@ static Pixmap BRUSH_DitherColor( COLORREF color, int depth)
+     GC gc;
+ 
+     XLockDisplay( gdi_display );
++    { extern __thread int dbg_xid_depth; dbg_xid_depth++; } /* DEBUG 182 */
+     if (!ditherImage)
+     {
+         ditherImage = XCreateImage( gdi_display, default_visual.visual, depth, ZPixmap, 0,
+@@ -154,6 +155,7 @@ static Pixmap BRUSH_DitherColor( COLORREF color, int depth)
+     gc = XCreateGC( gdi_display, pixmap, 0, NULL );
+     XPutImage( gdi_display, pixmap, gc, ditherImage, 0, 0, 0, 0, MATRIX_SIZE, MATRIX_SIZE );
+     XFreeGC( gdi_display, gc );
++    { extern __thread int dbg_xid_depth; dbg_xid_depth--; } /* DEBUG 182 */
+     XUnlockDisplay( gdi_display );
+ 
+     return pixmap;
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 8a68d99fde3..4c2cc336b9a 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -71,6 +71,7 @@ typedef int Status;
+ #include "ntgdi.h"
+ #include "shlobj.h"
+ #include "wine/unixlib.h"
++#define DBG_LOCK_FLAGS 2 /* DEBUG 173 */
+ #include "wine/gdi_driver.h"
+ #include "wine/list.h"
+ #include "wine/debug.h"
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index b8bf78f2153..10b1f70238f 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -44,6 +44,8 @@
+ #include "ntstatus.h"
+ 
+ #include "x11drv.h"
++#include <execinfo.h>
++#include <sys/syscall.h>
+ #include "winreg.h"
+ #include "xcomposite.h"
+ #include "wine/server.h"
+@@ -232,6 +234,82 @@ static inline BOOL ignore_error( Display *display, XErrorEvent *event )
+ }
+ 
+ 
++/* DEBUG 182: who allocates X resource ids, on which display, with the display locked by this thread or not */
++__thread int dbg_xid_depth;
++static XID (*dbg_orig_alloc)( Display * );
++static pthread_mutex_t dbg_xid_mutex = PTHREAD_MUTEX_INITIALIZER;
++static struct { void *pc[20]; int kind, locked; unsigned long count; } dbg_sites[4096];
++static int dbg_site_count;
++static unsigned long dbg_counts[3][2];
++static const char * const dbg_kinds[] = { "gdi_display", "own thread display", "other thread's display" };
++
++/* one write() per block: several processes share the log */
++static void dbg_xid_block( const char *tag, const char *head, void **pc, int count )
++{
++    char buf[8192], **syms = backtrace_symbols( pc, count );
++    int i, len = snprintf( buf, sizeof(buf), "%s pid %d tid %ld: %s\n", tag, getpid(), syscall( SYS_gettid ), head );
++
++    for (i = 0; syms && i < count && pc[i] && len < sizeof(buf) - 300; i++) len += snprintf( buf + len, 256, "%s\n", syms[i] );
++    len += snprintf( buf + len, 32, "%s end\n", tag );
++    fflush( stderr );
++    write( 2, buf, len );
++    free( syms );
++}
++
++static void dbg_xid_dump(void)
++{
++    char head[256];
++    int i;
++
++    for (i = 0; i < dbg_site_count; i++)
++    {
++        snprintf( head, sizeof(head), "%lu allocations on %s, display lock %s", dbg_sites[i].count,
++                  dbg_kinds[dbg_sites[i].kind], dbg_sites[i].locked ? "held" : "NOT HELD" );
++        dbg_xid_block( "XIDSITE", head, dbg_sites[i].pc, 20 );
++    }
++    snprintf( head, sizeof(head), "gdi_display locked %lu unlocked %lu; own thread display locked %lu unlocked %lu; "
++              "other thread's display locked %lu unlocked %lu; sites %d", dbg_counts[0][1], dbg_counts[0][0],
++              dbg_counts[1][1], dbg_counts[1][0], dbg_counts[2][1], dbg_counts[2][0], dbg_site_count );
++    dbg_xid_block( "XIDSTAT", head, NULL, 0 );
++}
++
++static XID dbg_alloc_xid( Display *display )
++{
++    struct x11drv_thread_data *data = x11drv_thread_data();
++    int kind = display == gdi_display ? 0 : (data && data->display == display) ? 1 : 2;
++    int i, n, locked = dbg_xid_depth > 0;
++    void *bt[22], *pc[20] = {0};
++
++    n = backtrace( bt, 22 );
++    for (i = 1; i < n && i <= 20; i++) pc[i - 1] = bt[i];
++    (pthread_mutex_lock)( &dbg_xid_mutex );
++    dbg_counts[kind][locked]++;
++    for (i = 0; i < dbg_site_count; i++)
++        if (dbg_sites[i].kind == kind && dbg_sites[i].locked == locked && !memcmp( dbg_sites[i].pc, pc, sizeof(pc) )) break;
++    if (i == dbg_site_count && dbg_site_count < ARRAY_SIZE(dbg_sites))
++    {
++        memcpy( dbg_sites[i].pc, pc, sizeof(pc) );
++        dbg_sites[i].kind = kind;
++        dbg_sites[i].locked = locked;
++        dbg_site_count++;
++        if (!locked && kind != 1)
++        {
++            char head[128];
++            snprintf( head, sizeof(head), "resource id allocated on %s without the display lock", dbg_kinds[kind] );
++            dbg_xid_block( "XIDALLOC", head, bt + 1, n - 1 );
++        }
++    }
++    if (i < ARRAY_SIZE(dbg_sites)) dbg_sites[i].count++;
++    (pthread_mutex_unlock)( &dbg_xid_mutex );
++    return dbg_orig_alloc( display );
++}
++
++static void dbg_hook_display( Display *display )
++{
++    if (!dbg_orig_alloc) { dbg_orig_alloc = ((_XPrivDisplay)display)->resource_alloc; atexit( dbg_xid_dump ); }
++    ((_XPrivDisplay)display)->resource_alloc = dbg_alloc_xid;
++}
++
+ /***********************************************************************
+  *		lock_xid_alloc
+  *
+@@ -249,7 +327,7 @@ static inline BOOL ignore_error( Display *display, XErrorEvent *event )
+  */
+ void lock_xid_alloc( Display *display )
+ {
+-    if (!TRACE_ON(synchronous)) XLockDisplay( display );
++    if (!TRACE_ON(synchronous)) { XLockDisplay( display ); dbg_xid_depth++; }
+ }
+ 
+ 
+@@ -258,7 +336,7 @@ void lock_xid_alloc( Display *display )
+  */
+ void unlock_xid_alloc( Display *display )
+ {
+-    if (!TRACE_ON(synchronous)) XUnlockDisplay( display );
++    if (!TRACE_ON(synchronous)) { dbg_xid_depth--; XUnlockDisplay( display ); }
+ }
+ 
+ 
+@@ -304,6 +382,7 @@ void X11DRV_expect_error( Display *display, x11drv_error_callback callback, void
+ {
+     pthread_mutex_lock( &error_mutex );
+     XLockDisplay( display );
++    dbg_xid_depth++;
+     err_callback         = callback;
+     err_callback_display = display;
+     err_callback_arg     = arg;
+@@ -322,6 +401,7 @@ int X11DRV_check_error(void)
+ {
+     int res = err_callback_result;
+     err_callback = NULL;
++    dbg_xid_depth--;
+     XUnlockDisplay( err_callback_display );
+     pthread_mutex_unlock( &error_mutex );
+     return res;
+@@ -349,11 +429,14 @@ static int error_handler( Display *display, XErrorEvent *error_evt )
+                error_evt->error_code, error_evt->request_code );
+         return 0;
+     }
+-    if (TRACE_ON(synchronous))
+     {
+-        ERR( "X protocol error: serial=%ld, request_code=%d - breaking into debugger\n",
+-             error_evt->serial, error_evt->request_code );
+-        assert( 0 );
++        /* DEBUG 173 */
++        void *bt[32];
++        int n = backtrace( bt, 32 );
++        fprintf( stderr, "XERROR pid %d tid %ld: error %d request %d.%d resource %lx serial %lu\n", getpid(), syscall( SYS_gettid ),
++                 error_evt->error_code, error_evt->request_code, error_evt->minor_code, error_evt->resourceid, error_evt->serial );
++        backtrace_symbols_fd( bt, n, 2 );
++        fprintf( stderr, "XERROR end\n" );
+     }
+     old_error_handler( display, error_evt );
+     return 0;
+@@ -712,6 +795,7 @@ NTSTATUS __wine_unix_lib_init(void)
+     fcntl( ConnectionNumber(display), F_SETFD, 1 ); /* set close on exec flag */
+     root_window = DefaultRootWindow( display );
+     gdi_display = display;
++    dbg_hook_display( display ); /* DEBUG 182 */
+     old_error_handler = XSetErrorHandler( error_handler );
+ 
+     pthread_key_create( &x11drv_thread_data_key, NULL );
+@@ -821,6 +905,7 @@ struct x11drv_thread_data *x11drv_init_thread_data(void)
+         NtTerminateProcess( 0, 1 );
+     }
+ 
++    dbg_hook_display( data->display ); /* DEBUG 182 */
+     fcntl( ConnectionNumber(data->display), F_SETFD, 1 ); /* set close on exec flag */
+ 
+     XkbUseExtension( data->display, NULL, NULL );
+diff --git a/include/wine/gdi_driver.h b/include/wine/gdi_driver.h
+index d3df9c24d96..5efe13ce631 100644
+--- a/include/wine/gdi_driver.h
++++ b/include/wine/gdi_driver.h
+@@ -448,4 +448,18 @@ struct user_driver_funcs
+ 
+ W32KAPI void __wine_set_user_driver( const struct user_driver_funcs *funcs, UINT version );
+ 
++/* DEBUG 173: lock order checks */
++W32KAPI extern void dbg_lock_acquired( void *lock, const char *name, int flags ); /* flags: 1 = trylock, 2 = driver lock */
++W32KAPI extern void dbg_lock_released( void *lock );
++static inline int dbg_mutex_lock( pthread_mutex_t *m, const char *name, int flags )
++{ int r = pthread_mutex_lock( m ); dbg_lock_acquired( m, name, flags ); return r; }
++static inline int dbg_mutex_trylock( pthread_mutex_t *m, const char *name, int flags )
++{ int r = pthread_mutex_trylock( m ); if (!r) dbg_lock_acquired( m, name, flags | 1 ); return r; }
++static inline int dbg_mutex_unlock( pthread_mutex_t *m ) { dbg_lock_released( m ); return pthread_mutex_unlock( m ); }
++#ifdef DBG_LOCK_FLAGS
++#define pthread_mutex_lock(m) dbg_mutex_lock( m, __FILE__ ":" #m, DBG_LOCK_FLAGS )
++#define pthread_mutex_trylock(m) dbg_mutex_trylock( m, __FILE__ ":" #m, DBG_LOCK_FLAGS )
++#define pthread_mutex_unlock(m) dbg_mutex_unlock( m )
++#endif
++
+ #endif /* __WINE_WINE_GDI_DRIVER_H */
