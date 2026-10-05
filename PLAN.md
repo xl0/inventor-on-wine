@@ -386,6 +386,18 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
 - 182 + 184 (Opus worker, wt/182): Wine-side fix for the XID race (it could abort real apps),
   proper fix for 184, an upstream libX11 report text for the user to file.
 
+- 181 fixed on fix/181 (7 commits on b5d75449ffe), in adversarial review; all three defects are
+  upstream's: (1) wined3d presented to the old-size Vulkan swapchain after a resize (now recreates
+  on a suboptimal acquire) + GL on NVIDIA raced the client X window's resize (XSync after a size
+  change); (2) move_window_bits copied only inside the window surface (now also on the host window
+  for client-surface areas; a moved same-process surface is re-presented); (3) wined3d's DC from
+  swapchain creation went stale, direct X drawing was never flushed (upstream d3cb94b543e), and
+  our 061 re-present on Expose restored an older frame (now limited to the exposed region).
+  Probes: 0 stale in 30-run passes, both renderers, ± picom (build/: 9-17 of 30, 10 of 10, 12 of 12
+  bad). fps unchanged. Inventor not run (seat). Drafts 186 (Windows repaints a child that a
+  resized sibling came to overlap; Wine copies bits — a lead for 174's stale panes), 187 (GL: first
+  present after show lost in ~25 % of runs on both builds).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
