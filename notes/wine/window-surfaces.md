@@ -140,3 +140,21 @@
 - A fault in Unix-side code inside a syscall is not a crash: ntdll returns the exception code to the PE caller
   and mutexes held stay locked (172). A hang on a Unix mutex whose owner isn't in the locked region: rerun
   with `WINEDEBUG=+seh` and grep `handle_syscall_fault`.
+- Offscreen client surfaces (181, probes tests/r174/): the toplevel X window only holds a copy, refreshed by a full
+  driver present and by fix/061 on Expose. Not refreshed: a child that moved without resizing (`move_window_bits()` copies
+  in the window surface, DCX_WINDOW), the strip a child grew by until its next full present, and GDI drawing on the
+  window: a DC of a window with a client surface has no window surface and draws on the toplevel X window directly
+  (`update_visible_region()` / `X11DRV_GetDC`), so the offscreen X window never gets it. wined3d presents partial
+  rectangles of COPY-effect swapchains that way (`swapchain_blit_gdi()`, WPF's dirty rectangles), from its command stream
+  thread; gdi_display is only flushed by `X11DRV_ProcessEvents`, a surface flush or a full present, so such a present
+  can stay invisible until an X event reaches the process.
+- Hardware WPF = one wined3d swapchain (Vulkan surface, offscreen X window) per HwndSource, a new one per size; software
+  WPF (`RenderOptions.ProcessRenderMode`, per-target `RenderMode`) BitBlts from the render thread into the window
+  surface and behaves like any GDI child. Client surfaces of a process: X windows below its 1x1 unnamed dummy parent in
+  `xwininfo -root -tree`.
+- win32u answers a present to a swapchain whose extent no longer matches the window with VK_SUBOPTIMAL_KHR after
+  presenting the old-size image; wined3d then recreates the swapchain but shows nothing new until the next Present (181).
+- A WM resize is X first: ConfigureNotify (awesome: a real one mapped one pixel off, then the synthetic one) and the
+  Expose events of the new area are handled before Win32 knows the size; under a compositing manager these are the only
+  Expose events a mapped window gets. awesome's frame ConfigureNotify also yields a GravityNotify whose posted
+  WM_WINE_WINDOW_STATE_CHANGED applies the new size before fix/077's WM_ENTERSIZEMOVE (35-60 % of resizes, 174).

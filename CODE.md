@@ -455,6 +455,12 @@ launches; previous device-limit errors do not authorize pausing another device.
   driver .so A/B), `minloop.sh`, `barpix.sh` (WM border around the invisible popup), `wm.sh` / `ac.sh` / `movetag.sh`
   (swap the WM of a display, awesome-client), `xinfo.sh` (X properties per window), `xtransient.c` / `xopacity.c`
   (plain X clients: WM policy for transients and frame opacity).
+  `tests/r174/`: what stays stale after a WM resize (174, 181): `frame.c` (frame with ribbon / browser / status children +
+  D3D11 view; options: layout deferred to WM_EXITSIZEMOVE, slow / pumping layout, children painted by another thread, DPI
+  aware), `wpf.cs` + `build-wpf.sh` (the same in WPF 4.8: one window or a WinForms frame hosting child HwndSources; `sw`,
+  `partial` = dirty-rectangle present after each resize), `drive.sh` (N Mod / Alt + right-button drags of a corner or
+  `xdotool windowsize` steps on any display, screenshot after each), `check.py` (screen vs. the layout for the X window's
+  size, per child), `wstate.c` (another process' top-level: rects, region, children with pending update rects; `redraw`).
   Never export `WINEDLLOVERRIDES="mscoree,..."` to a .NET app (wineboot only): Inventor then dies at
   `CommonUI.dll+0x60b90` 6 s after start (152).
 - `deps/` — third-party downloads, pinned (hash in the fetch cmd or below).
