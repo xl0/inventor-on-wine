@@ -333,6 +333,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
 - Harness: run.sh refuses a prefix leased to another holder (a run without INV= had started
   Inventor in another worker's prefix `inv`).
 
+- 173 review done: commits 2, 3, 5 fine. Commit 1 (DrawIconEx without the user lock) trades the
+  deadlock for wrong pixels — a bitmap can be selected into one DC only, and the user lock was what
+  serialized all users of an icon's bitmaps: 4 threads drawing one icon → ~60-75 % bad draws
+  (integ and Windows: 0), GetIconInfo copies wrong, partial images on DestroyIcon. Rework: keep the
+  lock for memory-DC destinations, draw from private bitmap copies otherwise (reviewer's prototype:
+  0 bad, deadlock still gone), add a threaded cursoricon test. Worker applying, plus drafts 182
+  (`_XAllocID` assertion: two threads doing CreateCompatibleDC/DeleteDC abort the process on
+  integ, 4 of 4 — could hit real apps), 183 (set_window_text use-after-free, by reading), 184
+  (position lost after cross-thread X window recreation under openbox).
+- VMs: both run scripts are now single-instance (a second start took sockets/pid file/TPM state
+  from the running VM — the Windows VM died several times while workers shared it); worker rule:
+  the VMs are shared, never restart or kill them.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
