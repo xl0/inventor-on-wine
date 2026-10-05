@@ -467,6 +467,17 @@ launches; previous device-limit errors do not authorize pausing another device.
   (expected XGetImage BadMatch errors still caught). inst/177/: `x.sh` (Xvfb :1770-:1777), `run.sh` (182's watchdog runner,
   `X11LIB=DIR` = another libX11), `ab.sh` (any probe alternately on build-next and wt/177-build), `cost.sh`, `ut.sh`,
   libX11 1.8.13 with the proposed `_XError` patch (`x11-build-fixed`). Xlib locking facts: notes/wine/xlib-locking.md.
+  `tests/r191/`: input methods vs. threads (190, 191, 193): `xicrace.c` (`race SECS [gap=MS]`: a thread recreates the
+  focused window of the main thread, which only pumps; `ui CMDFILE` + `xicrace-ui.sh`: xdotool typing with dead keys /
+  compose / Cyrillic into edits before and after recreations, one line per step to diff between builds), `thrwin.c` (N
+  threads create their first window at once; `nomain` = no main window: 193), plain Xlib: `xfilter.c` (XFilterEvent vs.
+  focus changes from another thread), `ximopen.c` (XOpenIM from threads with own displays), `xgeclose.c` (libXext XGE
+  record), `xthreads.c` (a UI thread's Xlib life cycle for ThreadSanitizer); `guardmalloc.c` (LD_PRELOAD allocator: a
+  heap overflow / use after free / double free in a Unix library faults at once, with the stacks of the access, the
+  allocation and the free). inst/191/: `x.sh` (Xvfb :1800-:1809), `run.sh` / `ab.sh` / `par.sh` (watchdog runner, base =
+  wt/177-build, fix = wt/191-build; alternating; several displays in parallel), `fresh.sh` (thrwin on a fresh
+  wineserver per run), `gm.sh` (under guardmalloc), `ibus.sh` (ibus XIM server on a private D-Bus session) +
+  `ui-ibus-restart.sh`, libX11 1.8.13 builds with locale data (as is, 191's patch, 190's patch, instrumented, TSan, ASan).
   `tests/r175/`: owned windows vs the window manager (175): `owned.c` (owner + owned layered popup / dialogs / tool
   window / unmanaged popups, cross-process dialog; commands from a file; `auto` = Windows semantics around minimize),
   `scen.sh` (owner moved between desktops, who follows, what stays on screen; `pix.py`), `matrix.sh` (4 WM configs,
@@ -480,7 +491,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   `xdotool windowsize` steps on any display, screenshot after each), `check.py` (screen vs. the layout for the X window's
   size, per child; `SIZE` = the window didn't end at the dragged size), `wstate.c` (another process' top-level: rects,
   region, children with pending update rects; `redraw`, `pos=X,Y,W,H`). `frame.exe rgn` / `rgnpost`: SetWindowRgn after
-  each layout / from a posted message (stale configure request, fix/174). Inventor driver: inst/174/i/inv-drive.sh.
+  each layout / from a posted message (stale configure request, fix/174). Inventor drivers: inst/174/i/inv-drive.sh, inst/174/h/round.sh +
+  heal.py (screen and frame pixmap sampled after a WM drag: when is the window right, was the content late on the
+  screen or in the window, CPU used meanwhile).
   `tests/r181/`: what the screen shows of a GPU-presented window (181): `gpuchild.c` (`grow` = one ResizeBuffers +
   Present per resize, `move` = moved without presenting, `movesib` = a sibling grows over it and presents first,
   `partial` = D3D9 COPY-effect presents of a 40x40 rectangle + a cover window, `fsclip` = DPI-unaware top-level going

@@ -1,11 +1,11 @@
 # 174: Main-window regions stay black or stale after Awesome Mod+mouse resize
 
-Status: open, partly fixed · Owner: worker-174 · Branch: fix/174 (wt/174, d09a8c4d1ce on integ cffd27540ee)
-The persistent stale picture of the report was **not reproduced** on the server, neither on build/ (b5d75449ffe, the
-user's build) nor on build-next (cffd27540ee), Inventor at 144 DPI under awesome + picom. What was found and fixed in
-Inventor: under load the window jumps back to an earlier size of a WM drag (stale configure request). 181's fixes
-(merged) cover GPU-presented children. To be confirmed by the user on a build with 181 + fix/174; data to ask for is
-at the end. See "Inventor round (2026-10-05)".
+Status: open · Owner: worker-174 · Branch: fix/174 (wt/174, d09a8c4d1ce on integ cffd27540ee: the jump-back only)
+**Main lead (2026-10-05, second round, reproduced on the server, not root-caused):** after a large grow by a WM drag
+Inventor's main thread stops handling messages for ~5.0 s: Win32 stays at an intermediate size of the drag with paints
+pending, the process is idle, the X window (already at the final size) shows the old layout and what was under it; then
+everything is repaired at once. Same on build-next and on fix/174; picom only shows what is in the window. See "Heal
+time after a resize". Earlier findings: the jump-back to an earlier size (fixed on fix/174) and 181 (merged).
 
 ## Environment
 
@@ -223,3 +223,50 @@ remember which rect the running update delivers.
    that tag (floating or tiled), which corner / edge was dragged, CPU load at the time (the debugger was attached).
 5. If it can be made to happen again: Inventor started with `WINEDEBUG=+timestamp,+x11drv,+event,+cursor` (the log
    compresses well) and the time of the stale resize.
+
+## Heal time after a resize (2026-10-05, inv2 on :99, awesome + picom glx vsync no-use-damage, 144 DPI, unthrottled)
+Method: `inst/174/h/round.sh` (Mod4 + right drag of the bottom right corner, 10 steps of 30 ms as the checks worker's
+rz.sh, pointer parked) and `heal.py`: for 6-10 s after the release, every ~0.1 s, the screen (root image), the
+composite pixmap of awesome's frame (= what is in the X window, before picom) and Inventor's CPU ticks; `stat.py`
+gives the time until the screen is within 15000 px of its final state (the navigation bar of the viewport fades for
+~2 s after any resize, 13704 px: Inventor's own effect, also in the pixmap). Files: inst/174/h/.
+
+| build | drag | grows: s until right | shrinks |
+|---|---|---|---|
+| build-next cffd27540ee | +300,+150 / back, 10 | 0.88 0.06 0.24 0.12 0.10 | <= 0.03 |
+| build-next | +450,+250 / back, fresh session, 10 | **5.30 4.64 5.18** 0.00 0.00 | <= 0.10 |
+| build-next | the same again, same session, 22 more | 0.00 x 10, one 1.85 (16000 px) | 0.00 (one 29000 px strip at the nav bar for 7 s) |
+| fix/174 (cffd27540ee + d09a8c4d1ce) | +450,+250 / back, fresh session, 14 | **6.59 6.45 6.01** 0.00 0.11 0.00 0.00 | <= 0.19 |
+build/ (b5d75449ffe) was not measured with this method (the hour was up); the first round's 3 s / 12 s screenshots
+on build/ only had the throttled cases.
+Window size after the drags: build-next 2 of 6 grows of one run ended short (jump-back, 1001 / 911 instead of 1136);
+fix/174 0 of 14.
+
+What the long cases are (measured, fix/174 run, resizes 1, 3, 5; build-next's look the same):
+- From the release to +5.0 s (4.97, 4.99, 5.16 s) the screen and the window pixmap are equal (2300 px apart) and both
+  wrong over the whole window (720000 px): ribbon at an old width, white viewport, tab strip and status bar at two or
+  three heights, the wallpaper where the window grew (inst/174/h/fixL-1-mid.png: left +1.0 s, right final). **picom is
+  not holding anything back**: what is wrong on the screen is wrong in the X window. Differences between the two only
+  occur in single samples while the content changes (one compositor frame).
+- In those 5 s Inventor's process uses 21 CPU ticks (0.04 cores): it is **not painting slowly, it is waiting**.
+- `wstate.exe` 1.5 s after the release: Win32 window 1181x801 / 1226x826 with its region the same size, while the X
+  window is 1451x951, and a pending update rect over the viewport (161,146-739,510 in 96 DPI units). So the thread that
+  owns the frame has neither applied the WM's last sizes nor handled WM_PAINT: it is blocked somewhere in the handling
+  of an intermediate size.
+- At ~5.0 s it resumes (30-120 ticks in 0.3 s), the window is right 0.3-1.5 s later.
+- Only the first three large grows of a session did it (both sessions), later ones and all shrinks are right within a
+  sample or two.
+Per pane (question of the coordinator): graphics view (client X window): white because the last frame presented is
+for an intermediate size and the application doesn't present while it is blocked; nothing of it is waiting in Wine.
+Ribbon / browser / tabs / status bar (window surface): what is on screen is what was painted for the intermediate
+sizes; the rest of the X window was never drawn (window region and Win32 size are behind), the WM_PAINTs are pending.
+Not established: what the thread waits for. A wait of exactly ~5 s that ends by itself looks like a timeout (a
+cross-thread / cross-process send or call from inside the resize handling: WebView2 panes (Home, Assistant) and
+their GPU processes get resized with the frame; first-time work in the first grows of a session). On a slower machine
+or with a longer timeout path this is what "stays until I hover / resize again" would look like; whether pointer events
+end the wait early was not tested (a PropertyNotify sent at +1.5 s hit no stuck case).
+Next step (15 minutes): fresh Inventor, one +450,+250 grow, and during the 5 s: `gdb -p <Inventor.exe> -batch -ex
+"thread apply all bt 12"` with tools/gdb/winesyms.py (or /proc/PID/task/*/syscall for the main thread) to see the wait;
+then the same on build/ and on Windows numbers if they exist (none in the notes: the VM reference has no resize
+heal-time measurement; 181's item "pane layout is redone at ~1.5 Hz during a splitter drag, 200 % CPU on both builds"
+is a different, busy, state).
