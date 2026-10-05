@@ -454,6 +454,13 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Not closed: 177 (reachable on plain integ too). New drafts: 188 (BitBlt from a window DC while
   another thread replaces the surface), 190 (libX11 XOpenIM double free when threads create their
   first windows together), 191 (XIC destroyed by another thread during XFilterEvent).
+  Review (inst/182-review/): commits 2 and 3 merge as is; commit 1 needs a pre-sync in
+  lock_xid_alloc (Xlib's 65K sequence sync otherwise waits for its reply inside the user lock: the
+  177 shape with a new holder, hang 5 of 5 in plain Xlib, UI p99 0.3 → up to 8 ms), the
+  `synchronous` flag latched, get_dummy_parent re-checked under the lock. Worker reworking on
+  integ d8e4d0f72d2; the fix is the reviewer's tested patch → coordinator reads and merges.
+  Decision: user lock kept (not the reviewer's hook-only variant, which misses xcb-only bursts).
+  libX11 report goes to the existing xorg/lib/libx11 issue #10 (same assertion, open since 2010).
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
