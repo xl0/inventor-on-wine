@@ -1,6 +1,6 @@
 # 177 winex11: process hangs in Xlib when an X error is read by one thread while another waits for a reply with the display locked (X11DRV_expect_error)
-Status: fixed on fix/177 (1 commit on integ cffd27540ee: b1e7b97cfed `winex11: Handle expected and ignored X errors without
-the display lock.`), verified except on Inventor and on the NVIDIA displays · Found in: review of 171 · upstream winex11 +
+Status: fixed, on integ (b1e7b97cfed), reviewed (`winex11: Handle expected and ignored X errors without the display lock.`;
+review data inst/177-review/; not run on Inventor) · Found in: review of 171 · upstream winex11 +
 a libX11 bug (1.8.13 and git master), report text + reproducer + patch ready, not filed:
 [attachments/177-libx11-bug-report.md](attachments/177-libx11-bug-report.md)
 
@@ -26,8 +26,11 @@ XCreateGC (2), XSetGraphicsExposures (1). Holders: X11DRV_GetImage 21, create_sh
   the error handler call (since X11R6; it runs the handler with the display mutex released). A waits for B, B for A.
 - `XLockDisplay` (src/LockDis.c) still has the code that was meant to let "the threads in the reply queue all get
   out" before it returns, but it tests `dpy->lock->reply_awaiters`, which nothing sets since the XCB transport
-  (2008-2010): dead code. So this is a library bug, present in 1.8.13 and unchanged in git master (6d4432b1:
-  `_XError`, `_XLockDisplay`, `XLockDisplay`, `_XReply` identical).
+  (2008-2010): dead code. So this is a library bug, present in 1.8.13 and in git master (6d4432b1: `_XError`,
+  `_XReply`, `handle_error`, locking.c, LockDis.c are the same; XlibInt.c and xcb_io.c differ in unrelated hunks; the
+  patch applies). History: fd85aca "Ignore user locks after sleeping in _XReply and _XReadEvents" (2011-03-14)
+  fixed this very pair for the plain lock wait; 83e1ba5 "Call _XErrorFunction without holding the Display lock"
+  (a day later) put the user lock into `_XError` and reopened it for errors.
 - Measured: `issues/attachments/177-libx11-reproducer.c` (reader thread: failing request + XSync; holder thread:
   XLockDisplay + XSync + XUnlockDisplay) hangs after 0 to 7 round trips in 8 of 8 runs (distribution package and an
   own build of 1.8.13; stacks as above, `inst/177/out/xerrlock-plain-stacks.txt`). With the patch
@@ -134,27 +137,46 @@ Rejected:
   per X11DRV_expect_error region and nothing per request (plain Xlib: `xerrlock bench`, 82.0 vs 82.6 ns per
   request with and without the hook). Not measured: bystander latency under contention (no lock was added that a
   drawing operation takes).
-- Not run: Inventor (licence seat elsewhere), anything on the NVIDIA displays (:98-:101 off limits for this task),
-  so the hook next to NVIDIA's GLX library is untested. The lock-order debug build was not rerun: the fix adds no
-  mutex and takes none inside the hook.
+- user32:win is run-dependent, not build-dependent (review: x86_64 win.c:11003 / 11004 come and go on both builds).
+- NVIDIA (review, :101; inst/177-review/out/RESULT-gpu*.txt): GLX stress (UseEGL=N) base 6 of 11 done, the hangs are
+  177 (holder create_shm_image, reader X11DRV_ThreadDetach's XSync); fix 11 of 11. What the NVIDIA and Mesa
+  libraries do on winex11's displays: notes/wine/xlib-locking.md.
+- Not run: Inventor (licence seat elsewhere). The lock-order debug build was not rerun: the fix adds no mutex and
+  takes none inside the hook.
 
 ## Not closed
-- An error that Wine neither expects nor ignores (it ends the process: X error message, exit) still makes the
-  reading thread wait for the user lock. If a holder waits for a reply at that moment the process hangs silently
-  instead of dying with the message. By reading; not provoked. The libX11 patch closes it.
-- A reader that is inside one of the Xlib calls with async handlers (list above) when it reads the error takes the
-  old path. On gdi_display only XInternAtoms at process init does that; on a thread display it would need another
-  thread holding that display's user lock across a reply wait, which nothing in winex11 does (lock_xid_alloc from
-  another thread has no reply wait, 182's pre-sync keeps Xlib's sync away).
-- Errors read while events are polled (XPending / XCheckIfEvent) don't go through the hook. No deadlock there (such a
-  thread waits for the user lock before it reads, and the holder does not depend on it), but an upstream oddity
-  stays: an expected error read that way by another thread would be missed by the expecting one. gdi_display has
-  no event readers, and the regions on thread displays are run by the owning thread.
+- An error that Wine neither expects nor ignores still makes the reading thread wait for the user lock, as on
+  base. That is an error that ends the process (X error message, exit), or one that another library waits for with
+  a temporary error handler of its own (Mesa's software GLX around XShmAttach). If a holder waits for a reply at
+  that moment the process hangs silently. By reading; not provoked. The libX11 patch closes it.
+- The hook stands down while ANY thread has an async handler on the display, the lock holder itself included. So
+  a holder that calls XGetWindowAttributes / XGetAtomNames / XInternAtoms / XLoadQueryFont / XReconfigureWMWindow
+  with the display locked is still half of the pair: plain Xlib, holder XLockDisplay + XGetWindowAttributes +
+  XQueryTree (what get_host_window does), reader BadDrawable + XSync hangs with the hook logic (review:
+  `inst/177-review/rv177 4 gwa sync`, also `atoms sync`; `geom sync` runs). In winex11 this is not reachable today
+  only because of 173's rule: get_host_window( create ) runs with the window data locked, and every request that
+  another thread makes on a thread's display is made with the window data locked too, so that holder and a foreign
+  reader exclude each other through win_data_mutex (read from the code, not provoked). A cross-thread round trip on
+  a thread display outside the window data would reopen it. On gdi_display async handlers exist only at start-up
+  (measured in the review: libXrender 1 round trip, libGLX / glvnd 2 per process, besides our XInternAtoms).
+- Errors read on the event path don't go through the hook: XPending / XCheckIfEvent / XNextEvent, and also every
+  XFlush, which polls and handles errors that way. gdi_display has such readers: every XFlush( gdi_display ), and
+  init.c blocks in XWindowEvent( gdi_display ). No 177 cycle follows (such a reader is not in the reply queue; plain
+  Xlib `sync flush`, `sync next`, `gwa next` of rv177 run). An upstream oddity stays: an expected error read that
+  way by another thread is missed by the expecting one, e.g. while a thread blocks in that XWindowEvent an XShmAttach
+  error that create_shm_image expects would be missed and then be fatal (derived, not provoked).
+- Considered in the review and not taken (F2): the err_callback statics are protected by the expecting display's
+  mutex only; handle_error() for an error on another display reads them with no common lock, as upstream always
+  did: a spurious "expected error" in a window of a few instructions. `inst/177-review/v2-leaf-mutex.patch` (a leaf
+  mutex instead of LockDisplay / UnlockDisplay, +17 -11, tested equal) is the upgrade if this ever shows or if
+  upstream objects to LockDisplay in winex11; it also removes LockDisplay's side effects (XID refill, sequence sync)
+  inside X11DRV_expect_error.
 - Displays that winex11 doesn't open (connections of GL / media libraries) have no hook.
 - A difference in behaviour, on purpose: the hook also acts while another library has temporarily put its own Xlib
   error handler in place (Mesa's software GLX does around XShmAttach, libXrender around its pixmap depth check), so
   errors Wine expects or ignores no longer reach that handler when they are read inside `_XReply`. The two known
-  ones wait for BadAccess / BadValue, which Wine doesn't ignore. Checking `_XErrorFunction` in the hook would keep
+  ones wait for BadAccess / BadValue, which Wine doesn't ignore (for Mesa an improvement: a stray BadDrawable of a
+  winex11 XShmPutImage no longer reaches its handler and switches XShm off). Checking `_XErrorFunction` in the hook would keep
   the old behaviour and the hang with it for that time.
 - 191 is now the hang that is left in these stresses (1 of 140 under openbox, 13 of 32 in synchronous mode under
   openbox with the distribution's libX11). 188 (flag `x`) and 190 were not seen in this round (190: the probe starts

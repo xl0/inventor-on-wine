@@ -1,15 +1,16 @@
 Text for a new issue at https://gitlab.freedesktop.org/xorg/lib/libx11/-/issues. Not filed.
 Reproducer: [177-libx11-reproducer.c](177-libx11-reproducer.c) (the longer `tests/r177/xerrlock.c` has the workaround
 modes and the cost benchmark). Patch: [177-libx11-xerror-user-lock.patch](177-libx11-xerror-user-lock.patch).
-No existing report found (searched the libx11 issues for `_XError` / `XLockDisplay` deadlocks; #121 is the
-self-deadlock through the sequence sync that commit 30ccef3a fixed, a different one).
+The tracker could not be searched from here (gitlab.freedesktop.org / bugs.freedesktop.org deny access; only a web
+search, which found #121, the self-deadlock through the sequence sync that commit 30ccef3a fixed, a different one):
+an existing issue may exist, look before filing.
 
 ---
 
 **Deadlock: `_XError()` waits for the `XLockDisplay()` lock of a thread that waits for a reply behind it**
 
-**Version:** libX11 1.8.13 (Ubuntu 26.04, 2:1.8.13-1), libxcb 1.17.0, x86_64; any X server. The code is the same in git
-master (6d4432b1): `_XError()`, `_XLockDisplay()`, `XLockDisplay()` and `_XReply()` are unchanged.
+**Version:** libX11 1.8.13 (Ubuntu 26.04, 2:1.8.13-1), libxcb 1.17.0, x86_64; any X server. Git master (6d4432b1) has
+the same `_XError()`, `_XReply()`, `handle_error()`, locking.c and LockDis.c; the patch applies to it.
 
 **Summary**
 
@@ -78,6 +79,12 @@ Thread A (reader)                                  Thread B (holder)
 
 but `dpy->lock->reply_awaiters` is never set since xcb_io.c replaced the old transport (nothing calls `push_reader`
 any more), so `XLockDisplay()` returns while other threads are still inside `_XReply()`.
+
+History: commit fd85aca7 "Ignore user locks after sleeping in _XReply and _XReadEvents." (2011-03-14) fixed exactly
+this pair of threads for the plain lock wait after the sleep ("thread 2 will wait for thread 1 to process its
+reply ..., but thread 1 will wait for thread 2 to drop its user lock"). Commit 83e1ba59 "Call _XErrorFunction
+without holding the Display lock." (2011-03-15, a day later) added the user lock around the handler call in
+`_XError()` and so reopened it for the case that thread 1 has an error to process.
 
 The same happens without an explicit `XLockDisplay()` round trip when Xlib's own sequence synchronisation runs in the
 `LockDisplay()` of `XUnlockDisplay()` (GetInputFocus + `_XReply()` with the user lock held).
