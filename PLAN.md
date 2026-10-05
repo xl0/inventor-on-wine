@@ -439,7 +439,8 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   the DCX flag off the syscall, DC invalidation only when the pixel-format flag reaches the server.
   36 acceptance runs 0 bad (awesome ± picom, both renderers, 144 DPI), 119 units 0 worse, fps equal.
   Driver version now 113. Not fixed: D3D9 + Vulkan on lavapipe after a resize. Kept: one extra
-  WM_PAINT for a moved GPU child (re-measure in Inventor). Regress of the new tip running.
+  WM_PAINT for a moved GPU child (re-measure in Inventor). Regress of the new tip
+  (build-next/ = wine-11.18-564-gd8e4d0f72d2): 0 worse of 1757 (1649 pass / 80 fail / 28 crash).
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
