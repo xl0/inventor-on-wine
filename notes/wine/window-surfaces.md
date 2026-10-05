@@ -97,7 +97,10 @@
   `lock_xid_alloc( display )` / `unlock_xid_alloc( display )` (= XLockDisplay; `create_gc()`, `create_pixmap()`,
   xrender's `create_picture()` do it; not in synchronous mode). Only requests without a reply belong inside: a thread
   that waits for a reply with the display's user lock held is half of 177 (as X11DRV_expect_error regions are, also
-  without synchronous mode: `X11DRV_GetImage`). The user lock makes a locked request safe from unlocked allocators
+  without synchronous mode: `X11DRV_GetImage`). XUnlockDisplay itself calls LockDisplay, where Xlib's sequence sync
+  would wait for a reply with the user lock held, so lock_xid_alloc syncs first when `NextRequest -
+  LastKnownRequestProcessed > 0x8000`. Xlib's locks are not fair: while one thread allocates at a high rate, other
+  threads' Xlib calls on that display can wait milliseconds on a busy host. The user lock makes a locked request safe from unlocked allocators
   too (NVIDIA's EGL allocates ids on the Display inside eglCreatePbufferSurface / eglMakeCurrent, called by win32u);
   a mutex of our own would not. Find allocators with tests/r182/debug-build.patch (hooks the Display's
   `resource_alloc`) + xidsites.py.

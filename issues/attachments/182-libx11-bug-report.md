@@ -1,11 +1,15 @@
-Text for a libX11 bug report (https://gitlab.freedesktop.org/xorg/lib/libx11/-/issues). Not filed.
+Text for a comment on xorg/lib/libx11 issue #10 (https://gitlab.freedesktop.org/xorg/lib/libx11/-/issues/10: the same
+assertion, open since 2010 without an established cause). Not posted.
 Reproducer: tests/r182/xallocid.c. Patch: issues/attachments/182-libx11-lockdisplay-order.patch.
 
 ---
 
-**Title:** `_XAllocID: Assertion 'ret != inval_id' failed` when two threads create resources on one Display (race between the sequence sync and the XID refill in `_XLockDisplay`)
+**Cause and reproducer for `_XAllocID: Assertion 'ret != inval_id' failed`: the sequence sync runs after the XID refill in `_XLockDisplay`**
+
+We hit this assertion in Wine and can reproduce it with a small Xlib program; the cause is below, with a two-line fix.
 
 **Version:** libX11 1.8.13 (Ubuntu 26.04, 2:1.8.13-1), libxcb 1.17.0, x86_64. Any X server (seen with Xvfb and Xorg).
+Git master still calls `_XIDHandler()` before `_XSeqSyncFunction()` in `_XLockDisplay()`.
 
 **Summary**
 

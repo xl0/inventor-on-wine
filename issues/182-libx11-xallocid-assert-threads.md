@@ -1,6 +1,7 @@
 # 182 Process aborts with `_XAllocID: Assertion 'ret != inval_id' failed` when several threads create DCs (libX11 race on the shared gdi_display)
-Status: fixed on fix/182 (wine-src, on integ b8f013d4fbb; commit 5c2152cd4d4 `winex11: Lock the display around the requests
-that allocate X resource ids.`), verified except on Inventor (licence seat on the laptop) · Found in: review of 173
+Status: fixed on fix/182, reworked after the review and rebased onto integ d8e4d0f72d2 (commits 9d2803e04c5 helpers,
+52e60e38bc2 `winex11: Lock the display around the requests that allocate X resource ids.`, 43a63cdae4b dummy parent; the
+first version is fix/182-v1 = 4c181523f06 on b8f013d4fbb), verified except on Inventor (licence seat on the laptop) · Found in: review of 173
 (`inst/173-review/iconrace.exe dcchurn 10 4`) · upstream winex11 + upstream libX11 1.8.13 · libX11 report text ready, not filed:
 [attachments/182-libx11-bug-report.md](attachments/182-libx11-bug-report.md)
 
@@ -29,7 +30,8 @@ on the distro's libX11 1.8.13 and on an own build of the same source (inst/182/x
   15 s with 2, 4, 8, 16 threads finish (37 million GCs per 2-thread run). That is the proposed libX11 fix.
 - Requests that Vulkan / EGL drivers send through xcb on the same connection count too (`dpy->request` jumps when Xlib
   takes the socket back), so a process that presents with Vulkan syncs more often than its own Xlib traffic suggests.
-- Whether libX11's git master differs was not checked (no source outside the distro archive).
+- libX11's git master still has the two calls in that order (checked in the review). xorg/lib/libx11 issue #10 is
+  the same assertion, open since 2010 without a cause; the report text is written as a comment for it.
 
 What protects a thread (reproducer modes, `xallocid THREADS SECS MODE [NOISE]`, 8 s runs):
 | who allocates how | result |
@@ -75,11 +77,12 @@ SetWindowText (173) and the other cross-thread uses of a thread's display alloca
 Inventor could not be measured (no licence seat). What it would add is known from 173's session: several threads with
 windows, GDI through window surfaces (GCs per DC and per surface, XShm segments).
 
-## Fix: commit 5c2152cd4d4
-`lock_xid_alloc( display )` / `unlock_xid_alloc( display )` (x11drv_main.c) = `XLockDisplay` / `XUnlockDisplay`, taken
-around the request that allocates the id: in `create_gc()` and `create_pixmap()` (x11drv_main.c, 30 call sites),
-`create_picture()` (xrender.c, 12), and directly around the remaining ones (table above). 165 lines added, 54 removed,
-11 files; no change of what is sent to the X server.
+## Fix (second version, see "Review round")
+9d2803e04c5 adds `create_gc()` and `create_pixmap()` (x11drv_main.c, 30 call sites) and `create_picture()` (xrender.c,
+12) without a functional change. 52e60e38bc2: `lock_xid_alloc( display )` / `unlock_xid_alloc( display )`
+(x11drv_main.c) = `XLockDisplay` / `XUnlockDisplay`, taken in the helpers and directly around the remaining
+allocating requests (table above), with a pre-sync before the lock (below). No change of what is sent to the X
+server apart from that GetInputFocus round trip every 32768 requests.
 - Why the display's user lock and not a driver mutex. The first version of this fix (82ad7612f45, kept in the reflog;
   results in inst/182/out/v1-mutex/) used a driver mutex. It passed everything below, but the allocation audit on the
   NVIDIA display showed allocators it cannot reach: NVIDIA's EGL library takes ids from the same Display inside
@@ -93,15 +96,31 @@ around the request that allocates the id: in `create_gc()` and `create_pixmap()`
 - Lock order (173): a thread inside lock_xid_alloc only makes Xlib calls, it takes no win32u or driver lock and
   calls nothing that can wait for one; it is entered with win_data, the user lock, a surface mutex or xrender_mutex
   held, like X11DRV_expect_error. The lock-order debug build shows no pthread mutex taken inside.
-- No reply is waited for while holding it by our code: every locked call is a request without reply. Two cases
-  remain where Xlib itself waits: the sequence sync when it falls into the locked `LockDisplay` calls (about
-  3 requests in 65000, or the first Xlib request after 65000 xcb requests of a Vulkan presenter), and synchronous
-  mode. In synchronous mode (`WINEDEBUG=+synchronous`, a reply after every request) the lock is therefore not taken
-  at all: Xlib then never needs the sequence sync for its own requests. See 177 below.
+- No reply is waited for while holding it by our code: every locked call is a request without reply. But Xlib's own
+  sequence sync can run inside the locked `LockDisplay` calls, in particular in the one XUnlockDisplay makes, i.e.
+  with the user lock held. My first estimate ("about 3 requests in 65000") was wrong: the sync lands on locked
+  requests in proportion to their share of all requests (review: 17 of 61 syncs in dcchurn 10 4, 119 of 672 in a
+  one-thread ROP blit loop). Then every thread that uses the display waits for that round trip, and it is 177's
+  shape with a new holder (reproduced by the reviewer in plain Xlib 5 of 5, `inst/182-review/xlat.c`). So
+  lock_xid_alloc reads a reply itself before locking once half of the sequence numbers are used up:
+  `if (NextRequest( display ) - LastKnownRequestProcessed( display ) > 0x8000) XSync( display, False );`
+  With it Xlib's own sync does not happen at all in these workloads (instrumented libX11: base 56 syncs in dcchurn 10
+  4 and 485 in the ROP loop; fix 0 and 0, none under the lock).
+- In synchronous mode (`WINEDEBUG=+synchronous`, a reply after every request) the lock is not taken: Xlib then never
+  needs the sequence sync for its own requests, and a round trip per request under the lock would be 177 every time.
+  The mode is read once at process start (`synchronous_mode`) and used for lock, unlock and the XSynchronize of new
+  thread displays: debug channels can change at run time, and a flip between lock and unlock would have left a
+  display locked.
 - Not done: creating the per-DC GC lazily. It would remove most of the 2 million allocations above but is an
   optimisation, not needed for correctness.
+- 43a63cdae4b (review F4, an older race): get_dummy_parent() checks its static again once it holds the lock, two
+  threads no longer create two dummy parents (not in synchronous mode, where nothing is locked).
+- Considered in the review and not taken: an XSetAfterFunction hook on gdi_display that syncs early, without any
+  locking (`inst/182-review/v2-after-function.patch`): it does not cover a burst of 65000 xcb-only requests followed
+  by two threads that allocate. A pool of pre-generated ids behind the Display's `resource_alloc` hook (my idea, not
+  built): ids that sit unused when xcb asks the server for a new id range (XC-MISC) can be handed out twice.
 
-## Cost (base = integ b8f013d4fbb, wt/182-base-build)
+## Cost (first version; base = integ b8f013d4fbb. For the second version see "Review round")
 - CreateCompatibleDC + DeleteDC, one thread on one core, 8 alternating 5 s runs (inst/182/cost.sh): base 5.67-6.60 us,
   mean 5.95; fix 5.70-6.64 us, mean 5.94. Not measurable.
 - The lock itself, plain Xlib, one thread (`xallocid 1 4 none|lock|mutex`): 0.190 / 0.190 / 0.191 us per
@@ -114,12 +133,52 @@ around the request that allocates the id: in `create_gc()` and `create_pixmap()`
 ## 177 (hang between `_XError` and a holder of the display's user lock that waits for a reply)
 Not closed by this fix and not meant to be. What the fix adds to it:
 - Synchronous mode: nothing (no lock taken).
-- Otherwise: the two Xlib-internal waits named above. For a hang one of them must coincide with an X error that a
-  thread ahead in the reply queue is reading. Not seen in any run.
+- Otherwise: nothing as long as the pre-sync keeps Xlib's own sequence sync from happening (0 syncs in the measured
+  workloads). It does not see requests that a GL / Vulkan driver sends through xcb until Xlib takes the socket back,
+  so the first locked request after a burst of more than 65000 of those can still sync under the lock (the
+  reviewer's `presentchurn` on the NVIDIA display showed none with the pre-sync).
 177 itself turned out to be reachable without synchronous mode: see Verification (gdistress under openbox) and the
 note added to [177](177-xlib-error-vs-xlockdisplay-deadlock.md).
 
-## Verification (wt/182-build at 4c181523f06 = this commit + 184's two; Xvfb displays of inst/182/x.sh)
+## Review round (2026-10-05, inst/182-review/; wt/182-build at cffd27540ee on integ d8e4d0f72d2, base = build-next)
+Taken: F1 the pre-sync (the reviewer's tested variant, comment reworded), F3 the synchronous mode latched once (a
+static set where XSynchronize is called; also used for the thread displays), F4 the dummy parent re-check (own
+commit), the split into helpers + lock, the report text as a comment for libx11 issue #10. Not taken: F2 (warm up
+Xcursor with XcursorSupportsARGB at init): measured with a plain Xlib program, it moves the round trips out of the
+first XcursorImagesLoadCursor (11 -> 8 requests, no reply read inside), but the first XcursorLibraryLoadCursor still
+reads a reply (XFixes, from XFixesSetCursorName) and reads its theme files inside the lock; half a cure, left as a
+weak spot.
+- `dcchurn 10 N`, N = 2, 4, 8, 20 runs each: 60 of 60, 0 assertions (+ 18 of 18 as background load later).
+- Xlib's own sequence syncs, libX11 with a counter (inst/182/x11-build-instr): dcchurn 10 4: base 56 (then the
+  assertion), fix 0; `rv182.exe bench 6 1 rop`: base 485, fix 0. None under the user lock.
+- `vstate.exe loop 60` x 6 under openbox: 0 of 720 moved.
+- Units, both arches, vs deps/regress/d8e4d0f72d2...-h26: all 20 lines equal (gdi32:dc fail 3 / 3, user32:win fail
+  4 / 4, user32:msg fail 1 / 1, the rest pass, same todo and skip counts).
+- gdistress: openbox `n` 10 of 10, `+synchronous` `n` 4 of 4, visual_race text 3 of 3; no WM with recreation: see
+  the last lines of this section.
+- The reviewer's bystander bench, `inst/182-review/rv182.exe bench 6 1 rop` (one thread of ROP blits on the screen
+  DC, a second thread draws a rubber band every ms and measures its own calls), pinned to CPUs 20-39, alternating:
+  | | base p99 (us) | fix p99 (us) |
+  |---|---|---|
+  | quiet host | 286, 285, 304, 311, 276 | 307, 351, 534, 290, 278 |
+  | 14 dcchurn threads of other Wine processes on overlapping CPUs | 350, 349, 380 (earlier batch 385, 378, 503, 449, 407, 345) | 2756, 2417, 3247 (earlier 4259, 5083, 6537, 3843, 2610, 4445) |
+  So on a quiet host the pre-sync brings p99 back to base, as the review found. Under CPU contention it does not:
+  2.4-6.5 ms against 0.35-0.5 ms, and an experiment build without the pre-sync is no different there (317, 4745, 6719
+  us). It is not a round trip: with a libX11 that records where each thread waits (inst/182/x11-build-wait), the
+  allocating thread never waits longer than 0.6 ms for anything (its 1500 pre-syncs take 10 us on average), while
+  the rubber band thread waits up to 8.3 ms for the display's user lock (33 and 95 waits over 1 ms in two runs) and up
+  to 8.8 ms for the display mutex (34 and 124 over 1 ms; base: 2 and 14, user lock 0 and 2). Xlib's locks are not
+  fair: a thread that has to sleep on them loses the race against a thread that takes them again within
+  nanoseconds, the more so the later the scheduler lets it run; and with the fix an allocating thread takes the
+  display mutex about four times per allocation instead of once and holds the user lock in between. This is the cost
+  of the user lock for threads that allocate nothing while another thread allocates at a few 100000 per second on a
+  busy host; a driver mutex would not make them wait (not measured), but leaves the GL library hole. Not solved.
+- gdistress without a WM, with recreation, on the new base (alternating, `ab.sh`): base 75 of 75, fix 83 of 85; the
+  two hangs are 177 with the usual pair (reader destroy_whole_window's XSync, holder X11DRV_GetImage), no thread
+  inside lock_xid_alloc or a pre-sync. The first version had 70 of 70 there on the old base; two of 85 against
+  none of 75 does not show whether the rate changed.
+
+## Verification of the first version (wt/182-build at 4c181523f06 on b8f013d4fbb; Xvfb displays of inst/182/x.sh)
 - `iconrace.exe dcchurn 10 N`, 20 runs each: N = 2, 4, 8: 60 of 60 finish, 0 assertions (integ: 6 / 20 / 20 of 20 abort).
 - `tests/r182/gdistress.exe 20 6 SEED` (6 threads: memory DC churn, pens / solid / hatched / pattern brushes, BitBlt
   with ROPs, StretchBlt, AlphaBlend, GradientFill, GetPixel, text in 8 fonts with all antialiasing kinds and region
@@ -170,8 +229,10 @@ note added to [177](177-xlib-error-vs-xlockdisplay-deadlock.md).
   hold the user lock across round trips of the GL library.
 - Synchronous mode is not protected (by design, see Fix). With a Vulkan / EGL presenter in the process (xcb requests
   that Xlib doesn't see) the sequence sync can still happen there.
-- The Xlib-internal sequence sync under the lock is a 177 window, small but not zero; I have no measurement of it
-  other than "0 of 34 dumps".
+- Threads that only draw wait longer for Xlib's locks while another thread allocates at a high rate, by milliseconds
+  at p99 on a busy host (Review round). Not solved.
+- The pre-sync does not see xcb-only requests of GL / Vulkan drivers: after a burst of 65000 of them Xlib's sync can
+  still run under the lock once (177 window, and a stall of one round trip).
 - The Xcursor calls are made inside the lock. The first one on a display queries extensions (round trips, once per
   process), and XcursorLibraryLoadCursor reads theme files there: other threads' requests on gdi_display wait that
   long, once per system cursor.
@@ -179,7 +240,7 @@ note added to [177](177-xlib-error-vs-xlockdisplay-deadlock.md).
   another thread recreates one of its windows is not covered; it needs 65000 requests without a single event or reply
   read on that display at that moment.
 - The first (mutex) version ran the same matrix once; its results are only in inst/182/out/v1-mutex/.
-- Whether libX11 master has the bug was not checked.
+- wt/182-dbg (debug build, audit) is still the first version: tests/r182/debug-build.patch applies to fix/182-v1.
 
 ## Tools
 `tests/r182/`: `xallocid.c` (plain Xlib reproducer with the lock modes), `gdistress.c` (multi-thread GDI / USER stress,

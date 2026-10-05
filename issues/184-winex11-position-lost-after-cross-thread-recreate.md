@@ -1,7 +1,8 @@
 # 184 winex11: window jumps (position doubled) after its X window was recreated by another thread
-Status: fixed on fix/182 (wine-src, on integ b8f013d4fbb; commits 8f1eca7003e `winex11: Ignore structure events of X
-windows that another thread has replaced.` and 4c181523f06 `winex11: Don't map the events of a recreated window through
-its previous host window.`), verified · Found in: review of 173 (`inst/173-review/vstate.exe loop 60`, kept as
+Status: fixed on fix/182 (wine-src, rebased onto integ d8e4d0f72d2: commits 9a4424f1e3d `winex11: Ignore structure events
+of X windows that another thread has replaced.` and cffd27540ee `winex11: Don't map the events of a recreated window
+through its previous host window.`; unchanged since the review, which takes them as they are; before the rebase
+8f1eca7003e and 4c181523f06 = fix/182-v1), verified · Found in: review of 173 (`inst/173-review/vstate.exe loop 60`, kept as
 tests/r184/vstate.c) · upstream code · needs a reparenting WM that lets the new window's first ConfigureNotify through
 before it reparents (openbox)
 
@@ -39,7 +40,7 @@ new window is root-relative, but `X11DRV_ConfigureNotify` (and `X11DRV_GravityNo
 added twice. `window_update_client_config` takes that as a move by the window manager and moves the Win32 window.
 
 ## Fix
-- 4c181523f06: the first ConfigureNotify / GravityNotify the owner thread handles while `parent_invalid` is set
+- cffd27540ee: the first ConfigureNotify / GravityNotify the owner thread handles while `parent_invalid` is set
   drops the stale parent with `set_window_parent( data, root_window )` (releases the old host window in the owner
   thread, clears the flag): from there on `data->parent` is what it claims to be, NULL = root, until the
   ReparentNotify sets the frame. The `!data->parent_invalid` tests in the two handlers go away. This is what the comment
@@ -51,7 +52,7 @@ added twice. `window_update_client_config` takes that as a move by the window ma
   and X delivers the window's ReparentNotify before any event generated after the reparenting, so "root until
   ReparentNotify" holds for every event in the stream, whatever the WM does and however late we read it. Synthetic
   ConfigureNotify events are absolute and were never mapped.
-- 8f1eca7003e, the "X window replaced" check the review of 173 suggested, for ConfigureNotify, GravityNotify and
+- 9a4424f1e3d, the "X window replaced" check the review of 173 suggested, for ConfigureNotify, GravityNotify and
   ReparentNotify: 173's `get_property_win_data` becomes `get_event_win_data( hwnd, window )` and these three handlers
   use it, so an event of the OLD X window that the owner had already looked up when the other thread replaced the
   window is dropped. It belongs to this fix: before, such a ConfigureNotify (frame-relative) was mapped through
@@ -72,7 +73,7 @@ Where it meets other work: event.c only; 175's `_NET_WM_DESKTOP` handler is adde
 `handle_wm_normal_hints_notify` and calls nothing of this (the six property handlers' `get_property_win_data( hwnd,
 event )` lines become `get_event_win_data( hwnd, event->window )`: a textual neighbour of 175's hunk, no overlap).
 
-## Verification (wt/182-build at 4c181523f06)
+## Verification (wt/182-build at 4c181523f06, before the rebase)
 see the table above, plus:
 - `tests/sizemove_scen.sh` table (inst/173/sm.sh, own Xvfb + openbox / awesome, fix/182 vs fix/173): identical in all
   19 cases (openbox: modmove 1/1, modresize 1/1, caption 1/1, click 0/0, quick 5/5, kbmove 1/1, kbresize 1/1,
@@ -81,8 +82,8 @@ see the table above, plus:
 - `tools/regress.sh unit user32:win` (window placement / restore tests), both arches: fail 4, todo 160 / 158, skip 1 =
   the b5d75449ffe-h26 baseline; user32:msg fail 1 = baseline; the other units of 182's list unchanged too.
 - 173's probes (visual_race, visual_race text, uistress, lockstress with openbox) finish, see 182.
-- The three commits cherry-pick onto integ d8e4d0f72d2 (175 and 181 are in it) without conflict (event.c merges by
-  itself), winex11 builds there.
+- After the rebase onto integ d8e4d0f72d2 (175 and 181 are in it; event.c merged by itself): `vstate.exe loop 60` x 6
+  under openbox 0 of 720 moved, user32:win / user32:msg equal that tip's baseline.
 
 ## Repro
 ```
