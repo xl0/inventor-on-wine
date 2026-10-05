@@ -167,6 +167,18 @@ pairs and WM_WINDOWPOSCHANGED counts identical base vs fix in all 16.
 tools/regress.sh unit, 2 runs per arch: user32:win 4 failures (baseline b5d75449ffe-h26: 4), user32:msg 1 (1),
 user32:input pass (pass), i386 and x86_64: 0 worse.
 
+## Still to do with Inventor (seat was in use; nothing below is verified)
+On inv3 with wt/175-build (`tests/r175/wm.sh :100 awesome picom`, back to openbox / build afterwards):
+- xprop / `tests/r175/xinfo.sh :100 ""` of the real splitters: managed, DIALOG, transient for the main window,
+  opacity 1 on client and awesome frame; whether the frame had no opacity on integ (when: first map, after
+  ShowPane, after minimize/restore) — the outline explanation above is from probes with the same style bits.
+- Main window to tag 2 and back 5 times with a part open (`tests/r175/movetag.sh :100 "<title>" 2`): nothing on
+  the old tag, splitters at the pane borders and draggable after each move; undocked browser (mini frame + its
+  four MiniFrameBorder popups, a two-level owner chain) and an open dialog come along.
+- Hover over a splitter: it turns opaque by design, awesome's border shows with it — acceptable?
+- Restored (not maximized) main window: does awesome's placement rule move the splitters / border popups when
+  they are mapped?
+
 ## Not fixed here / limits
 - Override-redirect owned popups (tooltips, menus, WS_EX_NOACTIVATE helpers) stay on screen on every tag, as
   before.
