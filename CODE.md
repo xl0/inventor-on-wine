@@ -443,6 +443,7 @@ launches; previous device-limit errors do not authorize pausing another device.
   `g-run.sh` / `g-utest.sh` (stress matrix and conformance units in the guest, watchdog + gdb backtraces),
   `lockorder-debug.patch` + `lockorder.py` (debug build that reports win32u locks taken under driver mutexes).
   `r132.sh` (132's probes on any build, host session), `sinkstress.sh` (lockstress with 132's sources in its windows).
+  `jitter.py host|vm SECS [X Y [RATE]]`: relative pointer motion + key presses during a stress (winj.py / QMP).
   `tests/r173/`: the same for winex11 (173): `iconlock.c` (user lock vs window data deadlock), `visual_race.c` (X window
   recreated by another thread: BadWindow), `flushpost.c` (forces the surface flush's posted retry), `lockorder-debug.patch` +
   `lockorder.py` + `cycles.py` (all win32u + winex11 mutex pairs with call chains, cycle check, X errors with backtraces),

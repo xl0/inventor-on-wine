@@ -1,5 +1,5 @@
 # 157 winewayland: deadlock between win32u's user lock and the driver's win_data_mutex (two threads showing/hiding windows)
-Status: review round in progress, paused (see State at pause, review round): fix/157 = 7 commits on integ b5d75449ffe, verification of the new series incomplete · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
+Status: fixed on fix/157 (7 winewayland commits on integ b5d75449ffe), reviewed once, review fixes verified; short re-review of the changed role-change design pending · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
 app with two UI threads changing window visibility can hang for good
 
 ## Symptom
@@ -35,18 +35,19 @@ the lock).
 
 ## Lock order rule
 win32u's locks first, the driver's window data last:
-`client surfaces_lock` (win32u window.c) -> `user lock` -> `window surface lock` -> `win_data_mutex` ->
-`pointer / keyboard / text_input / seat mutex`; under win_data_mutex also win32u's `display lock` -> `output_mutex` (leaf).
-- The fix is on the driver side, not in `update_surface_region`. win32u calls the driver with a lock held in two places: the
-  surface flush with the window pointer (user lock) held (`apply_window_pos` keeps `win` across `update_surface_region` ->
-  `window_surface_set_shape` / `set_clip` -> flush; upstream master still does), and the client surface callbacks (update,
-  detach, present, destroy) with the client `surfaces_lock` held. In this driver both need win_data: the window contents and
-  the wayland_surface live in it. Making win32u drop its locks around every driver surface callback is a much larger change
-  to shared code, and upstream already picked this direction for this driver: a334c147f81 "Avoid ABBA deadlocks between
-  win_data_mutex and user_mutex" ("always acquire the user_mutex lock on the user32 side first, and then the win_data_mutex").
-- winex11 has the opposite order: it calls NtUserGetWindowLongW / GetWindowText / GW_OWNER under its win data lock everywhere
-  (set_wm_hints, sync_window_style, create_whole_window...) and gets away with it because its surface flush and client
-  surface callbacks never take the win data lock. Not a model for this driver.
+`client surfaces_lock` (win32u window.c) -> `user lock` -> dce.c `surfaces_lock` (window surface list) ->
+`window surface lock` -> `win_data_mutex` -> `pointer / keyboard / text_input / seat mutex`; under win_data_mutex also
+win32u's `display lock` -> `output_mutex` (leaf). 132's `source_mutex` is a leaf under the client surfaces_lock.
+- The fix is on the driver side, not in `update_surface_region`. win32u calls the driver with locks held: the surface flush
+  with the window pointer (user lock) held (`apply_window_pos` keeps `win` across `update_surface_region` ->
+  `window_surface_set_shape` / `set_clip` -> flush; upstream master still does), every flush from `flush_window_surfaces`
+  with dce.c's `surfaces_lock` held, and the client surface callbacks (update, detach, present, destroy) with the client
+  `surfaces_lock` held. In this driver all of them need win_data: the window contents and the wayland_surface live in it.
+  Making win32u drop its locks around every driver surface callback is a much larger change to shared code, and upstream
+  already picked this direction for this driver: a334c147f81 "Avoid ABBA deadlocks between win_data_mutex and user_mutex"
+  ("always acquire the user_mutex lock on the user32 side first, and then the win_data_mutex").
+- winex11 uses the opposite order (window data -> user lock): its rule and its own deadlock are in issue 173. Not a model
+  for this driver.
 - winemac mixes both like winewayland did (surface.c's flush takes win_data; window.c reads styles under it, e.g.
   macdrv_WindowPosChanged): same latent bug by reading, not tested, not touched.
 - `get_user_handle_ptr` takes the user lock for every handle (lock, look up, unlock), also for windows of other processes,
@@ -54,20 +55,20 @@ win32u's locks first, the driver's window data last:
 
 ## Call table
 "seen" = reported by the debug build (`tests/r157/lockorder-debug.patch`: backtrace whenever a win32u lock is acquired while
-the thread holds a driver mutex) in rapid / lockstress on the unfixed tree, folded output `inst/157/vm/dbg0/all.folded`;
-"read" = by reading only.
+the thread holds a driver mutex) on the unfixed tree, folded output `inst/157/vm/dbg0/all.folded`; "read" = by reading only.
+Rows 20-27 are 132's code (wayland_remote.c), checked after the rebase: nothing to fix there.
 
 Driver holds a lock and calls into win32u (before the fix):
 | # | held | caller | callee | lock it takes | | fixed by |
 |---|---|---|---|---|---|---|
-| 1 | win_data | WAYLAND_WindowPosChanged -> wayland_win_data_create_wayland_surface | NtUserGetWindowLongW (GWL_EXSTYLE, GWL_STYLE) | user | seen, hang stacks | a267640e53b |
-| 2 | win_data | ... -> wayland_win_data_get_config | NtUserGetWindowLongW (GWL_STYLE) | user | seen, hang stacks | a267640e53b |
-| 3 | win_data | ... -> wayland_surface_make_toplevel | NtUserInternalGetWindowText | user | seen | a267640e53b |
-| 4 | win_data | ... -> reapply_cursor_clipping | NtUserGetClipCursor, NtUserClipCursor | display (seen); user via get_present_rect when the clip rect is empty (read); then pClipCursor -> win_data, pointer.mutex | seen | 9106309981b |
-| 5 | win_data | ... role change -> update_client_surfaces | win32u | client surfaces_lock, then user (NtUserGetAncestor, get_client_surface_rects; the update callback's NtUserIsWindowVisible) | seen | 56eebc11c39 |
-| 6 | win_data | wp_fractional_scale_handle_scale (event thread) -> update_client_surfaces | win32u | same as 5 | read (needs a scale change) | 56eebc11c39 |
-| 7 | pointer.mutex | wayland_set_cursor -> wayland_pointer_set_cursor_shape / wayland_pointer_update_cursor_buffer | NtUserGetIconInfo | user (get_icon_ptr) | read (no pointer over the windows in the VM runs) | 4eb976fc813 |
-| 8 | text_input.mutex | WAYLAND_SetIMECompositionRect | wayland_win_data_get | win_data, while wayland_surface_destroy takes text_input.mutex under win_data (seen): driver-internal ABBA, no win32u lock | read | 8641c9d1fba |
+| 1 | win_data | WAYLAND_WindowPosChanged -> wayland_win_data_create_wayland_surface | NtUserGetWindowLongW (GWL_EXSTYLE, GWL_STYLE) | user | seen, hang stacks | 166dc20fe8c |
+| 2 | win_data | ... -> wayland_win_data_get_config | NtUserGetWindowLongW (GWL_STYLE) | user | seen, hang stacks | 166dc20fe8c |
+| 3 | win_data | ... -> wayland_surface_make_toplevel | NtUserInternalGetWindowText | user | seen | 166dc20fe8c |
+| 4 | win_data | ... -> reapply_cursor_clipping | NtUserGetClipCursor, NtUserClipCursor | display (seen); user via get_present_rect when the clip rect is empty (read); then pClipCursor -> win_data, pointer.mutex | seen | 4d2aff975a9 |
+| 5 | win_data | ... role change -> update_client_surfaces (call removed, see Fix) | win32u | client surfaces_lock, then user (NtUserGetAncestor, get_client_surface_rects; the update callback's NtUserIsWindowVisible) | seen | 3ed44f42f3e |
+| 6 | win_data | wp_fractional_scale_handle_scale (event thread) -> update_client_surfaces | win32u | same as 5 | read; at run time by the reviewer (scale toggle + GL swap: integ hangs 2/2, fix 3/3 clean) | 3ed44f42f3e |
+| 7 | pointer.mutex | wayland_set_cursor -> wayland_pointer_set_cursor_shape / wayland_pointer_update_cursor_buffer | NtUserGetIconInfo | user (get_icon_ptr) | read (no pointer over the windows in the VM runs) | a8f1a76a26c |
+| 8 | text_input.mutex | WAYLAND_SetIMECompositionRect | wayland_win_data_get | win_data, while wayland_surface_destroy takes text_input.mutex under win_data (seen): driver-internal ABBA, no win32u lock | read | 0046202e1aa |
 | 9 | win_data | set_window_surface_contents / wayland_client_surface_present -> wayland_surface_reconfigure -> wayland_surface_get_rect_in_monitor | NtUserMonitorFromRect, NtUserGetMonitorInfo | display only | seen | allowed (leaf) |
 | 10 | win_data | wayland_surface_create | NtUserGetLayeredWindowAttributes | none (server request) | read | - |
 | 11 | win_data | 134: exported_handle, wayland_surface_clear_role, wayland_surface_import_parent (also via wayland_surface_mapped -> update_owned_toplevels in the flush) | NtUserSetProp, NtFindAtom, NtUserRemoveProp, NtUserGetProp, NtQueryInformationAtom | none: server requests; GetProp reads the shared window object (seqlock) and a per-thread cache | read + no report in runs that export on every map | - |
@@ -79,6 +80,16 @@ Driver holds a lock and calls into win32u (before the fix):
 | 17 | seat.mutex | WAYLAND_ClipboardWindowProc -> wayland_data_device_init | - | data_device.mutex | seen | - |
 | 18 | data_device.mutex, keyboard.mutex, xkb_layouts_mutex | | no win32u calls inside | | read | - |
 | 19 | output_mutex (under display lock) | WAYLAND_UpdateDisplayDevices | device manager callbacks, NtUserGetSystemDpiForProcess | registry, no user lock | read | - |
+| 20 | win_data | wayland_remote_sinks_detach / _update / _destroy (from wayland_surface_destroy, WindowPosChanged, scale handler, DestroyWindow) | list walk, wl requests; eventfd write after the unlock | none | read + debug build | - |
+| 21 | win_data | wayland_remote_process_events (event thread): remote_sink_read_wakes, remote_sink_update, remote_sink_set_buffers, remote_sink_destroy | recv; NtDuplicateObject, NtQuerySection, wine_server_handle_to_fd, NtUnmapViewOfSection, NtClose; wayland_win_data_get (recursive); wl requests | ntdll / server only | read + debug build (traced run: 3 sinks, 730 buffer sets, 1622 placements, 428 hides) | - |
+| 22 | none (lock dropped mid-walk) | remote_sink_get_geometry | NtUserGetWindowThread (shared memory), get_visible_region requests | none | read; only the event thread unlinks sinks, `next` is re-read after the relock | - |
+| 23 | none | wayland_remote_sink_create (window thread, WM_WAYLAND_REMOTE_SURFACE) | NtUserGetWindowThread, NtUserGetAncestor (user lock) before win_data | user, then win_data | read | - |
+| 24 | none | wayland_remote_window_changed <- WAYLAND_SetWindowStyle, WAYLAND_SetParent | NtUserGetAncestor (user lock) before win_data | user, then win_data | read | - |
+| 25 | win_data | buffer_release (event thread listener) | interlocked operations on the shared block | none | read | - |
+| 26 | win32u client surfaces_lock | wayland_client_surface_update / detach / destroy -> wayland_client_surface_set_remote | source_mutex; under it NtCreateSection, NtMapViewOfSection, socketpair, wine_server_fd_to_handle, NtClose; NtUserPostMessage after the unlock | source_mutex (leaf) | read + debug build (no pair with source_mutex reported) | - |
+| 27 | source_mutex (from lock_remote_buffer to unlock_remote_buffer) | wayland_drawable_present_remote | eglQuerySurface, glFinish, eglMakeCurrent, glReadPixels | host GL only, no win32u or driver lock | read + debug build | - |
+| 28 | user (update_surface_region path), dce.c surfaces_lock (flush_window_surfaces), window surface lock | wayland_window_surface_flush -> wayland_buffer_queue_get_free_buffer | wl_display_dispatch_queue on the queue of the surface | none; blocks until the compositor releases a buffer when all three are busy, with those win32u locks held | read (review) | left |
+| 29 | win_data | WAYLAND_CreateWindowSurface -> window_surface_release(previous) -> wayland_buffer_queue_destroy | wl_display_dispatch_queue_pending: buffer release listeners (NtUnmapViewOfSection, NtGdiDeleteObjectApp) | none | read (review) | left |
 Already correct: set_client_surface and wayland_client_surface_update read NtUserIsWindowVisible before the lock (a334c147f81);
 is_window_managed, the owner lookup and 134's is_foreign_owner run before the lock; wayland_configure_window and the
 configure / scale handlers call send_message, NtUserSetRawWindowPos, NtUserPostMessage, NtUserExposeWindowSurface after the release.
@@ -86,6 +97,7 @@ configure / scale handlers call send_message, NtUserSetRawWindowPos, NtUserPostM
 win32u holds a lock and calls the driver:
 | held | path | driver lock taken |
 |---|---|---|
+| dce.c surfaces_lock (window surface list) | flush_window_surfaces -> window_surface_flush of every surface -> driver flush | window surface lock, win_data |
 | user (window pointer) | apply_window_pos -> update_surface_region -> window_surface_set_shape / set_clip -> flush | window surface lock, win_data (seen in every hang) |
 | client surfaces_lock | client_surface_present, update_client_surfaces, client_surface_update, use_window_client_surface, get_unused_client_surface, detach_client_surfaces, client_surface_release -> present / update / detach callbacks | win_data (read; a GL swap goes through it) |
 | display lock | lock_display_devices -> pUpdateDisplayDevices | output_mutex |
@@ -93,249 +105,140 @@ Called without the user lock (read at the call sites): pWindowPosChanging, pWind
 pSetWindowIcons, pDestroyWindow (both sites, after release_win_ptr / user_unlock), pSetCursor, pClipCursor, pSetCursorPos,
 pSetLayeredWindowAttributes, pUpdateLayeredWindow, pCreateWindowSurface, pSysCommand.
 
-## Fix (winewayland.drv only; hashes here and in the table are the first series = fix/157-v1 on e00a74f6590, rebased hashes below)
-1. a267640e53b `winewayland: Get the window styles and text before locking the window data.` WAYLAND_WindowPosChanged reads
-   style, ex style and (for windows with a surface) the text next to the existing is_window_managed / owner lookup and passes
-   them down (rows 1-3).
-2. 9106309981b `winewayland: Reapply the cursor clipping with the window data unlocked.` (row 4).
-3. 56eebc11c39 `winewayland: Update the client surfaces with the window data unlocked.` A surface that has to change its role
-   is taken out of the win data under the lock; after the release the client surfaces are detached (update_client_surfaces)
-   and the surface destroyed, then WindowPosChanged runs again to create the new one. The scale handler updates after the
-   release (rows 5, 6).
-4. 4eb976fc813 `winewayland: Get the cursor info before locking the pointer.` One NtUserGetIconInfo before pointer.mutex instead
-   of up to two under it (row 7). Without it the cycle is user -> win_data (flush), win_data -> pointer.mutex (surface destroy),
-   pointer.mutex -> user (cursor set, e.g. on pointer enter in the event thread): three threads.
-5. 8641c9d1fba `winewayland: Lock the window data before the text input.` (row 8). Not a user-lock problem but the same kind of
-   inversion on win_data_mutex, 10 lines; drop the commit if it should be its own issue.
+## Fix (branch fix/157 = integ b5d75449ffe + 7 commits, winewayland.drv only)
+1. 166dc20fe8c `winewayland: Get the window styles and text with the window data unlocked.` WAYLAND_WindowPosChanged reads
+   style and ex style next to the existing is_window_managed / owner lookup and passes them down. A toplevel is created
+   without a title; after the release the text is read and set, unless a title was set since the toplevel was created
+   (`has_title`) (rows 1-3).
+2. 4d2aff975a9 `winewayland: Reapply the cursor clipping with the window data unlocked.` (row 4).
+3. 3ed44f42f3e `winewayland: Don't update the client surfaces with the window data locked.` The surface that changes its role
+   is still destroyed and replaced under the lock; the `update_client_surfaces` call that detached the client surfaces first
+   is gone. Each wayland_surface has a `serial`: `wayland_client_surface_attach` re-creates a client subsurface that was made
+   for another surface of the toplevel (win32u updates the client surfaces right after WindowPosChanged), and
+   `wayland_surface_reconfigure_subsurface` only places a popup above the owner's client surface if that is attached to the
+   owner's current surface. 132's sinks are detached by `wayland_surface_destroy`, under the lock. The scale handler updates
+   the client surfaces after the release (rows 5, 6).
+4. a8f1a76a26c `winewayland: Get the cursor info before locking the pointer.` One NtUserGetIconInfo before pointer.mutex
+   instead of up to two under it, and only when the pointer is on the window (row 7). Without it the cycle is user ->
+   win_data (flush), win_data -> pointer.mutex (surface destroy), pointer.mutex -> user (cursor set): three threads.
+5. 0046202e1aa `winewayland: Lock the window data before the text input.` (row 8; a driver-internal inversion on
+   win_data_mutex, no win32u lock).
+6. 74a086bfff1 `winewayland: Check that the window has a surface when the pointer moves.` The relative motion handler used
+   the surface of the focused window without a check (review finding; on integ the window between reading the focus and
+   locking the data is tiny, an earlier version of commit 3 had widened it into a reproducible fault).
+7. 750bb757812 `winewayland: Don't commit buffers to surfaces without a role.` Part of issue 170 (protocol error when a
+   toplevel with a GL child is shown again): fixes the case of a window hidden for 5 ms or longer; see 170 for the rest.
 Row 9 stays: the display lock is taken under win_data, and by reading nothing under the display lock takes the user lock or
 win_data (lock_display_devices: registry, driver UpdateDisplayDevices -> output_mutex, GPU enumeration).
+History: `fix/157-v1` (first series on e00a74f6590), `fix/157-v2` (rebased; it destroyed the old surface outside the lock,
+the reviewed version with the relative-motion fault), `fix/157-surface-per-show` (experiment for 170).
 
-## Staleness of what is now read before the lock
+## Staleness of what is read outside the lock
 - Style / ex style: they join `managed` (computed from the same styles), the owner and the rects, which were already taken
-  before the lock: one snapshot per call instead of styles read at two later points. Style writers (SetWindowLong from
-  any thread of the process) never took win_data, so the lock did not order them against this read before either. The one
-  ordering lost: two WindowPosChanged for the same window in two threads; the later locker now applies its earlier snapshot
-  where it used to read the styles under the lock. Its rects, flags, managed and owner were already per-call arguments with
-  exactly that behaviour, and win32u runs apply_window_pos on the window's own thread (SetWindowPos / ShowWindow from another
-  thread are sent as messages), UpdateLayeredWindow from a foreign thread being the exception.
-- Window text: before, a title set by another thread could not be lost (the text was read under win_data, and pSetWindowText
-  takes win_data). Now: thread 1 reads the old text, thread 2 sets the text and its pSetWindowText finds no toplevel yet,
-  thread 1 creates the toplevel with the old title, wrong until the next SetWindowText. It needs the text to change in another
-  thread than the one in WindowPosChanged, exactly while the window gets its toplevel role; win32u sets the text in the
-  window's thread (WM_SETTEXT is sent), so it takes a direct DefWindowProc(WM_SETTEXT) on a foreign window or a foreign-thread
-  UpdateLayeredWindow. Accepted, not re-validated (an exact fix needs a per-window serial and a retry).
-- Role change: between the release and the second pass the window has no wayland_surface, a state the flush, the event
-  handlers and the client surface callbacks already handle (same as a hidden child). If another thread's WindowPosChanged for
-  the same window creates a surface inside that window before update_client_surfaces ran, the client subsurfaces stay on the
-  surface that is then destroyed (wl_subsurface.place_above on a foreign sibling would be a protocol error): needs two threads in
-  WindowPosChanged for one window during a role change with GL children, see above. The destroyed surface itself is safe: no
-  other thread can reach it once it is out of the win data (wayland_win_data_destroy destroys surfaces unlocked as well).
-- Cursor clipping after the release: WAYLAND_ClipCursor re-reads the surface under its own lock; it now also sees a surface
-  created by this call (before, the new surface was not in the win data yet when it ran).
-- Cursor info: a private copy (bitmaps) made before pointer.mutex; a concurrent SetCursor is ordered by pointer.mutex as before.
-- IME rectangle: computed before the focus check; a rectangle for a window that lost the text input focus is dropped as before.
+  before the lock: one snapshot per call. Style writers (SetWindowLong from any thread of the process) never took win_data,
+  so the lock did not order them against this read before either. The one ordering lost: two WindowPosChanged for the same
+  window in two threads; the later locker applies its earlier snapshot. Its rects, flags, managed and owner were already
+  per-call arguments with exactly that behaviour, and win32u runs apply_window_pos on the window's own thread
+  (UpdateLayeredWindow from a foreign thread being the exception).
+- Window text: no stale title in any order. The toplevel exists (under the lock) before the text is read; pSetWindowText
+  takes win_data, sets the title and `has_title`; the late set in WindowPosChanged is skipped when `has_title` is set. If
+  pSetWindowText ran before the toplevel existed, the text it stored is what the later read returns.
+- Role change: atomic under the lock again. Between the destruction of the old surface and win32u's
+  update_client_surfaces (the next thing apply_window_pos does) the client subsurfaces are children of a destroyed
+  wl_surface (unmapped by the compositor, legal); every use of them goes through the serial check first.
+- Cursor clipping after the release: WAYLAND_ClipCursor re-reads the surface under its own lock.
+- Cursor info: a private copy (bitmaps) made before pointer.mutex. If the pointer is not on the window nothing is read;
+  the enter handler applies the cursor stored in the surface (stored before the focus check, so one of the two sees it).
+- IME rectangle: computed before the focus check; a rectangle for a window that lost the text input focus is dropped.
 
-## Verification (vmwl guest, 2026-10-04; fixed = wt/157-build 8641c9d1fba, unfixed = build/ = integ e00a74f6590)
-Stress under a watchdog (`tests/r157/batch.sh`, `g-run.sh`: a run that does not exit in 60 s / 300 s gets `thread apply all bt`
-and is killed by PID). ok / hang / exited early:
-| compositor | build | rv rapid 300 | rv rapid 3000 | lockstress 3000 (seeds 1..n) |
+## Verification
+Unfixed = integ `build/`; fixed = the final tip unless a series is named. ok / hang / exited early; a run is a hang when it
+does not exit within its watchdog (60 s / 300 s), then `thread apply all bt` and the mutex owners are saved.
+
+### vmwl guest (llvmpipe), `tests/r157/batch.sh`
+| compositor | build | rv rapid 300 | rv rapid 3000 | lockstress 3000 |
 |---|---|---|---|---|
-| GNOME 50 | unfixed | 2 / 8 / 0 of 10 | 0 / 5 / 0 of 5 | 0 / 5 / 0 of 5 |
-| GNOME 50 | fixed | 20 / 0 / 0 of 20 | 20 / 0 / 0 of 20 | 10 / 0 / 0 of 10 |
-| KDE (KWin 6) | fixed | 10 / 0 / 0 of 10 | 10 / 0 / 0 of 10 | 5 / 0 / 0 of 5 |
-| sway 1.11 | fixed | 10 / 0 / 0 of 10 | 10 / 0 / 0 of 10 | 5 / 0 / 0 of 5 |
-- Unfixed hangs are the lock pair: `inst/157/vm/gnome-integ-rapid300-hang-1.txt` (flush vs wayland_win_data_get_config),
-  `gnome-integ-stress-hang-1.txt` (flush vs NtUserGetWindowLongW in wayland_win_data_create_wayland_surface; lockstress stops
-  within its first operations every time).
-- 0 Wayland protocol errors in every log; the last two lockstress runs per compositor ran with WAYLAND_DEBUG=1.
-- The first KDE batch (same numbers) ran partly behind KDE's screen locker (5 min idle); the table row is the rerun with the
-  locker disabled, desktop checked by screenshot afterwards. Raw summaries: `inst/157/results/*.txt`.
-- `tests/r157/lockstress.c` (4 threads + short-lived ones, 12300 operations per run at N=3000): show/hide, minimize/restore/maximize,
-  text (own thread, sent, direct DefWindowProc from another thread), style and ex style flips from another thread, owner changes,
-  layered attributes and UpdateLayeredWindow (own and foreign thread), managed <-> unmanaged role change of a popup with a GL
-  child that another thread swaps, child <-> toplevel, painting from a foreign thread, threads that exit with their windows.
-  Its GL thread uses swap interval 0: with an interval the swap blocks while the popup is hidden (163, not a lock problem).
-- Debug build of the fixed tree (lockorder-debug.patch), GNOME: wl_xowner.sh with its clicks, rapid 300, lockstress x2,
-  user32:win, msg, input: 123 reports, all `win_data -> win32u:display` (monitor functions, row 9),
-  `win_data -> pointer / keyboard / text_input / seat`, `seat -> data_device`. No `-> win32u:user`, `client_surfaces` or
-  `window_surface` (`inst/157/vm/dbg2/all.folded`; unfixed: `dbg0/all.folded`).
-- `vmwl/wl_xowner.sh` (fixed build): GNOME 26 PASS / 0 FAIL, KDE 26 PASS / 0 FAIL, protocol errors 0 in all 9 logs (WAYLAND_DEBUG=1).
-- user32:win, user32:msg under Wayland (GNOME), 2 runs each: win 11 failures on 8 lines, msg 52 failures on 30 lines, the
-  same line sets in all four unfixed and all four fixed runs (`inst/157/vm/ut/`). One more fixed + unfixed win run later in
-  the session: same 8 lines. The debug-build win run once had win.c:4701/4707 on top (a pending WM_INPUTLANGCHANGEREQUEST
-  right after the click test), not seen in the six clean runs.
-- No win32u change, so no host regress units. Inventor on Wayland not run (belongs to the host session's owner).
+| GNOME 50 | unfixed e00a74f6590 | 2 / 8 / 0 | 0 / 5 / 0 | 0 / 5 / 0 |
+| GNOME 50 | fix v1 | 20 / 0 / 0 | 20 / 0 / 0 | 10 / 0 / 0 |
+| KDE | fix v1 | 10 / 0 / 0 | 10 / 0 / 0 | 5 / 0 / 0 |
+| sway | fix v1 | 10 / 0 / 0 | 10 / 0 / 0 | 5 / 0 / 0 |
+| GNOME / KDE / sway | fix v2 | 10 / 5 / 5 ok | 10 / 5 / 5 ok | 5 / 3 / 3 ok |
+| GNOME 50 | final, with jitter | 10 / 0 / 0 | 10 / 0 / 0 | 5 / 0 / 0 |
+| KDE | final, with jitter | 5 / 0 / 0 (jitter 500 events/s; see below) | 5 / 0 / 0 | 3 / 0 / 0 |
+| sway | final, with jitter | 5 / 0 / 0 | 5 / 0 / 0 | 3 / 0 / 0 |
+- Jitter = `tests/r157/jitter.py vm`: relative pointer motion through the guest's PS/2 mouse and shift presses over QMP
+  for the whole batch (guest IRQ counts confirm them), one click at 640,400 first. Unthrottled it sends ~2300 events/s:
+  GNOME and sway ran that way. On KDE that rate starved the probe: one of 5 rapid 300 runs took 63 s (finished by
+  itself; in three more such runs caught with a 20 s watchdog the UI thread is running in PeekMessage, draining input,
+  no lock involved), and the first run after the guest reboot had no windows (not counted). The KDE rapid 300 number is the
+  rerun at 500 events/s (jitter.py's default now); 84 more KDE rapid 300 runs at 2300/s with 15 / 20 s watchdogs: 80 in
+  time, 3 slow as above, 1 waiting for wineboot at process start.
+- Unfixed hangs are the lock pair (`inst/157/vm/gnome-integ-rapid300-hang-1.txt`, `gnome-integ-stress-hang-1.txt`).
+- 0 Wayland protocol errors in every fixed run; the last two lockstress runs per batch ran with WAYLAND_DEBUG=1.
+- `vmwl/wl_xowner.sh` on the final tip: GNOME 26 PASS / 0 FAIL twice in a fresh session, protocol errors 0, KDE 26 PASS / 0 FAIL, protocol errors 0 (v1 and v2: 26 PASS / 0 FAIL each).
+  A GNOME run right after the 2300 events/s batch had 22 PASS / 4 FAIL (self x3: no window within 10 s, prefix update;
+  hide-5: the probe ran ~12 s behind the script, no error in its log); not reproduced in the two fresh-session runs.
+- user32:win, user32:msg under Wayland (GNOME), final tip vs integ b5d75449ffe: win 11 failures on 8 lines, msg 52 failures on 30 lines, identical line sets in 1 integ and 2 fixed runs each
+  (v1 vs e00a74f6590: win 8 failing lines, msg 30, identical sets in 4 + 4 runs).
+- Runner traps hit and closed: a guest session that did not come up (gnome-shell start timeout under host load) and a
+  prefix whose explorer had no graphics driver both let `rv rapid` "finish" without a window; g-run.sh now refuses to run
+  without a Wayland socket and counts runs without windows as failed. The numbers above are from runs with both checks,
+  or from batches whose lockstress finished (it cannot without windows).
+
+### Host session (gnome-shell 50 headless, NVIDIA EGL), final tip
+- Reviewer's roleflip + jitter (`inst/157-review/rf-run.sh 157 TAG 1500 25`: one UI thread flips a popup managed /
+  unmanaged under ~640 relative-motion events/s): 8/8 DONE, faults 0, protocol errors 0 (v2: 0/4, integ 3/3). With a GL
+  child swapped by a second thread (600 flips, ~220k swaps): 3/3.
+- GL child visible after each role flip (`roleflip 5 3000 gl`, screenshot after every flip): 5/5, 15000 px of the child
+  each time (the serial re-attach works).
+- First frame after show (`rv.exe other`, ShowWindow from wl_winctl, screenshot ~0.5 s later): 5/5 fully painted
+  (45018 yellow px before, 0 hidden, 45018 after each show).
+- 132's probes (`tests/r157/r132.sh`): clip.sh 13 steps and the role flip with an idle and a live source: pix.py output
+  identical to integ run in the same session; geo.sh 11 steps: identical except the pixel counts cut by the sources'
+  moving bar in 2 steps (integ differs from integ in the same lines); 0 protocol errors.
+- Sink stress (`JITTER=1 LSFLAGS=noxulw tests/r157/sinkstress.sh`: lockstress with 132's sources in three of its windows,
+  61500 operations, pointer and key jitter): 6/6 DONE, 0 protocol errors. (Before the probe ignored injected caption
+  clicks: 5/6, the sixth sat in a system menu loop that a jitter click had opened; all five mutexes free.)
+  `noxulw` leaves out UpdateLayeredWindow on another thread's window, the trigger of the win32u race 171, which hung 5 of
+  32 earlier runs.
+- Request sequences of simple cases (reviewer's seq.c, 40 cases, requests per interface.method): final tip vs integ: the
+  cases that differ, differ between two integ runs in the same way (shm pools and extra flushes, cursor shape vs surface,
+  lock vs confine depending on where the pointer was); show / hide / show again / owned popup / both role changes /
+  GL parent show / destroy: equal counts.
+- Lock-order debug build of the final tip (rapid 300, roleflip 600 gl, glhide 1000 5, sink stress x3, 132's probes, all
+  with jitter): 154 reports, all `win_data -> win32u:display` (monitor functions, row 9), `win_data -> pointer / keyboard
+  / text_input`, `seat -> data_device`. No `-> win32u:user`, `client_surfaces`, `window_surface`, nothing under
+  pointer.mutex or source_mutex (`inst/157/r3/dbg/folded.txt`; unfixed: `inst/157/vm/dbg0/all.folded`).
+- 170: `lockstress glhide 3000 5` 14/14 DONE (integ fatal 3/3); `glhide 3000` (hidden 0-2 ms) still fatal, see 170.
+- No win32u change, so no host regress units. Inventor on Wayland not run.
 
 ## Weak spots / not covered
-- Title race and the role-change window described under staleness: argued, not closed.
-- Row 7 (cursor info under pointer.mutex) and row 6 (scale handler) were found and fixed by reading, never seen at run time:
-  the unfixed debug runs had no pointer input (the icon code only runs while the pointer is over the window), the fixed debug
-  run had wl_xowner's clicks but cannot show that the old call was reached; no scale change happened in any run.
-- "Display lock is a leaf" rests on reading lock_display_devices and a scan of the 31 locked regions in sysparams.c for direct
-  window calls (none); helpers were not followed.
-- winemac has the same pattern (see rule); untouched.
-- The debug patch only sees locks it was told about (user, display, client surfaces, window surface + driver mutexes); GDI
-  handle locks, imm_mutex, the opengl drawable locks are outside it.
+- 170's remaining case (hide and show within ~2 ms with a GL child on a GPU compositor) is still fatal; not a lock problem.
+- Older than 157, now easier to fix with the serial but not done: a popup with the subsurface role keeps its wl_subsurface
+  when its owner's surface is replaced by a role change (`wayland_surface_make_subsurface` only compares the owner HWND);
+  the next place_above would be a protocol error.
+- WAYLAND_ClipCursor (integ code) uses the wl_surface after releasing win_data and calls wayland_win_data_release() on a
+  possibly NULL data.
+- Row 7 (cursor info under pointer.mutex) was fixed by reading; with jitter the pointer is on the windows in the debug
+  runs, which then show no user lock under pointer.mutex, but the old call was never caught at run time.
+- "Display lock is a leaf" rests on reading lock_display_devices and a scan of the 31 locked regions in sysparams.c for
+  direct window calls (none); helpers were not followed.
+- Row 28: a flush can wait for the compositor with the user lock held; unchanged.
+- winemac has the same pattern as the unfixed driver; untouched. winex11: 173.
+- The debug patch only sees the locks it instruments (user, display, client surfaces, window surface, driver mutexes).
+- 171 (win32u surface list race) hangs lockstress on a fast host unless `noxulw` is used; independent of this branch.
+- One GNOME wl_xowner run (right after an unthrottled jitter batch) ran its probe ~12 s behind the script and failed 4 checks;
+  two reruns in a fresh session passed. Taken as leftover input load, not proven.
 
-## Infra changes on the way
-- vmwl/run.sh no longer uses bwrap (no user namespaces in the sandbox on the 26.04 host): one read-only virtiofsd per shared
-  path; `/host/.mounts` remounts after a guest reboot; default build is `build/` (wt/wayland-build is gone).
-- vmwl/wl_xowner.sh needs numpy from the package prefix (loads `tools/sysroot.sh env` now).
-- Leaving a KDE session with session.sh does not work (plasma user services survive): reboot the guest. KDE autolock is
-  disabled in the guest now. gdb attach in the guest needs `kernel.yama.ptrace_scope=0` (g-run.sh sets it).
-
-## Rebase onto integ b5d75449ffe (132: client surfaces of other processes), 2026-10-04
-Old tip 8641c9d1fba = branch `fix/157-v1`. New series (each commit compiles):
-`a9d7aa29907` styles and text before the lock, `99b964dc032` cursor clipping after the release, `4f3a0256f3f` client surfaces
-updated unlocked, `3bc7d04ebb6` cursor info before pointer.mutex, `7fb257635be` win_data before text_input.
-Conflicts, all in WAYLAND_WindowPosChanged / the scale handler, both intents kept:
-- commit 1: 132 added `wayland_win_data_lock/unlock` next to `wayland_win_data_get_config` (kept, with the new `style`
-  parameter) and `wayland_remote_sinks_update(toplevel)` in the "no win data" early return (kept, after the state reads).
-- commit 2: end of WindowPosChanged: sinks update first, then the cursor clipping.
-- commit 3: 132's `toplevel` variable + `stale`; the stale block (detach client surfaces, destroy, run again) comes before
-  the sinks update, so the second pass does it once for the new surface. Scale handler: `update_client_surfaces` and
-  `wayland_remote_sinks_update` both after the release.
-- commits 4, 5 applied as they were.
-
-### 132's code against the lock order rule (rows 20-27 of the call table)
-| # | held | caller | callee | lock it takes | |
-|---|---|---|---|---|---|
-| 20 | win_data | wayland_remote_sinks_detach / _update / _destroy (from wayland_surface_destroy, WindowPosChanged, scale handler, DestroyWindow) | list walk, wl requests; eventfd write after the unlock | none | read + debug build |
-| 21 | win_data | wayland_remote_process_events (event thread): remote_sink_read_wakes, remote_sink_update, remote_sink_set_buffers, remote_sink_destroy | recv; NtDuplicateObject, NtQuerySection, wine_server_handle_to_fd, NtUnmapViewOfSection, NtClose; wayland_win_data_get (recursive); wl requests | ntdll / server only | read + debug build (traced run: 3 sinks, 730 buffer sets, 1622 placements, 428 hides) |
-| 22 | none (lock dropped mid-walk) | remote_sink_get_geometry | NtUserGetWindowThread (shared memory), get_visible_region requests | none | read; only the event thread unlinks sinks, `next` is re-read after the relock |
-| 23 | none | wayland_remote_sink_create (window thread, WM_WAYLAND_REMOTE_SURFACE) | NtUserGetWindowThread, NtUserGetAncestor (user lock) before win_data | user, then win_data | read |
-| 24 | none | wayland_remote_window_changed <- WAYLAND_SetWindowStyle, WAYLAND_SetParent | NtUserGetAncestor (user lock) before win_data | user, then win_data | read |
-| 25 | win_data | buffer_release (event thread listener) | interlocked operations on the shared block | none | read |
-| 26 | win32u client surfaces_lock | wayland_client_surface_update / detach / destroy -> wayland_client_surface_set_remote | source_mutex; under it NtCreateSection, NtMapViewOfSection, socketpair, wine_server_fd_to_handle, NtClose; NtUserPostMessage after the unlock | source_mutex (leaf) | read + debug build (no pair with source_mutex reported) |
-| 27 | source_mutex (from lock_remote_buffer to unlock_remote_buffer) | wayland_drawable_present_remote | eglQuerySurface, glFinish, eglMakeCurrent, glReadPixels | host GL only, no win32u or driver lock | read + debug build |
-Result: no win32u lock is taken under a driver mutex in 132's code and no inversion with the reordered paths:
-source_mutex is only taken with no driver lock held or under win32u's client surfaces_lock, and nothing is taken under it;
-the sink paths take win_data only. Order with 132: `client surfaces_lock` -> `source_mutex`; `user` -> `win_data`.
-(On integ without 157 the role change still called update_client_surfaces under win_data: win_data -> surfaces_lock ->
-source_mutex; gone with commit 3.) Observation, not a bug here: source_mutex is one mutex for all client surfaces of the
-process and is held over the frame readback, so client surface updates of other windows (under win32u's surfaces_lock)
-wait for a glReadPixels.
-
-### Role change with live sinks
-The surface taken out of the win data is destroyed after the release; `wayland_surface_destroy` detaches the sinks
-(132) before the wl_surface goes, the second pass creates the new surface and marks the sinks dirty. In the gap the event
-thread finds no surface for the toplevel and hides the sink (its subsurface is still a child of the live old surface).
-Checks on the host session (gnome-shell 50, NVIDIA EGL, renderer=gl), `tests/r157/r132.sh BUILD TAG`:
-- `xp.exe host flip=8` with an idle and a live source: both sinks back in place after the role change; pix.py output
-  identical to integ `build/`.
-- `tests/r132/clip.sh` (13 steps) and `geo.sh` (11 steps): pix.py output identical to integ in every step; 0 protocol errors.
-- `tests/r157/sinkstress.sh` (lockstress with xp.exe sources in A, in the role-flipping popup F and in D; 61500 operations):
-  23 of 32 runs DONE with 0 protocol errors and, on the debug build, only allowed lock pairs. 9 failed, neither a lock order
-  problem nor 132's code (both also without sources, `NOSRC=1`): 4 x protocol error = draft 170 (reproduces on unfixed integ
-  with one UI thread: `lockstress glhide 3000`, 6 of 6), 5 x hang = draft 171 (win32u NULL write in
-  register_window_surface with its list lock held; user lock and win_data free in the gdb dumps).
-
-### Stress on the rebased build (vmwl guest, wt/157-build 7fb257635be; `inst/157/results2/`)
-| compositor | rv rapid 300 | rv rapid 3000 | lockstress 3000 |
-|---|---|---|---|
-| GNOME 50 | 10 / 0 / 0 of 10 | 10 / 0 / 0 of 10 | 5 / 0 / 0 of 5 |
-| KDE | 5 / 0 / 0 of 5 | 5 / 0 / 0 of 5 | 3 / 0 / 0 of 3 |
-| sway | 5 / 0 / 0 of 5 | 5 / 0 / 0 of 5 | 3 / 0 / 0 of 3 |
-(ok / hang / exited early.) 0 protocol errors; `vmwl/wl_xowner.sh gnome`: 26 PASS / 0 FAIL, protocol errors 0.
-Debug build of the rebased tree on the host session (132's clip/geo/flip + 4 sink stress runs): reports only
-`win_data -> win32u:display`, `win_data -> pointer / keyboard / text_input`, `seat -> data_device` (`inst/157/r132/dbg.folded`).
-
-### Changes to shared scripts
-`tests/r132/{env,geo,clip,run2}.sh` take `R132_PREFIX` / `R132_OUT` (defaults unchanged) so the probes can run on another
-build without touching inst/132. WAYLAND_DEBUG=1 cannot be used with them: the trace lands in the same file as the
-probe's handle line and splits it (the scripts then start `wl_winctl.exe` without a window and hang).
-
-## State at pause, review round (2026-10-04, sandbox restart)
-Branch `fix/157` = integ b5d75449ffe + 7 commits, tree clean, nothing half-applied; `wt/157-build` is a full build of that
-tip (version stamp one amend old). Earlier tips: `fix/157-v1` (first series), `fix/157-v2` = 7fb257635be (the reviewed one),
-`fix/157-surface-per-show` = 7ef19cf2795 (rejected experiment for 170, see item 7).
-```
-166dc20fe8c winewayland: Get the window styles and text with the window data unlocked.
-4d2aff975a9 winewayland: Reapply the cursor clipping with the window data unlocked.
-3ed44f42f3e winewayland: Don't update the client surfaces with the window data locked.
-a8f1a76a26c winewayland: Get the cursor info before locking the pointer.
-0046202e1aa winewayland: Lock the window data before the text input.
-74a086bfff1 winewayland: Check that the window has a surface when the pointer moves.
-750bb757812 winewayland: Don't commit buffers to surfaces without a role.
-```
-Design change against v2 (items 1, 2, 6): the surface that changes its role is destroyed and replaced under the lock again,
-as on integ; there is no gap, no stale surface and no second pass. What had to leave the locked region was only the
-`update_client_surfaces` call: it is gone. Each wayland_surface has a `serial`; `wayland_client_surface_attach` re-creates a
-client subsurface made for another surface of the toplevel (win32u updates client surfaces right after WindowPosChanged),
-and `wayland_surface_reconfigure_subsurface` only places a popup above the owner's client surface if that is attached to
-the owner's current surface. Sinks (132) are detached by `wayland_surface_destroy` under the lock as on integ.
-
-### Review items
-1. Fault in relative_pointer_v1_relative_motion: DONE. The state "data exists, surface NULL, focus still set" no longer
-   exists (focus is cleared in the same locked region that removes the surface); NULL check added anyway (74a086bfff1) for the
-   window that loses its surface between the handler reading the focus and locking the data (`!surface` path, on integ too).
-   Audit of every `data->wayland_surface` user (grep, 27 sites): only wayland_pointer.c relative motion lacked the check.
-   Checked: pointer motion / enter (wayland_set_cursor, motion_internal), relative motion (fixed), button / axis / leave
-   (no surface use), WAYLAND_ClipCursor, keyboard enter, SetIMECompositionRect, xdg_surface / xdg_toplevel configure, scale
-   handler, exported_handle / imported_destroyed, reconfigure_subsurface, client surface attach / present / update, sinks
-   (remote_sink_update), window.c entries (configure_window, SetLayeredWindowAttributes, SetWindowIcons, SetWindowStyle,
-   SetWindowText, SysCommand, UpdateLayeredWindow, set_window_surface_contents, get_mapped_toplevel). No touch / tablet
-   or frame-callback listeners in the driver. Noted, not changed (on integ too): WAYLAND_ClipCursor uses the wl_surface
-   after releasing win_data and calls wayland_win_data_release() on a possibly NULL data.
-   Verified: reviewer's `rf-run.sh 157 TAG 1500 25` 5/5 DONE, faults 0, proto 0 (twice: v3-1..5 and v4-1..5,
-   inst/157-review/rf-v4-*.out); `gl` variant 2/2 (600 flips, ~220k swaps); GL child visible after each of 5 role flips
-   (screenshots, 15000 px each time).
-2. Second thread creating a surface in the gap: DONE by removing the gap (see design change); nothing remaining of it.
-   Still open, older than 157: a popup with the subsurface role keeps its wl_subsurface when its owner's surface is replaced
-   (role change of the owner): `wayland_surface_make_subsurface` only compares the owner HWND. `owner->serial` is there to
-   fix it; not done.
-3. Title: DONE in 166dc20fe8c. The toplevel is created without a title; after the release the text is read and set unless
-   `surface->has_title` (set by every set_title, cleared with the xdg_toplevel) says a title was set since: a concurrent
-   pSetWindowText wins in every order.
-4. Cursor info only when the pointer is on the window: DONE in a8f1a76a26c (early return before get_icon_info; the enter
-   handler sets the stored cursor, the check under pointer.mutex stays).
-5. Docs: notes/wine/wayland.md lock order section updated (dce.c surfaces_lock, blocking in the buffer queue, 173 pointer
-   instead of "winex11 gets away with it", serial mechanism, 170) — uncommitted hunks of mine are in this commit; the
-   "since 171" line in that file is another worker's. NOT DONE: the same corrections in this issue's rule section and call
-   table above (still says winex11 "gets away with it"; rows for wayland_buffer_queue_get_free_buffer blocking in
-   wl_display_dispatch_queue with the user lock / dce.c surfaces_lock held, and WAYLAND_CreateWindowSurface dispatching a
-   buffer queue under win_data, are missing; rows 5/6 and the "Fix" / "Staleness" sections describe v1/v2).
-6. Commit message of the client surface commit: DONE (3ed44f42f3e says what replaced the detach and that the scale handler
-   changed); no second pass or `return f()` any more.
-7. Draft 170: PARTLY. 750bb757812 makes `wayland_surface_reconfigure` return FALSE for a surface without a role, so nothing
-   is committed to a hidden surface (the reviewer's piece). Host session, `lockstress glhide N HIDE_MS`:
-   hidden 5 ms: integ 3/3 fatal, fix 5/5 + 9/9 DONE with 0 protocol errors; hidden 0-2 ms (the default): still fatal, fix
-   2/2 and 10/10 before. Trace (inst/157/r3/glhide-trace.out): no buffer on the hidden surface any more; the NULL commit of
-   the hide itself is not applied by mutter 0.5 ms later when get_xdg_surface arrives (toplevel commits queued behind the GL
-   subsurface's pending commits). The robust fix, a new wl_surface whenever a window becomes a toplevel, is on
-   `fix/157-surface-per-show`: glhide 3000 10/10 DONE, but popups with the subsurface role are orphaned when their owner is
-   re-shown (`wl_subsurface::place_above ... not a valid parent or sibling`, sink stress 6/6 fatal) — needs the item 2
-   leftover plus re-homing and repaint of those popups. Not merged into fix/157. Draft 170 itself is NOT updated yet.
-   First frame after show: 3/3 fully painted 0.3 s after ShowWindow on the surface-per-show build; the rerun on the
-   final tip was invalid (a full-screen yellow window of unknown origin covered the screen): TO REDO.
-
-### Verification of the final tip: what ran, what did not
-- vmwl, `JITTER=1 tests/r157/batch.sh` (relative pointer motion through the PS/2 mouse + shift presses over QMP, ~2300
-  events/s; guest IRQ counts confirm them): sway rapid 300 5/5, rapid 3000 5/5, lockstress 3/3; GNOME rapid 300 10/10,
-  rapid 3000 10/10, lockstress 1/1 (4 more not run); 0 hangs, 0 protocol errors. NOT RUN: GNOME wl_xowner, KDE batch,
-  KDE wl_xowner (`inst/157/results3/`).
-- host session: roleflip + jitter and glhide as above. seq.c vs integ was only compared for the surface-per-show build
-  (differences = its extra surface per show + run-to-run noise); TO REDO on the final tip (`inst/157-review/seq-run.sh 157
-  TAG`, `seqcmp.py seq-v3-integ.req ...`).
-- INVALID, to redo: 132's clip/geo/flip on the final tip (run `fix4`: the same full-screen yellow window in every
-  screenshot, then x/wshot.sh failed with "Cannot spawn a message bus when AT_SECURE is set": the host session was
-  broken or shared at that point; clip and flip were identical to integ, geo within noise, on the surface-per-show build
-  earlier); sink stress with jitter (`JITTER=1 LSFLAGS=noxulw tests/r157/sinkstress.sh`): the one run (k1) "hung" because
-  of a probe bug of mine (the GL thread's loop bound had become N*100; all five mutexes free in the dump) — fixed in
-  tests/r157/lockstress.c, inst/157/lockstress.exe rebuilt, not rerun.
-- Not done: debug build (lockorder-debug.patch) on the final tip; user32:win / msg under Wayland on the final tip.
-
-### Remaining, in order
-1. Host session (check first that nothing else uses it, `tests/wl_winlist.exe`): first-frame-after-show, 132's probes
-   (`tests/r157/r132.sh wt/157-build TAG` vs inst/157/r132/integ), sink stress with jitter x6, seq.c comparison.
-2. vmwl with `JITTER=1`: GNOME lockstress x5 + wl_xowner, KDE rapid 300 x5 / lockstress x3 + wl_xowner.
-3. Debug build pass on the final tip (rapid, lockstress, r132, roleflip): expect the pairs listed in notes/wine/wayland.md.
-4. Item 5: bring this file's rule section, call table, fix and staleness sections in line with the final series.
-5. Item 7: update draft 170 (two variants, what 750bb757812 covers, the side branch and what it lacks); decide with the
-   coordinator whether the surface-per-show fix is wanted (it needs the popup re-homing).
-6. Final report.
-
-### Environment at pause
-VM powered off (qemu and its virtiofsd processes gone), host Wayland session stopped, my wineservers stopped, scratch
-prefixes deleted (inst/157 17 MB). New helpers: `tests/r157/jitter.py host|vm`, `JITTER=1` / `LSFLAGS=noxulw` in
-sinkstress.sh and batch.sh, `lockstress glhide N [HIDE_MS]`, `lockstress ... noxulw`.
+## Tools and infra
+- `tests/r157/`: lockstress.c (`N [SEED] [nogl] [noxulw]`, `glhide N [HIDE_MS]`), g-run.sh / g-utest.sh / batch.sh (vmwl
+  guest; `JITTER=1`), jitter.py (`host` / `vm`), sinkstress.sh and r132.sh (host session; 132's sources and probes),
+  lockorder-debug.patch + lockorder.py.
+- vmwl/run.sh shares paths with one read-only virtiofsd each (no bwrap in the sandbox); `/host/.mounts` remounts after a
+  guest reboot; leaving a KDE session needs a guest reboot; KDE autolock is off in the guest; gdb attach in the guest needs
+  `kernel.yama.ptrace_scope=0` (g-run.sh sets it). After a guest boot under host load gnome-shell can miss systemd's start
+  timeout: check the socket (`vmwl/session.sh gnome` restarts the session).
+- `tests/r132/{env,geo,clip,run2}.sh` take `R132_PREFIX` / `R132_OUT`. WAYLAND_DEBUG=1 cannot be used with them (the trace
+  splits the handle line they parse).
+- x/wayland.sh still needs its private D-Bus config: the stock session config fails in the sandbox with "Failed to query
+  AppArmor policy: Read-only file system" (retested 2026-10-04 after the AppArmor change).

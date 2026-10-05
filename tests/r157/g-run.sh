@@ -6,6 +6,7 @@
 B=/host/$1; TAG=$2; RUNS=$3; T=$4; EXE=/host/$5; shift 5
 export WINEPREFIX=$HOME/wp-$(basename $B) WINEDEBUG=${WINEDEBUG:--all}
 OUT=$HOME/r157/$TAG; mkdir -p $OUT
+[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] || { echo "$TAG: NO WAYLAND SESSION in the guest (vmwl/session.sh), nothing run"; exit 1; }
 sudo sysctl -q kernel.yama.ptrace_scope=0   # gdb attaches to non-children (lost at guest reboot)
 WINEDLLOVERRIDES="mscoree,mshtml=" $B/wine wineboot -u >$OUT/wineboot.log 2>&1   # creates the prefix, or updates it for a new build
 ok=0; hang=0; bad=0
@@ -19,6 +20,7 @@ for i in $(seq $RUNS); do
     gdb -p $pid -batch -ex 'source /host/tools/gdb/winesyms.py' -ex 'thread apply all bt' >$OUT/hang-$i.txt 2>&1
     kill -9 $pid
     echo "run $i: HANG (pid $pid, $(grep -a -c . $log) log lines) -> $OUT/hang-$i.txt"
+  elif grep -a -q -E 'A=0+ |A visible=0' $log; then bad=$((bad + 1)); echo "run $i: NO WINDOWS (graphics driver not loaded in this prefix? wineserver -k and check the session)"
   elif grep -a -q -E 'DONE|rapid end' $log; then ok=$((ok + 1))
   else bad=$((bad + 1)); echo "run $i: exited without finishing: $(tail -n 2 $log | tr '\r\n' '  ')"
   fi

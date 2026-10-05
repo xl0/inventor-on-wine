@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Pointer and key jitter for the winewayland stress runs (157; after the review's inst/157-review/jitter.py).
-  jitter.py host SECS [X Y]   host session (x/wayland.sh): winj.py socket; relative moves +1/-1 as fast as it takes
+  jitter.py host SECS [X Y [RATE]]   host session (x/wayland.sh): winj.py socket; relative moves +1/-1 as fast as it takes
                               them, a click at the start (focus), a Shift_L press every 50 moves
-  jitter.py vm SECS [X Y]     vmwl guest over QMP (vmwl/qmp.sock): absolute move (usb-tablet) + click, then relative
+  jitter.py vm SECS [X Y [RATE]]     vmwl guest over QMP (vmwl/qmp.sock): absolute move (usb-tablet) + click, then relative
                               moves through the PS/2 mouse and a shift key press every 50 moves
 Relative motion is what zwp_relative_pointer_v1 reports; absolute moves alone produce none. Prints the rate."""
 import json, os, socket, sys, time
 mode, secs = sys.argv[1], float(sys.argv[2])
 x = int(sys.argv[3]) if len(sys.argv) > 3 else 400; y = int(sys.argv[4]) if len(sys.argv) > 4 else 300
+rate = float(sys.argv[5]) if len(sys.argv) > 5 else 500   # events per second; a probe that drains its queue starves above ~2000/s in the VM
 s = socket.socket(socket.AF_UNIX)
 if mode == 'host':
     s.connect('/tmp/wl-xdg/winj.sock'); f = s.makefile('rw')
@@ -33,9 +34,10 @@ else:
     key = lambda: q('send-key', keys=[{'type': 'qcode', 'data': 'shift'}], **{'hold-time': 1})
     def click(): ev(btn(True)); time.sleep(0.05); ev(btn(False))
 home(); click()
-end = time.time() + secs; n = 0
+t0 = time.time(); end = t0 + secs; n = 0
 while time.time() < end:
     rel(1 if n % 2 == 0 else -1); n += 1
+    time.sleep(max(0, (t0 + n / rate) - time.time()))
     if n % 50 == 0: key()
     if n % 2000 == 0: home()
 print('%d moves, %.0f/s' % (n, n / secs))

@@ -35,6 +35,10 @@ static unsigned rnd(unsigned *seed) { *seed = *seed * 1103515245 + 12345; return
 static LRESULT CALLBACK wndproc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     if (msg == WM_CLOSE) return 0;  /* the compositor's close button must not end the run */
+    /* injected clicks and keys (jitter.py) must not start a modal menu or move / size loop */
+    if (msg == WM_NCLBUTTONDOWN || msg == WM_NCRBUTTONDOWN || msg == WM_NCLBUTTONDBLCLK) return 0;
+    if (msg == WM_SYSCOMMAND && ((wp & 0xfff0) == SC_MOUSEMENU || (wp & 0xfff0) == SC_KEYMENU ||
+                                 (wp & 0xfff0) == SC_MOVE || (wp & 0xfff0) == SC_SIZE)) return 0;
     return DefWindowProcA(hwnd, msg, wp, lp);
 }
 
