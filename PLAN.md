@@ -520,9 +520,23 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   lock holder inside an Xlib call with async handlers (unreachable while cross-thread requests on
   thread displays stay under win_data_mutex). libX11 report + reproducer + patch in
   issues/attachments/177-* — the user's to file. Worker is correcting the texts per the review.
-- 191 (XIC destroyed by another thread during the owner's XFilterEvent; now the dominant
-  leftover hang: 1 of 140 under openbox, 13 of 32 with +synchronous) + a look at 190 (XOpenIM
-  double free): Opus worker on wt/191 (fix/191 off fix/177), Inventor-free.
+- 191 fixed on fix/191 (commit 1, 629120c8837, on fix/177 = integ tip), in adversarial review.
+  Cause measured: libX11's filter list is unlocked (XFilterEvent vs XUnsetICFocus/XDestroyIC),
+  and even with a library patch a cross-thread XDestroyIC crashes in the local IM's filter → the
+  XIC must stay in its owner thread. Wine did ~500 cross-thread XDestroyIC per stress run. Fix:
+  a non-owner flags the XIC (`xic_invalid`), the owner destroys/recreates it in X11DRV_get_ic.
+  +synchronous gdistress 7 hangs of 40 → 0; xicrace 10 and 7 of 16 → 0. Typing checks (local IM,
+  dead keys, compose, ibus) identical base/fix. Known leftovers: non-owner XmbLookupString via
+  ToUnicodeEx, SetIMECompositionRect from a non-owner.
+- 190 fixed on fix/191 commit 2 (675c332fddc: recursive mutex around XOpenIM / XCloseIM / font
+  sets / IM callbacks; libX11 reallocs a process-wide IM list unlocked) — NOT MERGING:
+  it staggers thread starts and thereby exposes draft 193 (libXext frees its global XGE record
+  when the last XInput2 display closes; process whose main thread has no window: 0 of 6 → 5 of 6
+  die). Decision: hold 190 until 193 has a fix (new issue, not in this wrap-up round); the
+  worker's untested one-liner is tests/r191/xge-keep-display-try.patch. 190's base rate in Wine
+  is low (2 of 70 with a main window); 193 is not reachable in Inventor.
+  libX11 reports for 190 and 191 in issues/attachments/ — the user's to file.
+  Correction: own libX11 builds under inst/177, inst/182 have no locale data → no XIM there.
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
