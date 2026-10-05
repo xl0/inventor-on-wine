@@ -1,6 +1,7 @@
 # 191 winex11: owner thread hangs in XCheckIfEvent after another thread recreated its X window (XIC destroyed under XFilterEvent, fault swallowed with the display locked)
-Status: fixed on fix/191 (wine-src; 629120c8837 `winex11: Don't destroy the input context of a window from another
-thread.`, on fix/177 b1e7b97cfed, independent of it), verified · found while running 182's GDI stress · upstream winex11
+Status: fixed, reviewed, on integ (12ef0899477 `winex11: Don't destroy the input context of a window from another
+thread.` preceded by the reviewer's 48676c8af1c `Keep the window data locked while using the input context in
+ToUnicodeEx().`, see "Review" at the end), verified · found while running 182's GDI stress · upstream winex11
 (cross-thread set_window_visual, same family as 173 / 184) + a libX11 bug (1.8.13 and git master 6d4432b:
 `_XUnregisterFilter` doesn't lock; report text + reproducer + patch ready, not filed:
 [report](attachments/191-libx11-bug-report.md), [reproducer](attachments/191-libx11-reproducer.c),
@@ -139,3 +140,31 @@ grep -c X191OWNER inst/191/out/TAG.out                # cross-thread XIM calls
 DISPLAY=:1800 XMODIFIERS=@im=none tests/r191/xfilter 5                                  # plain Xlib
 XMODIFIERS=@im=none tests/r191/xicrace-ui.sh $PWD/wt/191-build/wine 1806 $PWD/inst/191/pfx-fix-1806 inst/191/out/ui
 ```
+
+## Review (2026-10-05, inst/191-review/) — merge after fixes, done
+- The ToUnicodeEx path above is NOT "as before": with the fix alone the owner frees a flagged XIC within microseconds
+  of taking the window data lock (base: the destroyer spends an XSync round trip under the lock first), so a non-owner
+  thread still inside XmbLookupString hits the freed IC far more easily. It faults at libX11 `XmbLookupString+0xe`
+  with kbd_mutex held, the fault is swallowed (172), and keyboard input is dead in the whole process.
+  `inst/191-review/probe/xthr.exe 20 gap=2 tu=200` (thread B polls ToUnicode on a child of thread A's top-level, a
+  third thread recreates every 2 ms, openbox): base 5 hangs of 16, fix alone 26 of 32, fix + follow-up 0 of 16.
+  With realistic typing (xdotool, 25 s) the fix alone is already better than base: swallowed faults in 11 of 12 runs
+  at a 2 ms recreation gap on base, 0 of 12 on fix and on fix + follow-up.
+- Follow-up 48676c8af1c: X11DRV_ToUnicodeEx keeps the window data locked across its lookups and reads data->xic
+  under the lock (new lock edge win_data → kbd_mutex; no kbd_mutex section takes win_data). Also covers IM-server
+  death (the xic_destroy callback takes win_data before Xlib frees the IC).
+- Low, by design: a non-owner no longer creates an XIC. If the owner's top-level has none (no XIM, or keys injected
+  into a window that never had X focus) the non-owner translates with XLookupString: Latin-1, dead keys, Unicode
+  keysyms and Euro still work, legacy non-Latin-1 keysyms (Cyrillic, Greek) don't. Base created an XIC on the wrong
+  display there and left a dangling pointer.
+- Pre-existing, unchanged: X11DRV_SetIMECompositionRect from a non-owner does a synchronous XSetICValues on the
+  owner's display (over-the-spot with an IM server only, by reading); get_ic returns before updating last_xic_hwnd
+  when the window is gone; owner and non-owner can run XmbLookupString on one IC concurrently.
+- Checked sound: flag and data->xic always under win_data_mutex; destroyed-while-flagged, recreated twice, use_xim
+  off, IM server killed and restarted with flagged XICs; cross-thread XDestroyIC count 1875 → 0; gdistress
+  +synchronous 5 hangs of 40 → 0; xicrace 6 and 4 of 12 → 0; vstate 0 of 360 moved on both; typing (local IM, ibus)
+  identical. Not verified: fcitx, CJK preedit, other preedit styles, WMs other than openbox.
+- Upstream nits (not applied): keep the XFlush / NtUserRemoveProp lines of destroy_whole_window in place for a
+  smaller diff; xim.c line over 100 columns; "never create from another thread" could be its own commit.
+- libX11 report: correct, still in master; search for existing reports before filing.
+

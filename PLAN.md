@@ -528,14 +528,15 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   lock holder inside an Xlib call with async handlers (unreachable while cross-thread requests on
   thread displays stay under win_data_mutex). libX11 report + reproducer + patch in
   issues/attachments/177-* — the user's to file. Worker is correcting the texts per the review.
-- 191 fixed on fix/191 (commit 1, 629120c8837, on fix/177 = integ tip), in adversarial review.
+- 191 fixed, reviewed, ON INTEG (local tip 12ef0899477 = pushed cffd27540ee + 177 + 2).
   Cause measured: libX11's filter list is unlocked (XFilterEvent vs XUnsetICFocus/XDestroyIC),
   and even with a library patch a cross-thread XDestroyIC crashes in the local IM's filter → the
-  XIC must stay in its owner thread. Wine did ~500 cross-thread XDestroyIC per stress run. Fix:
-  a non-owner flags the XIC (`xic_invalid`), the owner destroys/recreates it in X11DRV_get_ic.
-  +synchronous gdistress 7 hangs of 40 → 0; xicrace 10 and 7 of 16 → 0. Typing checks (local IM,
-  dead keys, compose, ibus) identical base/fix. Known leftovers: non-owner XmbLookupString via
-  ToUnicodeEx, SetIMECompositionRect from a non-owner.
+  XIC must stay in its owner thread. Fix: a non-owner flags the XIC (`xic_invalid`), the owner
+  destroys/recreates it in X11DRV_get_ic. Review: "merge after fixes" — the fix alone made the
+  ToUnicodeEx-from-a-non-owner path hit a freed XIC more easily (probe 5 of 16 → 26 of 32
+  hangs); the reviewer's tested follow-up (ToUnicodeEx keeps the window data locked, 0 of 16)
+  went in before it. +synchronous gdistress 5–7 hangs of 40 → 0; xicrace → 0; typing identical.
+  build-next/ = wine-11.18-572-g12ef0899477; full regress and Inventor suite running.
 - 190 fixed on fix/191 commit 2 (675c332fddc: recursive mutex around XOpenIM / XCloseIM / font
   sets / IM callbacks; libX11 reallocs a process-wide IM list unlocked) — NOT MERGING:
   it staggers thread starts and thereby exposes draft 193 (libXext frees its global XGE record
