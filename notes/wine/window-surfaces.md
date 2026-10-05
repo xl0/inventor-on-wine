@@ -167,18 +167,22 @@
   copy of the offscreen X window, made at each full driver present. What refreshes it otherwise (fix/181):
   an Expose presents the exposed region again (fix/061; only that region since 181), a child that moved without
   resizing is presented again at its new place and invalidated (`update_client_surfaces()`), and `move_window_bits()`
-  also copies on the host window what the window surface doesn't paint (internal `DCX_CLIENTSURFACES` DC: no
-  surface, visible region minus the surface clip region), which is all that moves a GPU child of *another* process
-  when its container moves. Windows: a plain move keeps the bits, a child that a resized sibling covered first gets
+  also copies on the host window what the window surface doesn't paint (`get_dc_ex()` with the internal
+  `DCX_CLIENTSURFACES`: no surface, visible region minus the surface clip region; not reachable through
+  NtUserGetDCEx), which is all that moves a GPU child of *another* process when its container moves. Both re-present
+  paths need `client_surface.presented`: set by a real present, cleared when the surface grows or changes between
+  onscreen and offscreen. Before the first present the offscreen X window holds what the server copied from the
+  screen or, on NVIDIA, old VRAM (fragments of other windows). Windows: a plain move keeps the bits, a child that a resized sibling covered first gets
   WM_PAINT instead (186).
 - GDI on a window with a client surface (client DC, not DCX_WINDOW) has no window surface and draws on the toplevel
   X window directly (`update_visible_region()` / `X11DRV_GetDC`), so the offscreen X window never gets it. wined3d
   presents partial rectangles of COPY-effect swapchains that way (`swapchain_blit_gdi()`, WPF's dirty rectangles),
   from its command stream thread, on the DC it got when the swapchain was created. Three traps (181): a DC that was
   valid before the window got its pixel format flag kept the window surface (drawing lands under the client surface,
-  never visible) until something invalidated it - `update_window_state()` now does; gdi_display is only flushed by
-  `X11DRV_ProcessEvents` when the thread has X events (upstream d3cb94b543e), a surface flush or a full present, so
-  such drawing stayed in Xlib's buffer - `add_device_bounds()` now flushes; and an Expose (no compositing manager)
+  never visible) until something invalidated it - `apply_window_pos()` now does when the flag is first sent;
+  gdi_display is only flushed by `X11DRV_ProcessEvents` when the thread has X events (upstream d3cb94b543e), a surface
+  flush or a full present, so such drawing stayed in Xlib's buffer - the image operations (PutImage, StretchBlt,
+  XRender blits) now flush, fills / lines / text still don't (189; a flush per primitive costs 8x on PatBlt); and an Expose (no compositing manager)
   over such drawing brings back the last *full* frame there (open, needs partial presents to reach the offscreen
   window: wined3d keeping the front buffer, or DCs of these windows drawing into it).
 - A window DPI-scaled by Wine (unaware application, scaled monitor) has a scaled window surface and a host window
@@ -195,6 +199,8 @@
   is rendered (XSync there since 181).
 - A blt-model present from WM_SIZE of a *top-level* window that just grew can miss the new strip on Windows too (1 of
   6 on Win11): not a reference for anything.
+- `X11DRV_client_surface_present()` gets no region for an exclusive fullscreen window; it must still select it (a null
+  region removes the clip), or the frame stays clipped to the former window rectangle (181, `gpuchild fsclip`).
 - A WM resize is X first: ConfigureNotify (awesome: a real one mapped one pixel off, then the synthetic one) and the
   Expose events of the new area are handled before Win32 knows the size; under a compositing manager these are the only
   Expose events a mapped window gets. awesome's frame ConfigureNotify also yields a GravityNotify whose posted

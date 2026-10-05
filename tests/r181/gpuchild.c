@@ -10,6 +10,9 @@
  *   movesib  two D3D11 children, A above B (`below`: B lower in the z-order than A): A grows over B's place
  *            and presents a new colour at once, then B moves down out of the way without presenting (a
  *            layout pass of WPF panes), N times down and back: B's new place must show B's frame
+ *   fsclip   top-level D3D11 swapchain of a DPI-unaware process (an offscreen client surface on Wine when the
+ *            monitor is scaled): presents, gets partly covered and uncovered, goes fullscreen and presents
+ *            green: five screen points (corners, middle) must be green
  *   partial  D3D9 child, D3DSWAPEFFECT_COPY: one full present (red), then N presents of a 40x40
  *            destination rectangle in a new colour: the square must show it, the rest stays red; at the
  *            end another window covers the child beside the square, then over it, and goes away: square
@@ -198,7 +201,7 @@ int main( int argc, char **argv )
     RECT rc;
 
     setvbuf( stdout, NULL, _IONBF, 0 );
-    SetProcessDPIAware();
+    if (strcmp( mode, "fsclip" )) SetProcessDPIAware();
     if (!strcmp( mode, "pix" ))
     {
         HDC hdc = GetDC( 0 );
@@ -218,6 +221,7 @@ int main( int argc, char **argv )
         else if (atoi( argv[i] )) n = atoi( argv[i] );
     }
     if (!strcmp( mode, "partial" )) { use_d3d9 = 1; pp.SwapEffect = D3DSWAPEFFECT_COPY; }
+    else if (!strcmp( mode, "fsclip" )) top = 1;
     else if (strcmp( mode, "grow" ) && strcmp( mode, "move" ) && strcmp( mode, "movesib" )) { printf( "usage: gpuchild.exe grow|move|movesib|partial [N] [top] [d3d9] [flip] [below] [nudge] [wait=MS]\n" ); return 2; }
 
     wc.hbrBackground = CreateSolidBrush( PARENT_COLOR );
@@ -229,7 +233,45 @@ int main( int argc, char **argv )
     present_color( RGB(255, 0, 0), NULL );
     idle( 1000 );
 
-    if (!strcmp( mode, "grow" ))
+    if (!strcmp( mode, "fsclip" ))
+    {
+        /* physical screen points, the checker process is DPI aware; 1920x1080 assumed */
+        static const char cmd_pts[] = " pix 40 40 1880 40 40 1040 1880 1040 960 540";
+        char cmd[400], buf[256] = {0};
+        SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
+        STARTUPINFOA si = {sizeof(si)};
+        PROCESS_INFORMATION pi;
+        POINT pt = {0, 0};
+        HANDLE rd, wr;
+        DWORD len;
+        HWND cover;
+        char *p;
+
+        ClientToScreen( target, &pt );
+        cover = CreateWindowExA( WS_EX_TOPMOST | WS_EX_TOOLWINDOW, "static", NULL, WS_POPUP | WS_VISIBLE, pt.x + 50, pt.y + 50, 60, 40, 0, 0, 0, 0 );
+        idle( 500 );
+        DestroyWindow( cover );
+        idle( 1000 );
+        CHECK(IDXGISwapChain_SetFullscreenState( sc, TRUE, NULL ));
+        idle( 1000 );
+        present_color( RGB(0, 255, 0), NULL );
+        idle( 1000 );
+        GetModuleFileNameA( NULL, buf, sizeof(buf) );
+        sprintf( cmd, "\"%s\"%s", buf, cmd_pts );
+        CreatePipe( &rd, &wr, &sa, 0 );
+        si.dwFlags = STARTF_USESTDHANDLES;
+        si.hStdOutput = wr;
+        CreateProcessA( NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi );
+        CloseHandle( wr );
+        memset( buf, 0, sizeof(buf) );
+        for (i = 0; i < sizeof(buf) - 1 && ReadFile( rd, buf + i, sizeof(buf) - 1 - i, &len, NULL ) && len; i += len) ;
+        WaitForSingleObject( pi.hProcess, INFINITE );
+        for (i = 0, p = buf; i < 5; i++) bad += !near_color( strtoul( p, &p, 16 ), RGB(0, 255, 0) );
+        checks = 5;
+        printf( "fullscreen after a partial cover: corners and middle %s(expect 00ff00)\n", buf[0] ? strtok( buf, "\r\n" ) : "? " );
+        IDXGISwapChain_SetFullscreenState( sc, FALSE, NULL );
+    }
+    else if (!strcmp( mode, "grow" ))
     {
         on_size = 1;
         for (step = 1; step <= n; step++)
