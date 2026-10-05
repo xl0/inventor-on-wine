@@ -66,6 +66,19 @@
   on UpdateLayeredWindow and adds it to the clip region (so it isn't taken for a client surface).
 - winex11's surface flush can run with win_data_mutex held by the same thread (WindowPosChanged ->
   window_surface_set_shape): don't take the window data there, post a driver message.
+- winex11 lock order (173; the opposite of winewayland's, 157): win32u client `surfaces_lock` (window.c) ->
+  `win_data_mutex` -> win32u user lock -> dce.c `surfaces_lock` (171) -> window surface mutex -> leaves (gdi, font,
+  display lock, xrender_mutex). The driver reads window styles / owner / text / DCs with the window data locked
+  everywhere, so: win32u must not call a driver entry that locks the window data, nor draw on a window DC (a dirty DC
+  calls pGetDC -> get_win_data), while it holds the user lock (a window / icon / menu pointer). What win32u does call
+  with the user lock or the surface locks held (surface flush / set_shape / set_clip, pReleaseDC) must never wait for the
+  window data: trylock + posted retry as in try_set_window_hidden, or do it from the window's thread. In the driver,
+  sends / SetWindowPos come after release_win_data. An X window can be destroyed and recreated by a thread that doesn't
+  own it (set_window_visual): X requests on it are only safe with the window data locked, on data->display, after
+  comparing the window. Check with tests/r173/lockorder-debug.patch (+ lockorder.py): reports every lock taken while
+  another is held, with the call chain; repros tests/r173/iconlock.c, visual_race.c, flushpost.c.
+- One wineserver must not serve two X displays one after the other (explorer's windows live on the first): the app dies
+  of BadWindow on X_UnmapWindow. `wineserver -k` between displays (077, 173).
 - Moves: with _NET_WM_MOVERESIZE (openbox) the WM moves the frame, Wine waits in
   move_resize_window() (sends WM_ENTER/EXITSIZEMOVE). Without it (awesome 4.3) win32u's
   sys_command_size_move() loop does SetWindowPos per mouse move. WM-initiated moves (Mod4+drag,

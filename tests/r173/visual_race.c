@@ -3,7 +3,10 @@
  * default visual) from a thread that doesn't own it; the driver destroys and recreates the X window in the
  * calling thread while the owner thread handles PropertyNotify events of the old one.
  * Build: x86_64-w64-mingw32-gcc -O1 -o visual_race.exe visual_race.c -lgdi32 -luser32
- *   visual_race [SECS]   prints "DONE" at the end; the unfixed driver dies of an X BadWindow error. */
+ *   visual_race [SECS] [text]   prints "DONE" at the end; the unfixed driver dies of an X BadWindow error
+ *                               (X_GetProperty in the owner's PropertyNotify handlers).
+ * text: a third thread sets the window text with DefWindowProc(WM_SETTEXT), i.e. the driver's SetWindowText runs in
+ * a thread that doesn't own the window (X_ChangeProperty on the destroyed window). */
 #include <windows.h>
 #include <stdio.h>
 
@@ -23,6 +26,18 @@ static DWORD WINAPI owner_proc(void *arg)
     return 0;
 }
 
+static DWORD WINAPI text_proc(void *arg)
+{
+    MSG msg; int i; char text[32];
+    for (i = 0; !stop; i++)
+    {
+        sprintf(text, "L %d", i);
+        DefWindowProcA(L, WM_SETTEXT, 0, (LPARAM)text);
+        if (!(i % 16)) while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
+    }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     int secs = argc > 1 ? atoi(argv[1]) : 20, i;
@@ -35,6 +50,7 @@ int main(int argc, char **argv)
     for (i = 0; i < 64 * 64; i++) bits[i] = 0x80004000;
     SelectObject(dc, bmp);
     while (!L) Sleep(1);
+    if (argc > 2) CreateThread(NULL, 0, text_proc, NULL, 0, NULL);
     while (GetTickCount() - t0 < secs * 1000)
     {
         /* resetting WS_EX_LAYERED lets the window change between the two kinds */

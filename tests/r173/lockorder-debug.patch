@@ -87,6 +87,23 @@ index 87b2f3bb2f8..cb66fdf93ab 100644
  #include "wine/gdi_driver.h"
  #include "wine/unixlib.h"
  #include "wine/debug.h"
+diff --git a/dlls/winex11.drv/bitblt.c b/dlls/winex11.drv/bitblt.c
+index 845b4d99184..794966a7976 100644
+--- a/dlls/winex11.drv/bitblt.c
++++ b/dlls/winex11.drv/bitblt.c
+@@ -1854,7 +1854,12 @@ static BOOL x11drv_surface_flush( struct window_surface *window_surface, const R
+         if (try_set_window_hidden( window_surface->hwnd, window_surface->shape_hidden ))
+             surface->hidden = window_surface->shape_hidden;
+         else  /* try again from the window's thread */
++        {
++            static LONG dbg_posts; /* DEBUG 173 */
++            LONG n = InterlockedIncrement( &dbg_posts );
++            if (n <= 3 || !(n % 100)) fprintf( stderr, "FLUSHPOST %d hwnd %p hidden %d\n", (int)n, window_surface->hwnd, window_surface->shape_hidden );
+             NtUserPostMessage( window_surface->hwnd, WM_X11DRV_SET_HIDDEN, 0, 0 );
++        }
+     }
+ 
+     if (!put_shm_image( ximage, &surface->image->shminfo, surface->window, surface->gc, rect, dirty ))
 diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
 index bd46c47b2f5..b6bd0c23b6b 100644
 --- a/dlls/winex11.drv/x11drv.h
