@@ -319,6 +319,20 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   desktop switch minimizes Wine windows), 180 (win32u doesn't hide owned windows on minimize the
   way Windows does). Meets fix/173 in event.c (one handler).
 
+- 174: no root cause yet, no fix. Ruled out with probes on :98 (awesome + picom, 96/144 DPI):
+  the size-move ordering hypothesis (EXITSIZEMOVE before the last size: 2 of 200, harmless), any
+  regression from 077/130 (three builds behave alike), GDI and software-WPF panes (0 stale in ~600
+  resizes). Inventor's ribbon WPF is probably software-rendered. NEEDS either ~10 minutes of
+  Inventor on the server (seat) or data from the laptop while the window is stale: `xwininfo -root
+  -tree`, `tests/r174/wstate.exe "Autodesk Inventor" tree`, DPI settings, whether hovering the
+  viewport alone repairs anything (list in the issue). The exact 2/3 and 5/6 width boundaries in
+  the screenshot (= 96/144, 120/144) hint at a DPI path; not excluded.
+- 181 (Opus worker, wt/181, display :98): three defects of GPU-presented child windows found by
+  the 174 probes — grown strip garbage after the first present following a resize (10/10), a moved
+  pane not shown at its new place, dirty-rect presents invisible until an X event arrives (7/10).
+- Harness: run.sh refuses a prefix leased to another holder (a run without INV= had started
+  Inventor in another worker's prefix `inv`).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the

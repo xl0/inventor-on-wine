@@ -24,6 +24,12 @@ if [ -n "${INV:-}" ]; then B0=${WINE_BUILD:-}; eval "$(tools/prefix.sh env "$INV
 # Wayland run (eval "$(x/wayland.sh env)" first): no X display, Wine falls back to winewayland.drv
 W11=1; [ -z "${WAYLAND_DISPLAY:-}" ] || { W11=; unset DISPLAY; }
 W=${WINE_BUILD:-build}  # Wine build dir to run under
+# Never drive a prefix that is leased to someone else (the default prefix is inv: a run without INV=
+# once started Inventor in another worker's prefix).
+LH=$(awk -v n="${INV:-inv}" '$1 == n { print $2 }' x/leases 2>/dev/null || true)
+if [ -n "$LH" ] && [ "$LH" != "${PREFIX_HOLDER:-}" ] && [ "${INV_PREFIX:-prefixes/${INV:-inv}}" = "prefixes/${INV:-inv}" ]; then
+	echo "run.sh: prefix ${INV:-inv} is leased to $LH (set INV= to your prefix and PREFIX_HOLDER to your lease)" >&2; exit 2
+fi
 VM=; [ "$1" = --vm ] && VM=1 && shift
 S=${1:?usage: $0 [--vm] SCENARIO|all}
 # D: per-prefix output root (bin/, results/, inventor.log, SCENARIO/); prefixes/inv keeps inst/invscen itself
