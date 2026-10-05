@@ -477,14 +477,19 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   Running: Sonnet worker on inv2 doing the Inventor checks 175 / 181 / 173 still owed; the 174
   worker on inv3 (does the user's resize problem still reproduce on the new integ? bounded).
   User: wrap up — finish what is started (177 review, 191, these checks), no new issues.
-- 177 fixed on fix/177 (1 commit on integ cffd27540ee, b1e7b97cfed), in adversarial review.
+- 177 fixed, reviewed ("merge as is", no defect found), ON INTEG (local tip b1e7b97cfed = pushed
+  cffd27540ee + 1; not built/regressed yet: build-next is in use by the Inventor checks).
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
   but when it reads an X error _XError waits for that lock; the holder's reply is queued behind
-  it). Wine side: an XESetError hook on every display handles expected/ignored errors before
-  _XError takes the lock; expect_error keeps the user lock. gdistress openbox 66 of 80 → 79 of 80
-  (the one left is 191), +synchronous 0 of 12 → 12 of 12; no measurable cost. Review to weigh:
-  Xlibint.h in winex11, NVIDIA GLX next to the hook (untested by the worker).
-  libX11 report + reproducer + patch in issues/attachments/177-* — the user's to file.
+  it; introduced by libX11 83e1ba5, 2011). Wine side: an XESetError hook on every display handles
+  expected/ignored errors before _XError takes the lock. gdistress openbox 74 of 80 → 78 of 80
+  (rest is 191), +synchronous 0 → all; NVIDIA GLX stress 6 of 11 → 11 of 11; no measurable cost.
+  Decision: reviewer's optional leaf-mutex variant (inst/177-review/v2-leaf-mutex.patch) not
+  taken (pre-existing upstream race, larger diff); it is the upgrade if upstream objects to
+  LockDisplay in winex11. Still open by design: errors Wine neither expects nor ignores, and a
+  lock holder inside an Xlib call with async handlers (unreachable while cross-thread requests on
+  thread displays stay under win_data_mutex). libX11 report + reproducer + patch in
+  issues/attachments/177-* — the user's to file. Worker is correcting the texts per the review.
 - 191 (XIC destroyed by another thread during the owner's XFilterEvent; now the dominant
   leftover hang: 1 of 140 under openbox, 13 of 32 with +synchronous) + a look at 190 (XOpenIM
   double free): Opus worker on wt/191 (fix/191 off fix/177), Inventor-free.
