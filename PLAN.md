@@ -470,10 +470,17 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   regressions of 1757 (9 units differed in the loaded run — the 177 worker was building — and all
   are flaky on rerun on both builds: dxgi, mf, ntdll:change/exception, wininet:http,
   cryptowinrt). Waiting only for the seat: Inventor suite, push, rebuild build/.
-- 177 (Xlib hang: reader's _XError waits for the user lock that an X11DRV_expect_error region
-  holds across a reply wait): Opus worker started on wt/177 (fix/177 off integ cffd27540ee),
-  Inventor-free. Wanted: Wine-side fix for every expect_error region with a round trip, libX11
-  report if it is a library bug; then adversarial review.
+- 177 fixed on fix/177 (1 commit on integ cffd27540ee, b1e7b97cfed), in adversarial review.
+  Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
+  but when it reads an X error _XError waits for that lock; the holder's reply is queued behind
+  it). Wine side: an XESetError hook on every display handles expected/ignored errors before
+  _XError takes the lock; expect_error keeps the user lock. gdistress openbox 66 of 80 → 79 of 80
+  (the one left is 191), +synchronous 0 of 12 → 12 of 12; no measurable cost. Review to weigh:
+  Xlibint.h in winex11, NVIDIA GLX next to the hook (untested by the worker).
+  libX11 report + reproducer + patch in issues/attachments/177-* — the user's to file.
+- 191 (XIC destroyed by another thread during the owner's XFilterEvent; now the dominant
+  leftover hang: 1 of 140 under openbox, 13 of 32 with +synchronous) + a look at 190 (XOpenIM
+  double free): Opus worker on wt/191 (fix/191 off fix/177), Inventor-free.
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
