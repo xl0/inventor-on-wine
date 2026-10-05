@@ -500,6 +500,13 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   is late (bounded, inv2). This is now the main lead for the user's "rendering issues on resize".
   Open small items: one slow rubber-band session (71–87 fps after WM swaps, not reproduced);
   `uilat wmdrag` hits toolbar widgets in this layout; splitter drag across a tag change stops.
+- 174 lead (measured, issues/174 "Heal time after a resize"): not picom and not slow painting.
+  After the first ~3 large grows of a session (+450,+250) Inventor sits IDLE for ~5.0 s (4.97 /
+  4.99 / 5.16 s, 21 CPU ticks) with the Win32 window at an intermediate size, the X window at
+  the final size and paints pending, then repairs in a burst. The X window content before picom
+  is wrong the same way. Same on build-next and fix/174 (the jump-back fix doesn't address it);
+  build/ not measured. Smaller grows 0.06–0.9 s. Worker is taking backtraces during the wait to
+  find who waits for what (a 5 s timeout: Wine's or the application's?), bounded.
 - 177 fixed, reviewed ("merge as is", no defect found), ON INTEG (local tip b1e7b97cfed = pushed
   cffd27540ee + 1; not built/regressed yet: build-next is in use by the Inventor checks).
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
