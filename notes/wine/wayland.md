@@ -182,8 +182,7 @@ Drafts: 127 (opengl hang), 128 (VK_PROCESSKEY on every key), 129 (present rectan
 
 ## Lock order (157; branch fix/157, not on integ yet)
 win32u's locks come first, the driver's window data last:
-`client surfaces_lock (win32u window.c)` -> `user lock` -> `window surface list lock (dce.c surfaces_lock, since 171)` ->
-`window surface lock` -> `win_data_mutex` -> `pointer / keyboard /
+`client surfaces_lock (win32u window.c)` -> `user lock` -> `window surface lock` -> `win_data_mutex` -> `pointer / keyboard /
 text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
 132's `source_mutex` (wayland_remote.c) is a leaf: taken with no driver lock held or under win32u's client surfaces_lock.
 - Why this way round: win32u calls the surface flush with the window pointer (= user lock) held (`apply_window_pos` ->

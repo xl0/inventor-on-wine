@@ -1,5 +1,5 @@
 # 171 win32u: two threads changing the surface of one window corrupt the window surface list (NULL write in register_window_surface, lock leaked, later hang)
-Status: fixed (branch, not on integ) · Owner: worker 171 · Branch: fix/171 (3 commits on integ b5d75449ffe) · Found in: 157 (lockstress on the host Wayland session) · win32u, driver independent · upstream bug
+Status: fixed (branch, not on integ; reworked after review) · Owner: worker 171 · Branch: fix/171 (3 commits on integ b5d75449ffe, tip 545a8c7b1fb; first version = fix/171-v1, rejected) · Found in: 157 (lockstress on the host Wayland session) · win32u, driver independent · upstream bug
 
 ## Symptom
 A thread hangs forever in `pthread_mutex_lock(&surfaces_lock)` (dce.c: `register_window_surface` or
@@ -62,58 +62,115 @@ Thread 2: flush_window_surfaces <- NtUserPeekMessage, waiting for surfaces_lock
 The surface the updating thread removed (rdx, ...3f80) is the one the owner thread is still waiting to add. (In the
 157 evidence, `inst/157/evidence/171-fault.txt`, the registers read the same way: rdx/r13 = old, rsi/r12 = new.)
 
-## Fix (fix/171)
-- 49738642551 `win32u: Update the window surface list with the window lock held.` `register_window_surface` moves in
-  front of `release_win_ptr` in `apply_window_pos` (5 lines up), `destroy_window` and `destroy_thread_windows`. The list
-  now changes under the lock that protects `win->surface`, like every other field of the window: a surface is in the
-  list exactly while it is a window's surface. New nesting: user lock -> dce.c `surfaces_lock`. Safe because nothing
-  under `surfaces_lock` takes the user lock: `flush_window_surfaces` only calls `window_surface_flush` (surface lock,
-  NtGdi, driver flush), and a driver flush that took the user lock would already deadlock against
-  `update_surface_region`, which flushes with the window pointer held. Read: winex11 `x11drv_surface_flush` (X calls,
-  `try_set_window_hidden` = trylock, NtUserPostMessage = server call), winewayland `wayland_window_surface_flush`
-  (win_data + NtGdi), scaled / offscreen surfaces (NtGdi only). winemac not read.
-  The call sits at the end of the locked section, not at the swap: registering earlier lets a flushing thread pick up
-  the new surface while its owner still sets it up (measured: +11 % on a contended resize, gone at the end).
-- af812239de0 `win32u: Release a window surface that was set while the window is destroyed.` Found with the destroy
-  stress: UpdateLayeredWindow between `destroy_window` dropping the surface and `free_window_handle` installs a new one
-  that nobody releases (81 list entries left after 1500 create/destroy rounds, each flushed forever). `free_window_handle`
-  now drops whatever is there, under the lock that removes the handle.
-- 784c189d22e `user32/tests: Test UpdateLayeredWindow on a window of another thread.` (`test_layered_window_threads`):
-  update with move + resize while the owner thread doesn't process messages (deterministic; guards against "fixing" this
-  by forwarding to the owner), then 500 owner resizes against updates from the main thread with a third thread painting.
-  Windows: 6 of 6 runs pass (x64 and x86). On unfixed Wine the race part fails or hangs in 14 of 20 runs (it is a
-  stress, not deterministic).
+## Fix (fix/171, second version; the first one is kept as fix/171-v1 and must not be merged)
+- 6939f5b5a58 `win32u: Count the registrations of a window surface.` `register_window_surface` stays where upstream
+  calls it (after the window is released); `struct window_surface` gets `LONG registered` (after `ref`: fills padding
+  on 64-bit, no other field moves; WINE_GDI_DRIVER_VERSION 112 as for 062's fields) and dce.c does
+  `if (old && !--old->registered) list_remove(...)`, `if (new && !new->registered++) list_add_tail(...)` under
+  `surfaces_lock`. No lock is nested that wasn't before.
+- 9d6e6146deb `win32u: Release a window surface that was set while the window is destroyed.` `free_window_handle`
+  takes `win->surface` under the lock that removes the handle and unregisters + releases it after `user_unlock`
+  (UpdateLayeredWindow between `destroy_window` dropping the surface and the handle being freed installed one that
+  nobody released: 81 list entries left after 1500 create/destroy rounds).
+- 545a8c7b1fb `user32/tests: Test UpdateLayeredWindow on a window of another thread.` (`test_layered_window_threads`):
+  update with move + resize while the owner thread doesn't process messages (deterministic; guards against forwarding
+  to the owner), then up to 500 owner resizes against updates from the main thread with a third thread painting.
+  All waits bounded (10 s, ok()), 30 s deadline for the update loop, helper windows WS_EX_NOACTIVATE.
+
+Why the counter is right (derived again, not taken from the review):
+- Every change of `win->surface` happens under the user lock, so per surface S the changes form one sequence, and since
+  a window has one surface at a time it alternates: in, out, in, out... (S can come back: `get_window_surface` reuses the
+  window's surface when the size matches, a thread can hold such a stale choice; the driver returning its previous
+  surface is the same case). A change with old == new is neither (skipped in `register_window_surface`, and the
+  reference taken and dropped cancel out). The dummy surface is filtered before counting.
+- Each change is followed by one `register_window_surface` call from the thread that made it; the calls run under
+  `surfaces_lock` in any order. `registered` = executed ins - executed outs; the list operations happen exactly at
+  0 -> 1 (add, entry not linked) and 1 -> 0 (remove, entry linked), so the entry is never unlinked twice or linked
+  twice, whatever the order (out before in: 0 -> -1 -> 0, never listed).
+- Listed implies alive: `registered > 0` means some in has run whose matching out has not. Either that out's change
+  hasn't happened (S is still `win->surface`, which holds a reference) or it has and the thread that made it still
+  holds the reference it took over from the window: all four callers release it after their
+  `register_window_surface` call. So a surface is never freed while listed, and every call runs on a live surface
+  (the in is made by a thread that holds its own reference from `get_window_surface`).
+- When all calls have run: listed exactly if S is a window's surface. In between a surface can be the window's without
+  being listed yet, or listed while already replaced: both exist upstream (register after release) and only decide
+  whether one flush pass includes it.
+- Destroy racing an install: the install after `destroy_window` cleared the surface is an in whose out is
+  `free_window_handle`'s (2nd commit); no install can follow, the handle is gone under the same lock. Thread exit:
+  `destroy_thread_windows` nulls the handles and takes the surfaces in one locked pass; a pending in of another thread
+  is cancelled by its out, in either order.
+- Scaled wrappers (DPI): the window's surface is the wrapper, only it is registered; `scaled_surface_set_target` swaps
+  the driver surface inside without changing `win->surface` (old == new). Wrapper <-> bare driver surface switches are
+  ordinary out + in on two objects. Run in a 144 dpi prefix (gdb: both listed surfaces `scaled_surface_funcs`).
+- A driver handing one surface to two windows (none does) would still be handled: listed while any window has it.
 
 Rejected: forwarding UpdateLayeredWindow to the owner thread (Windows doesn't; breaks callers whose owner doesn't pump);
-a registration counter per surface under `surfaces_lock` alone (works out of order without the new nesting, but adds a
-field to the driver-visible `struct window_surface` and leaves the list out of step with the windows).
+registering under the user lock (first version, see below).
 
-## Verification (final build wt/171-build = 784c189d22e; Xvfb :1400/:1401, prefixes under inst/171/, logs inst/171/TAG/)
-`tests/r171/run.sh BUILD TAG RUNS TIMEOUT EXE ARGS` (own Xvfb, watchdog, gdb backtraces of stuck runs).
-| probe | build/ (integ b5d75449ffe) | master 4e819f054dd | fix |
-|---|---|---|---|
-| `ulwrace race 1500 1` (owner resizes, other thread updates, 1 painting thread) | 46 of 50 runs FAULT + hang | - | 199 of 200 ok, 0 faults, 0 hangs (1 run: BadWindow death, 173) |
-| `ulwrace race 5000 1` | 10 of 10 FAULT | 10 of 10 FAULT | 10 of 10 ok (first fix build) |
-| `ulwrace race 5000 0` (two threads only) | 10 of 10 ok | - | - |
-| `ulwrace destroy 1500/2000 1` (windows created and destroyed under updates) | 6 ok, 4 stuck (flush of a freed surface) of 10 | - | 20 of 20 ok |
-| surfaces left in the list after `destroy 1500 1` (`tests/r171/leak.sh`) | - | - | 0 (81 with the first commit only) |
-| `ulwrace exit 2000 1` (windows left to the thread exit) | 10 of 10 ok | - | 10 of 10 ok (first fix build; weak probe: the updating thread rarely replaces the surface) |
-| `tests/r157/lockstress.exe 3000 1 nogl` | 8 ok, 2 BadWindow deaths (173) of 10; 15000 ops: 5 ok, 1 BadWindow of 6, no hang | - | 10 of 10 ok (first fix build: 9 ok, 1 BadWindow) |
-| new user32:win subtest alone, unfixed vs fixed | 14 of 20 runs fail/hang | - | 20 of 20 pass |
-lockstress on Xvfb does not trigger 171 at these sizes (on the host Wayland session it was 5 of 32 at 15000 ops).
+## Review of the first version (inst/171-review/, 2026-10-04) and what was wrong
+fix/171-v1 moved `register_window_surface` in front of `release_win_ptr`: user lock -> dce.c `surfaces_lock`. My argument
+"nothing under `surfaces_lock` takes the user lock" only covered what the lock holder calls itself. `flush_window_surfaces`
+holds the list lock while it waits for each surface mutex, and upstream has holders of a surface mutex that take the user
+lock (draft 176): `NtUserUpdateLayeredWindow` (surface locked -> NtGdiAlphaBlend from a window DC with a dirty visible
+region -> `update_visible_region` -> `get_win_ptr`) and `move_window_bits_surface` (-> NtGdiSetDIBitsToDeviceInternal ->
+`update_dc` -> in winex11 `X11DRV_GetDC` waits for win_data, held by `X11DRV_WindowPosChanged` waiting for the user lock).
+Found by the reviewer:
+1. user -> list lock -> surface mutex -> user: `rv.exe wdc 12` hangs 10 of 10 on v1, 0 of 10 on integ; three threads,
+   none touching another thread's window.
+2. user -> list lock -> surface -> win_data -> user on winex11 (once in 92 loaded runs).
+3. Every USER call in the process waits behind whole flush passes: `rv.exe lat 12 8`, GetWindowLongW on another thread's
+   window max 454-1343 ms (integ 0.5-1.5 ms). My benchmark missed it: its painters call GetDC per paint and were
+   throttled by the same lock.
+4. winewayland and winemac take their window data in the flush callback: the same widening there (derived).
+Also from the review: drafts 176 (win32u updates a window DC with a surface locked: an upstream user -> surface -> user
+cycle on one window) and 177 (Xlib: `X11DRV_ThreadDetach` -> XSync -> `_XError` waits for the display lock held by a thread
+in `create_shm_image` across its own XSync). Not fixed here.
 
-Conformance (`tools/regress.sh unit`, both arches, vs deps/regress/b5d75449ffe...-h26): user32:win fail 4 (base 4; the same
-two lines, win.c:10998/10999 = base 10890/10891), user32:msg fail 1 (1), user32:sysparams fail 6 (6), gdi32:dc fail 3 (3),
-user32:dce, user32:input, win32u:win32u, d3d9:device pass. 0 worse.
+## Verification (second version, wt/171-build = 545a8c7b1fb; Xvfb :1400 fix / :1401 build/, prefixes inst/171/pfx-*)
+`tests/r171/run.sh BUILD TAG RUNS TIMEOUT EXE ARGS`; `rv.exe` = the reviewer's probe (inst/171-review/rv.c).
+| probe | build/ (integ b5d75449ffe) | fix |
+|---|---|---|
+| `ulwrace race 1500 1` | 27 of 30 FAULT | 200 of 200 ok |
+| `ulwrace destroy 1500 1` | 10 of 10 ok this time (before the reboot 4 of 10 stuck) | 20 of 20 ok |
+| surfaces left after `destroy 1500 1` (`tests/r171/leak.sh`) | - | 0 |
+| `ulwrace exit 2000 1` | (10 of 10 ok before) | 10 of 10 ok |
+| 144 dpi prefix (scaled wrapper surfaces): `race 1500 1`, `destroy 1500 1`, leak | - | 30 of 30, 10 of 10, 0 left |
+| `rv.exe wdc 12` (review finding 1; v1: 10 of 10 HANG) | 10 of 10 DONE | 10 of 10 DONE |
+| `rv.exe lat 12 8`, GetWindowLongW on another thread's window, 3 runs (v1: max 454-1343 ms) | max 2706, 3148, 264 us; calls > 1 ms: 7, 5, 0 | max 506, 222, 562 us; calls > 1 ms: 0, 0, 0 |
+| `rv.exe stress 20 rgn gl` | 6 of 6 FAULT (171) | 6 DONE, 4 HANG of 10; with stacks 5 DONE, 3 stuck of 8, all three = 177 |
+| `rv.exe stress 20 wdc rgn` | 5 FAULT, 5 HANG of 10 | 10 of 10 HANG = 176 (owner in `update_surface_region` wants the surface, updater in NtGdiAlphaBlend -> `get_win_ptr` wants the user lock; inst/171/v3-stress-hold/stuck-1.txt) |
+| `tests/r157/lockstress.exe 3000 1 nogl` | (8 ok, 2 BadWindow of 10 before) | 9 ok, 1 BadWindow death (173) of 10 |
+The 177 hangs (stacks inst/171/v3-gl-hold/stuck-{1,3,8}.txt: thread 2 `X11DRV_ThreadDetach -> XSync -> _XError` in
+pthread_cond_wait, another thread in `create_shm_image <- X11DRV_CreateWindowSurface`) are at the rate the review measured
+for variants that don't serialize surface changes behind flush passes (about 30 %); v1 hid most of them (6 of 80) by
+doing exactly that. integ can't be compared with this stress: it faults (171) first.
 
-Inventor (inv4, :101, fix build): suite 12 PASS + export failing only "IGES export: 80-column records" (known state of that
-prefix), Home page and Assistant pane render, no dialogs. inv4 is back on build/, Inventor closed, lease released.
+Conformance (`tools/regress.sh unit`, 2 runs per arch, vs deps/regress/b5d75449ffe...-h26, the newest): user32:win fail 4
+(base 4, the same two lines), user32:msg fail 1 (1), user32:sysparams fail 6 (6), gdi32:dc fail 3 (3), user32:dce,
+user32:input, win32u:win32u, d3d9:device pass. 0 worse.
 
-Cost: single thread, no contention (`ulwrace bench 2000 0`, 5 interleaved runs each, loadavg 10-16): resize with a new
-surface 393 us on build/ vs 394 us, UpdateLayeredWindow 147 vs 149 us, create + destroy 1215 vs 1217 us. With one thread
-painting and pumping all the time (`bench 2000 1`): resize 512 vs 528 us (median 514 vs 515), update 171 vs 167 us,
-create + destroy 1682 vs 1641 us. Inventor suite, part / asm scenario totals, warm runs interleaved F B F B (loadavg
-10-17): fix part 2.8 2.8 2.8 3.0 2.9 s, asm 3.8 3.9 3.7 4.1 4.2 s; build/ part 3.1 3.0 3.0 2.9 s, asm 3.9 3.9 4.0 4.2 s.
+Windows: see "Windows runs of the test" below. Inventor: not run in this round (licence seat elsewhere); the first
+version passed the suite on inv4, the coordinator runs it for the second one in the merge round.
+
+### Windows runs of the test (Win11 VM, 2026-10-04 evening)
+The VM was unstable after the host reboot: `vm/run.sh` boots Windows to the logon, then qemu-system-x86_64 10.2.1 dies with
+SIGSEGV (seen with qemu in the foreground: "Segmentation fault (core dumped)"; "previous shutdown was unexpected" in the
+Windows event log for boots from 19:34 on, i.e. also for other workers' starts; lifetimes 35 s to 11 min; after two failed boots Windows sits in its recovery screen, where the VM
+stays up; `qemu-img check`: 18 leaked clusters, no errors). Started from a private copy of the launcher without the
+virtio-fs device (inst/171/vmrun-novfs.sh, no Z: share; winrun doesn't need it) it stayed up for the whole session
+(> 50 min) and all numbers below are from that session. It is still running that way.
+- New subtest alone (test build with an `r171` argument, inst/171/user32_test_r171*.exe): 5 of 5 pass on x86, 5 of 5 on
+  x64, 4-6 s each. (In the crashing session before: x64 3 of 3; x86 1 pass, 1 timeout after 120 s, 1 run where the owner
+  thread had no window after 10 s, then qemu segfaulted during the next run: not reproduced on the stable VM.)
+- Whole user32:win, integ and fix test binaries alternating, both arches:
+  | | runs | clean | test_mdi (win.c:2750, scroll info) | other |
+  |---|---|---|---|---|
+  | integ (build/) | 18 | 11 | 6 runs | 1 run: win.c:13655, 13657 |
+  | fix | 20 | 12 | 6 runs | 1 run: test_mouse_input (11 lines); 2 runs: test_topmost (win.c:12459, 12462, once also 12733) |
+  The new subtest never failed. test_mdi and test_mouse_input run before it. test_topmost runs after it: its two
+  failures were consecutive runs (x64, then x86) 6-9 minutes after the VM boot and didn't come back in the 16 fix runs
+  after that; integ has no test_topmost failure in 18 runs but another late one. I can't tie it to the new subtest (its
+  windows are gone and never activated when it returns) and can't rule it out with these numbers.
 
 ## Not covered (existing, upstream)
 - winex11 dies with BadWindow (X_GetProperty <- XGetWMHints <- handle_wm_hints_notify <- X11DRV_PropertyNotify) when

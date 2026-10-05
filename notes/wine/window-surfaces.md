@@ -124,14 +124,17 @@
   process"), so a foreign cursor couldn't be created there: the pointer stayed empty over
   WebView2/Chromium children (085). fix/085 posts it to the cursor's owner thread, whose
   winex11 XDefineCursor()s the foreign whole window. Check the screen cursor with x/xcur.c.
-- Locking (171): `win->surface` and the process' list of window surfaces (dce.c `window_surfaces`, what
-  `flush_window_surfaces` walks) change together with the window pointer (= user lock) held:
-  `register_window_surface` is called under it, in `apply_window_pos`, `destroy_window`,
-  `free_window_handle` and `destroy_thread_windows`. Order: user lock -> dce.c `surfaces_lock` -> a surface's
-  lock -> driver. `flush_window_surfaces` holds `surfaces_lock` over the driver flushes, so a driver flush must
-  never take the user lock (it couldn't before either: `update_surface_region` flushes with the window
-  pointer held). A surface is in the list exactly while it is some window's `win->surface`; the list holds
-  no reference.
+- Surface list (171): `win->surface` changes with the window pointer (= user lock) held, but the process' list of
+  window surfaces (dce.c `window_surfaces`, what `flush_window_surfaces` walks) is updated after the release, as
+  upstream does: `register_window_surface` in `apply_window_pos`, `destroy_window`, `free_window_handle`,
+  `destroy_thread_windows`. With two threads on one window the calls for a surface come in any order, so the
+  surface counts them (`registered`, under dce.c `surfaces_lock`): listed while registrations > unregistrations.
+  The list holds no reference; a listed surface is alive because whoever still owes the unregistration holds one.
+  Don't move the registration under the user lock (171's first fix did): `flush_window_surfaces` holds
+  `surfaces_lock` while it waits for every surface mutex, and holders of a surface mutex take the user lock
+  (176: `UpdateLayeredWindow` from a window DC, `move_window_bits_surface`; in winex11 also win_data), so user ->
+  list lock closes deadlocks (10 of 10 in the review's probe) and makes every USER call in the process wait for
+  whole flush passes (GetWindowLongW up to 1.3 s). dce.c `surfaces_lock` is taken with no user lock held.
 - `UpdateLayeredWindow` is the one caller of `apply_window_pos` that runs on a thread that doesn't own the
   window (Windows too: direct, no messages to the owner, works while the owner doesn't pump; `SetWindowPos`
   goes through the owner's message loop on both; Wine's `SetLayeredWindowAttributes` surface update is posted

@@ -8,7 +8,7 @@ n = 0
 e = head['next']
 while e != head and n < 10000:
     s = (e.cast(gdb.lookup_type('char').pointer()) - off).cast(ws.pointer())
-    print("surface %s hwnd %s ref %d rect %s" % (s, s['hwnd'], int(s['ref']), s['rect']))
+    print("surface %s %s hwnd %s ref %d rect %s" % (s, s["funcs"], s["hwnd"], int(s["ref"]), s["rect"]))
     n += 1
     e = e['next']
 print("window_surfaces: %d entries" % n)
