@@ -85,7 +85,7 @@
   GravityNotify, ReparentNotify, `get_event_win_data`). The host window parent (`data->parent`: WM frame / embedder,
   owner-thread data) cannot be released by the other thread, which only sets `parent_invalid`; the new window is a
   child of the root until its ReparentNotify, so the owner drops the stale parent at the first position event (184).
-  Still open: the surface flush draws into the old window (X error -> 177), the window's XIC is destroyed from the
+  Still open: the surface flush draws into the old window (an X error, harmless since 177), the window's XIC is destroyed from the
   wrong thread (191).
 - Lock-order debug build: tests/r173/lockorder-debug.patch (+ lockorder.py, cycles.py) reports every win32u / winex11
   mutex taken while another is held, with the call chain, and X errors with a backtrace; repros tests/r173/iconlock.c,
@@ -97,7 +97,8 @@
   `lock_xid_alloc( display )` / `unlock_xid_alloc( display )` (= XLockDisplay; `create_gc()`, `create_pixmap()`,
   xrender's `create_picture()` do it; not in synchronous mode). Only requests without a reply belong inside: a thread
   that waits for a reply with the display's user lock held is half of 177 (as X11DRV_expect_error regions are, also
-  without synchronous mode: `X11DRV_GetImage`). XUnlockDisplay itself calls LockDisplay, where Xlib's sequence sync
+  without synchronous mode: `X11DRV_GetImage`; since 177 the other half, a thread that reads an error, no longer
+  waits for the lock when Wine expects or ignores the error: xlib-locking.md). XUnlockDisplay itself calls LockDisplay, where Xlib's sequence sync
   would wait for a reply with the user lock held, so lock_xid_alloc syncs first when `NextRequest -
   LastKnownRequestProcessed > 0x8000`. Xlib's locks are not fair: while one thread allocates at a high rate, other
   threads' Xlib calls on that display can wait milliseconds on a busy host. The user lock makes a locked request safe from unlocked allocators

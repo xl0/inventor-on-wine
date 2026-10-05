@@ -1,0 +1,58 @@
+--- a/src/XlibInt.c
++++ b/src/XlibInt.c
+@@ -1488,15 +1488,27 @@
+ 		.error_thread = xthread_self(),
+ 		.next = dpy->error_threads
+ 	}, **prev;
++	Bool user_locked = False;
++
+ 	dpy->error_threads = &thread_info;
+-	if (dpy->lock)
++	/*
++	 * If another thread holds the user lock, it took it while we were
++	 * waiting for a reply or an event with the display unlocked. Don't
++	 * wait for it: it may be waiting in _XReply for a reply that it
++	 * only gets once we have processed ours.
++	 */
++	if (dpy->lock && (dpy->lock->locking_level == 0 ||
++			  xthread_equal(dpy->lock->locking_thread,
++					xthread_self()))) {
+ 	    (*dpy->lock->user_lock_display)(dpy);
++	    user_locked = True;
++	}
+ 	UnlockDisplay(dpy);
+ #endif
+ 	rtn_val = (*_XErrorFunction)(dpy, (XErrorEvent *)&event); /* upcall */
+ #ifdef XTHREADS
+ 	LockDisplay(dpy);
+-	if (dpy->lock)
++	if (user_locked)
+ 	    (*dpy->lock->user_unlock_display)(dpy);
+ 
+ 	/* unlink thread_info from the list */
+--- a/src/locking.c
++++ b/src/locking.c
+@@ -470,17 +470,18 @@
+     xmutex_lock(dpy->lock->mutex);
+ #endif
+ 
+-    if (dpy->lock->locking_level > 0)
+-    _XDisplayLockWait(dpy);
+-
+     /*
+-     * Skip the two function calls below which may generate requests
+-     * when LockDisplay is called from within _XError.
++     * When LockDisplay is called from within _XError, don't wait for a
++     * user lock that another thread took in the meantime, and skip the
++     * two function calls below which may generate requests.
+      */
+     for (ti = dpy->error_threads; ti; ti = ti->next)
+ 	    if (ti->error_thread == xthread_self())
+ 		    return;
+ 
++    if (dpy->lock->locking_level > 0)
++    _XDisplayLockWait(dpy);
++
+     _XIDHandler(dpy);
+     _XSeqSyncFunction(dpy);
+ }

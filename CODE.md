@@ -461,6 +461,12 @@ launches; previous device-limit errors do not authorize pausing another device.
   `loop N` counts lost positions; 184), `r184/tray.c` (a notification icon, to look at XEmbed docking).
   inst/182/: runner with gdb stacks + mutex owners (`run.sh`, `mowner.py`), `classify.py` (sorts hang dumps: 177 / 188 /
   190 / 191), `ab.sh` (stress alternately on two builds), libX11 1.8.13 builds (as is with debug info, fixed, tracing).
+  `tests/r177/`: Xlib error vs. display lock deadlock (177): `xerrlock.c` (plain Xlib: reader thread with failing requests +
+  XSync against a thread that syncs inside XLockDisplay; modes for the workarounds (XESetError hook, async handlers) and a
+  per-request cost bench), `cost.c` (us per GetPixel / BitBlt from the screen DC, per new window surface), `expect.c`
+  (expected XGetImage BadMatch errors still caught). inst/177/: `x.sh` (Xvfb :1770-:1777), `run.sh` (182's watchdog runner,
+  `X11LIB=DIR` = another libX11), `ab.sh` (any probe alternately on build-next and wt/177-build), `cost.sh`, `ut.sh`,
+  libX11 1.8.13 with the proposed `_XError` patch (`x11-build-fixed`). Xlib locking facts: notes/wine/xlib-locking.md.
   `tests/r175/`: owned windows vs the window manager (175): `owned.c` (owner + owned layered popup / dialogs / tool
   window / unmanaged popups, cross-process dialog; commands from a file; `auto` = Windows semantics around minimize),
   `scen.sh` (owner moved between desktops, who follows, what stays on screen; `pix.py`), `matrix.sh` (4 WM configs,

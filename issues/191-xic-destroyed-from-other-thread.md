@@ -39,3 +39,14 @@ inst/182/x.sh start                                   # :1482 :1483 openbox
 WINEDEBUG=err+all,+seh inst/182/gs.sh fix 1483 seh 60 20 6     # HANG lines; inst/182/classify.py out/*-hang.txt: "selfowner"
 ```
 (the same runs also hit 177 and, when the threads start together, 190).
+
+## With 177 fixed (177 worker, 2026-10-05; fix/177 b1e7b97cfed on integ cffd27540ee)
+- A fast repro once 177 is out of the way: `WINEDEBUG=err+all,+seh,+synchronous tests/r182/gdistress.exe 20 6 SEED` under
+  openbox hangs with this shape in 13 of 32 runs (integ: 0 of 12 get that far, all 177). Without synchronous mode:
+  integ 4 of 80, fix/177 1 of 140. `BUILDS=fix WINEDEBUG=err+all,+seh,+synchronous inst/177/ab.sh 1775 TAG 10 20 6`
+  (inst/177/x.sh start; :1774-:1777 openbox).
+- 7 of 7 hung runs traced with `+seh` have exactly one `handle_syscall_fault` in libX11's XFilterEvent (+0xe3 five
+  times, +0x88 twice; the distribution's 2:1.8.13-1, base from the XCheckIfEvent frame of the gdb dump).
+- Only the distribution's libX11 binary faults: the same Wine build on an own build of the same source
+  (inst/182/x11-build, `X11LIB=... inst/177/run.sh`) 10 of 10, on the build with 177's `_XError` patch 10 of 10. The
+  use after free is there all the same (by reading); whether the stale node faults depends on the binary.
