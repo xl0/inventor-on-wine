@@ -489,6 +489,17 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   state update (4 of 2854 in a trace). Whether this explains the user's picture is unproven; the
   data list to collect on the laptop is at the end of issues/174. Fact: Inventor has one client X
   window (the graphics view); ribbon, browser, tabs are in the window surface.
+- Inventor checks on build-next (Sonnet worker, issues 175 / 181 / 173 have the details):
+  175 PASS (owned popups follow across awesome tags, 10 of 10 shots clean; tooltips, drop-downs,
+  marking menu, dialogs on the right tag), 173 PASS (orbit 56.6 vs 53.3 fps, pan equal, 11 min
+  mixed session clean), 181 PASS for final content, rubber band 117–119 fps on both builds,
+  splitter drag 55–60 vs 47 fps. Extra WM_PAINT: not measurable with the existing tools, no fps
+  effect. FOUND: under awesome + picom, transient wrong content after a resize (white viewport,
+  duplicated ribbon fragments) for 0–4.2 s, worst healed by 12 s; without picom final after 0.6 s.
+  Not compared with build/ → the 174 worker is measuring build dependence and where the content
+  is late (bounded, inv2). This is now the main lead for the user's "rendering issues on resize".
+  Open small items: one slow rubber-band session (71–87 fps after WM swaps, not reproduced);
+  `uilat wmdrag` hits toolbar widgets in this layout; splitter drag across a tag change stops.
 - 177 fixed, reviewed ("merge as is", no defect found), ON INTEG (local tip b1e7b97cfed = pushed
   cffd27540ee + 1; not built/regressed yet: build-next is in use by the Inventor checks).
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
