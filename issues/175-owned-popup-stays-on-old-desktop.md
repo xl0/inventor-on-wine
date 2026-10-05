@@ -325,3 +325,23 @@ On inv3 with wt/175-build (`tests/r175/wm.sh :100 awesome picom`, back to openbo
   the owner's tag. Exception: windows of other processes (above).
 - A dialog on several tags that include the owner's first one follows a real move of the owner and is then on
   that one tag (EWMH has one desktop per window).
+
+## Inventor check on integ cffd27540ee (2026-10-05, inv2 :99, build-next, awesome 4.3 + picom --backend glx --vsync --no-use-damage, 144 DPI)
+Part box.ipt open, maximized. Evidence in inst/checks/175/ (screenshots show the account name: not for git).
+- xprop of the two splitter popups (5x910, DIALOG): managed (not override-redirect), depth 32, `WM_TRANSIENT_FOR` = main window,
+  `_NET_WM_WINDOW_TYPE_DIALOG`, `_NET_WM_STATE_SKIP_TASKBAR`, `_NET_WM_DESKTOP` = the main window's, no `_NET_WM_WINDOW_OPACITY`
+  on client or awesome frame (xprop-before.txt). Application Options and the Measure panel's four border popups: same
+  (transient for the main window / for the mini frame, desktop of Inventor).
+- Main window tag 1 -> 2 -> 1, 5 cycles (twice: first awesome, then a fresh awesome after the coordinator's note about stray
+  awesome-client calls): the splitters (awesome clients) were on the main window's tag every time; the screen of the tag
+  left was identical to an empty tag in 10 of 10 shots (0 differing pixels below the wibar); on the new tag the hovered
+  splitter bar (dark, by design) is at the pane border (x 242-244). Restored (floating 1300x800) window moved to tag 3:
+  splitters at the pane borders (441, 1264) and followed. **PASS.**
+- Mouse held on the splitter (live pane resize happens during the drag; Inventor shows no separate outline), tag changed
+  with the button down: old tag empty; the drag was not continued on the new tag (the pane stayed where it was). Not a clear
+  result either way; the pane border and its popup agreed afterwards (popup x 307 for a pane border at 309).
+- With Inventor on tag 2 and tag 2 viewed: the tooltip (Extrude), a ribbon drop-down (Start 2D Sketch), the marking menu /
+  context menu (right click in the viewport) and Application Options (centered over the main window, DIALOG transient, desktop
+  of Inventor) all appeared at the right place on that tag. **PASS** (by screenshots I looked at).
+- Not done: undocked browser (mini frame chain) moved with the window (the Measure panel's mini frame was only listed, on
+  the right tag, not moved separately); dialog opened while another tag is viewed.

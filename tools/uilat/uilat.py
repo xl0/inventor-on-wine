@@ -447,6 +447,26 @@ def run(S, a, pids):
         S.button(2, 0)
         if mod: S.key('Shift_L', 0)
 
+    elif sc == 'split':
+        # Drag the splitter between browser pane and viewport right by 300 px; tracks the border column on a 1-row strip.
+        y, bx = 600, 150
+        S.move(bx, y); time.sleep(0.3)
+        ref = S.grab((bx, y, 400, 1))[0].astype(np.int16)
+        bg = ref[10]
+        b = int(np.argmax(np.abs(ref - bg).max(axis=1) > 6)); x0 = bx + b  # first column that is not browser background
+        strip = (bx, y, 800, 1)
+        def tr(img):
+            d = np.abs(img[0].astype(np.int16) - bg).max(axis=1) > 6
+            return bx + int(np.argmax(d)) if d.any() else None
+        n = int(a.hz * a.secs)
+        S.move(x0 + 2, y); time.sleep(0.3); S.button(1, 1); time.sleep(0.2)
+        path = [(x0 + 2 + round(i * 300 / n), y) for i in range(1, n + 1)]
+        res['drag'] = drag(S, path, a.hz, strip, tr) + (0,)
+        S.button(1, 0); time.sleep(0.5)
+        S.move(x0 + 302, y); S.button(1, 1); time.sleep(0.2)  # back
+        for i in range(20): S.move(x0 + 302 - (i + 1) * 15, y); time.sleep(0.03)
+        S.button(1, 0)
+
     elif sc in ('wmdrag', 'superdrag', 'xmove'):
         # Inventor restored (not maximized); its caption strip at y = caption_y of the frame.
         fr, geo = frame_of(a.display)

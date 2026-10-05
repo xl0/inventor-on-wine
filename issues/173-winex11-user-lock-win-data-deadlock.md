@@ -300,3 +300,16 @@ run.sh / batch.sh / ls.sh / x.sh / sm.sh (copies of inst/173/: watchdog runner w
 (no WM) / :1411 (openbox), lockstress loop, X servers, size-move table). `tests/r182/xallocid.c`, `tests/r183/settext_race.c`,
 `tests/r184/` (vstate.c, parent-invalid-try.patch) belong to the drafts. Builds: wt/173-build (fix/173), wt/173-dbg
 (detached: fix/173 + debug patch uncommitted) / wt/173-dbg-build.
+
+## Inventor check on integ cffd27540ee (2026-10-05, inv2 :99, build-next = second version)
+- uilat on build-next vs build/ (fresh Inventor each): rubber 118.7 / 118.7 / 116.5 fps (build/ 118.5 / 115.2 / 118.7), lag p50 2.0 vs 2.1 ms;
+  orbit 56.6 vs 53.3, pan 60.1 vs 60.1; splitter drag 59.6 / 54.7 vs 47.6 / 47.4 fps. No cost from the series visible. Numbers
+  in inst/checks/uilat/ (summary.txt, log.txt, *.out). `view` scenario: PASS (open + SaveAsBitmap 1621x884).
+- Mixed UI session, 11 min 46 s (07:09:48-07:21:34) on build-next with `WINEDEBUG=-all,err+all` (the default run.sh log is `-all`
+  and would show nothing): per round all ribbon tabs, Shift+MMB orbit in the viewport, wheel zoom, Application Options open/close,
+  Ctrl+O open dialog/Esc; after 4 min a drawing (Drawing1) opened via COM (dim141's later step failed with E_INVALIDARG from
+  Documents.Open, scenario problem, the drawing itself was open), 3 more minutes on the drawing, then the part again: 43 rounds,
+  Inventor alive at every one, no hang. New lines in inventor.log: 332, none of x11drv/win32u/X protocol/Bad* (0 matches);
+  the err: lines are the known ones (TokenSecurityAttributes, RoGetActivationFactory, ole class not registered, d3d state
+  table). **PASS.** The first attempt of the session (with `-all`) is not evidence for the log part. rubber after the session: 118.7 / 114.5 fps.
+- Not done: wmdrag with a dialog (scenario can't find a free caption spot, see 181); lock-order debug build not used.

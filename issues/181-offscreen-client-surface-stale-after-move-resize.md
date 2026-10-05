@@ -189,3 +189,37 @@ Inventor's viewport (D3D11 child): defect 1 after every growth until its next fr
 Its WPF panes are most likely software-rendered (174), so defect 3 concerns other WPF / D3D9 applications. WebView2
 children are other processes' client surfaces: defect 2's first commit. The stale ribbon / browser of 174's report is
 not explained by any of this; 186 is the lead found here.
+
+## Inventor check on integ cffd27540ee (2026-10-05, inv2 :99, build-next)
+Evidence: inst/checks/181/ (screenshots, steps.txt, heal-*/, m-*.png; they show the account name: not for git). Drives: Mod4+right-button
+drags of a window corner under awesome 4.3 (rz.sh), 10 drags per series; ck.sh = screenshot with the pointer parked, again after 8 s,
+again after a hover sweep over the window; heal.sh = screen sampled every 0.3 s after the release. The first series
+ran while another worker's awesome-client calls could reach my awesome (geometry jumped between steps once): discarded and repeated
+in a fresh awesome (r-* files); the picom / no-picom conclusions below are from the repeats unless said.
+- Viewport, ribbon, browser, Home/Assistant (WebView2) after resizes (grow, shrink, from every corner), maximize/restore x 5,
+  tiling layout changes (tile, tile.left, tile.bottom, max, floating): **final content correct every time**, no stale/black
+  region left after the settle; hover sweep changed only the status bar (~300 px).
+- **Transient wrong content after a resize, FAIL (needs a look, not root-caused):** with picom, `br -500 -300` after a grow (1300x850 ->
+  800x550) showed at +3.5 s a white viewport and white Assistant pane, duplicated ribbon fragments in the title/clock area
+  (inst/checks/181/m-r-pc02.png, left = +3.5 s, right = +12 s) and healed by itself (no input) within 12 s; 211099 px differed
+  between +3.5 s and +12 s. Seen again in the first series (pcs-02: Assistant content laid out for the old size, healed in <12 s;
+  pcr-04: garbage in the viewport that survived a hover sweep until the next resize, 39024 px, m-pcr04.png; npc-05/06 without
+  picom: white viewport + black right pane at +3.5 s). The `heal.sh` repeats were much better: without picom the screen equals
+  its final state 0.6 s after the release in 5 of 5 (first sample 0.3 s still differs), with picom 0 s to 4.2 s (grow
+  1000x700 -> 1300x850: wrong until 2.2 s, 35136 px until 4.2 s; two shrinks 0 differing at the first sample). So: sometimes
+  seconds of white/black/duplicated pieces after a resize, always repaired without input. Compare with build/ not done.
+- Splitter drag (uilat `split`, new scenario in tools/uilat/uilat.py: 300 px at 120 Hz, frames of a 800x1 strip) build/ vs
+  build-next, fresh Inventor each: 47.6 / 47.4 fps vs 59.6 / 54.7 fps. The "border lag" of this scenario is meaningless (the
+  tracker saw 4-8 distinct border positions in 4 s on both: the pane layout is redone at ~1.5 Hz during the drag, Inventor
+  200% CPU on both). No regression seen.
+- uilat `rubber` (fresh Inventor, setup, 120 Hz): build/ 118.5 / 115.2 / 118.7 fps, lag p50 2.1 ms, step latency p50 5.0 ms,
+  settle p50 23 ms; build-next 118.7 / 118.7 / 116.5 fps, lag p50 2.0 ms, latency 4.8 ms, settle 23.6 ms (file's base
+  115-119). After a 12 minute mixed session on build-next 118.7 / 114.5. orbit / pan: 53.3 / 60.1 (build/) vs 56.6 / 60.1 (next);
+  hover settle 496 vs 494 ms. **PASS, no difference.**
+- **One odd run, FAIL-ish, not reproduced:** in the Inventor session that had been through the awesome + picom checks and a
+  window-manager swap back to openbox, `rubber` gave 85.0 / 87.5 / 74.4 / 70.8 fps and step settle ~990 ms (continuous
+  damage in the watched rect); inst/checks/uilat/n-rubber*.out. A fresh Inventor on the same build gave 117-119; an attempt to
+  reproduce via awesome + picom + swap was not completed. Cause unknown (WM swap with a live Inventor? picom killed?).
+- Extra WM_PAINT for a moved GPU child (item 6): not measurable with the existing tools in Inventor (no per-window WM_PAINT counter
+  exists for Inventor's viewport); only the fps effect above, which shows none.
+- Not done: wmdrag (the scenario's caption point hit toolbar widgets in this Inventor layout; frames=1).
