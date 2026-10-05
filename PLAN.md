@@ -417,6 +417,17 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   (171 + 173 + 157); merge after (coordinator reads the delta). Kept deliberately: one extra
   WM_PAINT for a moved GPU child (Windows sends none) — re-measure in Inventor.
 
+- 175 reworked and ON INTEG (local): acts only on a real change of the owner's desktop, moves only
+  managed owned windows that were on the owner's previous desktop, follows child-window owners via
+  GA_ROOT; a followed window is recorded on the new desktop at once (two quick owner moves: 0 of 75
+  left behind, 15-17 of 25 without that). Windows of other processes are still requested
+  unconditionally. awesome ± picom 0 of 20 left behind; openbox: a second-level dialog once in 10
+  (draft 179, not a missed follow). Minimize/restore under awesome: base 1 of 352 incomplete,
+  patched 6 of 624 (p = 0.43; draft 178's race). Opacity commit unchanged. Inventor not checked.
+- integ local = b5d75449ffe + 171 (3) + 173 (6) + 157 (7) + 175 (2) = tip ed0755113c0. Building it
+  in build-next/ and running the full regress now; the Inventor suite needs the seat, then push
+  and rebuild build/. Still to come into this round: 181 (corrections), 182/184.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
