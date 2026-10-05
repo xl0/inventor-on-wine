@@ -346,6 +346,13 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   from the running VM — the Windows VM died several times while workers shared it); worker rule:
   the VMs are shared, never restart or kill them.
 
+- 157 re-review done: all six earlier findings closed, commits 1-6 merge as is. Commit 7
+  (role-less surfaces) re-flushes a hidden layered window at every idle (810 ms CPU in a 2 s probe
+  vs 0 on integ): report the flush as done + expose when the subsurface role arrives. Worker
+  fixing; then merge (coordinator reads the delta). Draft 185: mutter 50.1 mishandles rapid role
+  flips with a presenting GL child (Clutter criticals, child drawn on the owner; compositor-side,
+  the driver's requests are legal).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
