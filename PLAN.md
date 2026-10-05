@@ -500,13 +500,21 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   is late (bounded, inv2). This is now the main lead for the user's "rendering issues on resize".
   Open small items: one slow rubber-band session (71–87 fps after WM swaps, not reproduced);
   `uilat wmdrag` hits toolbar widgets in this layout; splitter drag across a tag change stops.
-- 174 lead (measured, issues/174 "Heal time after a resize"): not picom and not slow painting.
-  After the first ~3 large grows of a session (+450,+250) Inventor sits IDLE for ~5.0 s (4.97 /
-  4.99 / 5.16 s, 21 CPU ticks) with the Win32 window at an intermediate size, the X window at
-  the final size and paints pending, then repairs in a burst. The X window content before picom
-  is wrong the same way. Same on build-next and fix/174 (the jump-back fix doesn't address it);
-  build/ not measured. Smaller grows 0.06–0.9 s. Worker is taking backtraces during the wait to
-  find who waits for what (a 5 s timeout: Wine's or the application's?), bounded.
+- 174 heal-time lead, state at stop (issues/174 "Heal time after a resize", "What the main thread
+  waits on"): the ~5.0 s idle state after the first large grows of a session (Win32 window at an
+  intermediate size, X window final, paints pending, then a burst) has only ever appeared while
+  the screen was being sampled after release (heal.py: root image + the frame's composite pixmap
+  every 0.1 s; the checks worker's heal.sh grabs continuously too). Without the sampler: 0 long
+  cases in 53 + ~110 drags. gdb during the wait: main thread in Inventor's ordinary message pump
+  (FwUI → NtUserWaitMessage), nothing queued in Xlib, winex11's rects settled — but no capture
+  is a confirmed 5 s case. No 5 s constant found on this path in winex11 / win32u / server.
+  So: probably a measurement effect (correlation, not proven), and the user's persistent picture
+  is still unexplained. Next step if resumed (15 min): same sequence with and without the sampler
+  in fresh sessions; if only sampled runs are slow, look at Xorg / awesome delivering the final
+  ConfigureNotify late (xev on the frame, winex11 +event timestamps), not at Inventor.
+  Not done: WebView2 panes closed, real input during the wait, build/ with this method.
+  STOPPED here (wrap-up). From the user: retest on integ; if still seen, the data list at the
+  end of issues/174.
 - 177 fixed, reviewed ("merge as is", no defect found), ON INTEG (local tip b1e7b97cfed = pushed
   cffd27540ee + 1; not built/regressed yet: build-next is in use by the Inventor checks).
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
