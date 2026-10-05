@@ -467,6 +467,10 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   and NVIDIA GL allocators are outside it. libX11 report is now a comment for xorg/lib/libx11
   issue #10 (same assertion, open since 2010) — the user's to file.
   build-next/ = wine-11.18-569-gcffd27540ee; full regress running.
+- 177 (Xlib hang: reader's _XError waits for the user lock that an X11DRV_expect_error region
+  holds across a reply wait): Opus worker started on wt/177 (fix/177 off integ cffd27540ee),
+  Inventor-free. Wanted: Wine-side fix for every expect_error region with a round trip, libX11
+  report if it is a library bug; then adversarial review.
 
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
