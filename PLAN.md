@@ -284,6 +284,17 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   plain fix build (suite, fps A/B, drag/resize) — the server got "Device limit reached" (the seat
   is on the laptop); nothing was clicked in that dialog.
 
+- 171 review done: the race fix works, but commit 1's new edge (user lock → dce.c surfaces_lock)
+  closes real deadlocks (a 3-thread probe hangs 10/10 on fix/171, 0/10 on integ: the flusher holds
+  the list lock while waiting for surface mutexes whose holders take the user lock — e.g.
+  UpdateLayeredWindow with a window DC as source) and stalls every USER call behind flush passes
+  (GetWindowLongW up to 1.3 s). Decision: rework to the reviewer's variant A — a registration
+  counter on the surface, registration stays outside the user lock (13 lines); bounded waits in
+  the test. Worker applying. Reviewer's drafts: 176 (upstream: win32u updates a window DC with a
+  surface locked → user → surface → user cycle on one window), 177 (Xlib: _XError in XSync from
+  thread detach vs a thread holding the display lock in create_shm_image; hangs in 5-30 % of
+  loaded stress runs on every build) — both X11-relevant, to be handed out after the 173 review.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
