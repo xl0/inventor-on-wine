@@ -407,6 +407,16 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   layered popup hidden and re-shown without a redraw stays invisible (integ too), draft 185 (mutter).
   integ local = b5d75449ffe + 171 (3) + 173 (6) + 157 (7) — not pushed, build/ not rebuilt.
 
+- 181 review done (2026-10-05): no regression in the per-frame path (no recreation storm, no extra
+  round trips, fps equal, validation layer clean, 119 units 0 worse); three commits fine. To fix:
+  a moved GPU child that never presented shows VRAM garbage (re-present needs a `presented` flag,
+  also for our 061 path); the XFlush in add_device_bounds misses pen primitives and costs 7-17x on
+  direct GDI (flush after the image blits only; the general "direct GDI not flushed" regression
+  from upstream d3cb94b543e → draft 188); clip left on hdc_dst after an Expose re-present; the
+  internal DCX flag must not be reachable from apps. Worker applying and rebasing onto integ
+  (171 + 173 + 157); merge after (coordinator reads the delta). Kept deliberately: one extra
+  WM_PAINT for a moved GPU child (Windows sends none) — re-measure in Inventor.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
