@@ -139,8 +139,23 @@ launches; previous device-limit errors do not authorize pausing another device.
   on master; `git format-patch master..integ` = our series), force-pushed to
   the fork github.com/xl0/wine (remote `gh`; origin = gitlab.winehq.org).
 - `wine-src/` — upstream Wine git (gitlab.winehq.org), our patches go here.
+  Non-obvious rules our winex11 patches add (details: notes/wine/xlib-locking.md,
+  notes/wine/window-surfaces.md, issues 174 / 177 / 182 / 191):
+  - every request that allocates an X resource id on a shared display goes through
+    `lock_xid_alloc()` / `unlock_xid_alloc()` (or `create_gc` / `create_pixmap` / `create_picture`):
+    XLockDisplay with a pre-sync, never held across a reply wait (libX11 id-refill race);
+  - expected / ignored X errors are consumed in an `XESetError` hook (`reply_error_handler`), before
+    Xlib's `_XError` waits for the display's user lock (libX11 hang);
+  - an XIC is created and destroyed only by the thread that owns the window; other threads set
+    `xic_invalid`; ToUnicodeEx holds the window data while it uses the XIC;
+  - `sync_window_position()` doesn't re-request a rect the Win32 side didn't change (the WM's
+    rect wins until the posted WM_WINE_WINDOW_STATE_CHANGED is handled; `update_rect` covers
+    the same inside a state update).
 - `build/` — out-of-tree build, `--enable-archs=i386,x86_64` (new WoW64,
   no 32-bit host libs). Run in place: `build/wine`, `build/server/wineserver`.
+  The prefixes run it; it follows the pushed `integ` (PLAN.md has the current tip). `build-next/`
+  is the same tree built first for a merge round (regress + Inventor suite) before `build/` moves;
+  builds need `eval "$(tools/sysroot.sh env)"` and `taskset -c 20-59,80-119 make -j80`.
   Full `make -j120` ≈ 2.5 min. Wine's own conformance tests are in
   `build/dlls/*/tests/x86_64-windows/`.
 - `deps/sysroot/` — local package prefix (git-ignored): Ubuntu archive packages the host lacks (-dev
@@ -692,7 +707,7 @@ Long-running app sessions (installers, Inventor): launch with
 `setsid nohup ... &` so a Claude Code restart doesn't kill part of the process
 tree (ODIS helpers died once, leaving Installer.exe spinning on dead COM peers).
 
-# Host notes (Ubuntu 22.04, 120 threads, 1 TB RAM, 4× RTX 6000 Ada, drv 580)
+# Host notes (120 threads, 1 TB RAM, 4× RTX 6000 Ada; Ubuntu 26.04.1 + NVIDIA 595 since 2026-10-04, notes from 22.04 / drv 580 still apply unless marked)
 
 - NVIDIA Vulkan can't present to Xvfb ("Queue family does not support
   presentation") → D3D device creation fails. Hence the NVIDIA Xorg.
