@@ -1,5 +1,5 @@
 # 175 Moving Inventor to another virtual desktop leaves the splitter bar behind
-Status: fixed on fix/175 (2 commits on integ b5d75449ffe), probes only — Inventor not verified (licence seat in use) · Owner: worker-175 · Branch: fix/175 (wt/175) · Found in: user's laptop (awesome + picom)
+Status: fixed on fix/175 (2 commits on integ b5d75449ffe, commit 1 reworked after the adversarial review; first version kept as fix/175-v1), probes only — Inventor not verified (licence seat in use) · Owner: worker-175 · Branch: fix/175 (wt/175) · Found in: user's laptop (awesome + picom)
 
 ## Symptom
 Laptop: awesome WM on X11 (NVIDIA), picom (`--backend glx --vsync --no-use-damage`), 144 DPI, Wine
@@ -76,7 +76,8 @@ Plain X clients (tests/r175/xtransient.c: parent, transient, transient of the tr
 |---|---|---|---|
 | awesome 4.3 | never moved: `awful.ewmh.tag` gives a transient its parent's tags only when it is mapped; `c:move_to_tag`, Mod4+Shift+N and a pager `_NET_WM_DESKTOP` message move one client (parent 1, child 0, grandchild 0) | frame unmapped, client IsUnviewable, WM_STATE stays Normal | only PropertyNotify `_NET_WM_DESKTOP`; Win32 state unchanged |
 | openbox 3.6 | the whole transient tree moves, whichever member is asked (1,1,1) | WM_STATE Iconic | winex11 minimizes the window (SC_MINIMIZE; also on a plain desktop switch) and restores it when it is shown again; win32u hides the direct owned windows meanwhile |
-| mutter, KWin | not run (the Linux VM was in use). From their sources as I remember them — both move a window's transients along on a workspace change and keep windows of other workspaces mapped; treat as unverified | | |
+| mutter (GNOME guest, Xwayland; reviewer's run, inst/175-review/out/gnome-*.txt) | owned windows end up on the owner's workspace, with and without the fix | like openbox for Wine: while the owner is on another workspace its managed owned windows are withdrawn (no `_NET_WM_DESKTOP`), i.e. winex11 minimizes the owner there too (179); they come back when that workspace is viewed | |
+| KWin | not established | | |
 Baseline (integ) with the probe: awesome leaves every managed owned window on the old tag (each move of the
 baseline runs; a dialog created while the owner is on the other tag appears with the owner, then stays there when
 the owner comes back). openbox moves them, but see "Not fixed here".
@@ -85,9 +86,9 @@ the owner comes back). openbox moves them, but see "Not fixed here".
 Minimizing the owner (ShowWindow(SW_MINIMIZE) and WM_SYSCOMMAND SC_MINIMIZE alike) hides every window in its
 owner chain — the layered popup, dialogs, tool window, the WS_EX_NOACTIVATE / plain popups and the dialog owned
 by a dialog (WM_SHOWWINDOW 0 / SW_PARENTCLOSING each) — and restoring shows them again (SW_PARENTOPENING).
-Hiding the owner (SW_HIDE) leaves them visible. So on Windows an owned window is never on screen without its
-minimized owner's windows staying behind. Virtual desktops: an owned window is on its owner's desktop (the
-premise of this issue, Windows' documented behaviour; not probed, the VM run has no virtual-desktop step).
+Hiding the owner (SW_HIDE) leaves them visible. So on Windows the owned windows of a minimized owner are never
+left on screen. Virtual desktops: an owned window is on its owner's desktop (the premise of this issue, Windows'
+documented behaviour; not probed, the VM run has no virtual-desktop step).
 
 ## The outline
 The window that draws it is awesome's frame around the popup: awesome gives every client a 1 px border
@@ -116,9 +117,10 @@ Not from the outline but related: on mouse-over the bar is opaque by design (the
     strip lives as long as the document. Without a compositor it is a black bar over whatever covers Inventor,
     with one an invisible 5 px strip that takes the clicks of other applications;
   - so winex11 would have to hide it itself whenever the owner is not viewable. A minimized owner is covered
-    (win32u hides owned popups), a hidden tag/desktop is not: awesome only unmaps its frame (no event for the
-    client), mutter/KWin keep the window mapped. It would need a new "X-unmapped but Win32-visible" state driven
-    by `_NET_WM_DESKTOP` vs `_NET_CURRENT_DESKTOP`, and restacking against the owner's frame;
+    (win32u hides owned popups), and so is a hidden desktop under openbox and mutter, which report the owner as
+    Iconic there (179); a hidden tag under awesome is not: it only unmaps its frame (no event for the client).
+    It would need a new "X-unmapped but Win32-visible" state driven by `_NET_WM_DESKTOP` vs
+    `_NET_CURRENT_DESKTOP`, and restacking against the owner's frame;
   - the popup is clickable and a click activates it; `is_window_managed()` returns TRUE for the active window,
     so it would turn managed on its next SetWindowPos unless that rule got an exception too;
   - other applications: the bits are what any WPF `Window` with WindowStyle=None + AllowsTransparency has once it
@@ -129,43 +131,160 @@ Not from the outline but related: on mouse-over the bar is opaque by design (the
     not a known victim.
   The 2008 upstream change went the same way (tool windows no longer forced unmanaged).
 
-## Fix (fix/175 on integ b5d75449ffe)
-1. 3e2c5738a98 `winex11: Keep owned windows on the desktop of their owner.` PropertyNotify `_NET_WM_DESKTOP` on
-   a window (new atom, new handler next to the other property handlers in event.c) ->
-   `window_net_wm_desktop_notify()` (window.c): reads the value with the window data locked and the X window
-   compared, then sends the EWMH `_NET_WM_DESKTOP` client message (source 1) for every top-level whose owner
-   chain reaches the window: same-process windows when managed and not withdrawn, windows of other processes
-   by their whole window (the WM ignores non-clients). Owner cycles can't exist (server set_window_owner).
-   0xFFFFFFFF (all desktops) is passed on as is.
-2. 764362956c3 `winex11: Don't set a window opacity of 0.` `sync_window_opacity()` uses 1 (of 2^32) instead of
-   0: awesome then copies it to the frame at manage time too. Covers LWA_ALPHA 0 windows as well.
-Meets fix/173 in event.c: 173 changes the first line of each handle_*_notify to `get_property_win_data()`
-and adds that helper above handle_wm_state_notify; mine adds handle_net_wm_desktop_notify + one line in
-X11DRV_PropertyNotify (context only). After 173 the new function can use the helper instead of its own compare.
-No overlap with 174 (mouse.c / size-move code).
+## Fix (fix/175 on integ b5d75449ffe; applies cleanly to integ b8f013d4fbb with 171 + 173)
+1. 0ce9a9fdd15 `winex11: Keep owned windows on the desktop of their owner.`
+   - Every window remembers the desktop it is on (`has_net_wm_desktop`, `net_wm_desktop` in the window data):
+     the `_NET_WM_DESKTOP` the window manager gave it, read on PropertyNotify (new atom, new handler next to
+     the other property handlers in event.c) with the window data locked and the X window compared, or the
+     one winex11 last requested for it.
+   - Only when the value differs from the remembered one, `window_net_wm_desktop_notify()` (window.c) sends the
+     EWMH `_NET_WM_DESKTOP` client message (source 1) for the top-levels owned by the window — through other
+     owned windows, and through owners that are child windows (GA_ROOT at each step, like WM_TRANSIENT_FOR; at
+     most 32 steps) — that are managed, not withdrawn and were on the desktop the window comes from, and
+     records the new desktop for them at once.
+   - Windows of other processes in the owner chain are requested whatever desktop they are on (see the cases).
+2. 31c518e6b7d `winex11: Don't set a window opacity of 0.` `sync_window_opacity()` uses 1 (of 2^32) instead of
+   0: awesome then copies it to the frame at manage time too. On base an alpha-0 window (LWA_ALPHA 0, or 062's
+   "hidden" surface) under awesome + picom is drawn as if it had no opacity at all, border included (reviewer:
+   22860 changed pixels vs 0), and setting 0 again once it is managed doesn't help: no change for awesome.
+fix/173 (now on integ) changed the first line of the other handle_*_notify functions to
+`get_property_win_data()`; the new function does the same compare itself and could use the helper. No overlap
+with 174.
 
-## Verification (:100 NVIDIA Xorg, wt/175-build, driver .so swapped for A/B; logs inst/175/)
+### Review round: what changed in commit 1 and why (reviewer's findings, inst/175-review/)
+The first version (fix/175-v1, 3e2c5738a98) sent the request to every managed owned window on every
+`_NET_WM_DESKTOP` PropertyNotify of the owner. Reproduced by the reviewer:
+- a tool window the user moved to another screen jumped back to the owner's screen on each owner tag change
+  (awesome's handler also sets the client's screen; i3 has workspaces per output too);
+- awesome rewrites the property with the same value whenever a tag is toggled on the client: a dialog moved
+  alone to another tag was pulled back, a dialog on tags [1,4] collapsed to [1], and every managed-window map
+  cost a top-level enumeration;
+- a popup whose owner is a child of the main window (SetWindowLongPtr(GWLP_HWNDPARENT, child)) stayed behind.
+The cases, as decided:
+- First PropertyNotify of a window: there is no previous desktop, so nothing was moved: the value is only
+  remembered. A new transient is placed with its parent by the window manager itself (awesome, openbox).
+- Withdrawn and re-mapped window: the remembered value is deliberately kept (awesome and openbox delete the
+  property on withdraw; the delete is ignored). It means "the desktop this Win32 window was last on": if the
+  window comes back on another desktop (shown again while another tag is viewed, restored from minimized —
+  winex11 re-maps through Withdrawn —, or, by the code, its X window recreated), that is a move, and the owned
+  windows still on the old desktop join it (probe inst/175/rv/cases.sh: owner hidden on tag 1, shown viewing
+  tag 3 -> dialogs on 3, base: left on 1; minimized on tag 1 and restored viewing tag 4 -> all on 4, base: the
+  second-level dialog left on 1). While withdrawn, a window is never requested itself; a dialog hidden while
+  the owner moves away appears on the owner's tag when shown (the window manager places it) and follows again.
+- Sticky: 0xFFFFFFFF is a value like any other (owned windows on the old desktop become sticky with the owner
+  and return with it). openbox handles the whole transient tree itself (same result base and fix); awesome
+  ignores 0xFFFFFFFF requests and keeps the number of sticky clients, so nothing happens there.
+- Owner chains: one enumeration at the moved window's notify covers all levels (a second-level dialog follows a
+  real move, also through a hidden first-level one); it doesn't rely on the window manager's answers
+  cascading. Each window is judged by the desktop it was on, so a dialog the user moved alone stays, and its
+  own dialogs stay with it.
+- Windows of other threads: their remembered desktop is kept by their own thread's PropertyNotify, read here
+  under the window data lock; a dialog of another thread follows (probe `thr`). One whose thread has not
+  handled its first PropertyNotify yet (mapped, then not pumping) has no desktop and is left where it is.
+- Windows of other processes: requested unconditionally on a real move. Their previous desktop can't be known
+  cheaply: reading the property needs a round trip on an X window that the other process can destroy at any
+  time (BadWindow ends this process; trapping the error means X11DRV_expect_error, which holds the display lock
+  over the round trip — the hang of 177), and their own driver doesn't see the owner's PropertyNotify. Not
+  following at all would bring the reported bug back for helper-process dialogs (a modal dialog left on the old
+  tag, its owner dead on the new one). So: they follow, and one that the user parked elsewhere is pulled along
+  on a real owner move (probe: `xproc` on tag 3 -> owner to tag 2 -> xproc on 2; the same-process `late` stays
+  on 3). The precise version is a driver message to the owned window's thread ("your owner went from A to B"),
+  to do if this case ever matters.
+- Two owner moves within the Wine-to-WM latency (the reviewer's known weaker spot of v3: a child judged by
+  the desktop the window manager last *reported* is still on the old one when the second move arrives, and
+  stays one desktop behind): measured with inst/175/rv/rapid.sh, two pager messages back to back, 25 times:
+  15 of 25 left the dialog and its own dialog behind. Hence the one difference to v3: a window that is
+  asked to follow is recorded on the new desktop at once. 0 of 25 then (see Verification). The same line
+  keeps the followed window's own PropertyNotify from counting as a move of its own, which made every owned
+  window enumerate all top-levels again and re-request its owned windows (cost table below).
+  What it costs: a window the window manager refuses to move is believed moved until its next PropertyNotify;
+  it is then asked again at the owner's next move, which is the intent anyway. With overlapping moves a
+  second-level window can be sent to the intermediate desktop and back before it settles (every write of the
+  window manager produces a PropertyNotify, the last one read is the final state).
+- Multi-monitor (awesome numbers desktops over all screens: tag 1 of screen 2 = 9; inst/175/rv/screen2.sh with
+  two fake screens): a tool window parked on screen 2 stays there while the owner changes tags on screen 1
+  (reviewer's screens.sh: base = final); an owner moved to a tag of the other screen (`c:move_to_tag`,
+  `c:move_to_screen`) takes the dialogs that were on its tag along to that screen (base: they stay); when the
+  owner lands on the very tag the parked window is on and leaves again, that window is on the owner's desktop
+  and goes with it.
+
+## Verification (:100 NVIDIA Xorg, wt/175-build = fix/175 31c518e6b7d, driver .so swapped for A/B; logs inst/175/, inst/175/rv/out/)
+"base" = integ's driver, "v1" = the first version (fix/175-v1), "final" = fix/175 as committed (the tested .so is
+byte-identical to a rebuild of the branch head).
+
+Reviewer's table (his probes edge.sh / screens.sh with own2.exe, copied to inst/175/rv/; awesome):
+| case | base | v1 | final |
+|---|---|---|---|
+| popup owned by a child of the owner, owner changes tag | left | left | follows |
+| dialog moved alone to tag 3, then tags 4 / 5 toggled on the owner | stays on 3 | pulled back to 1 | stays on 3, its own dialog with it |
+| dialog on tags [1,4], tag toggled on the owner | [1,4] | [1] | [1,4] |
+| tool window parked on screen 2, owner changes tag on screen 1 | stays | jumps to screen 1 | stays |
+| dialog and dialog of the dialog, owner changes tag | left | follow | follow |
+| after all that a real move of the owner | all left | all but the child-owned popup follow | the parked dialog (+ its own) stays, the rest follows |
+Own cases (inst/175/rv/cases.sh, screen2.sh, sticky.sh, rapid.sh):
+- dialog of another thread follows; a dialog hidden while the owner moves away is on the owner's tag when shown
+  again and follows afterwards; owner hidden and shown on another tag / minimized and restored viewing another
+  tag: all owned windows there (base: left behind, or only the direct ones);
+- owner to a tag of the other screen and back, `c:move_to_screen`: the dialogs come along (base: left);
+- owner to all desktops and back under openbox: same as base (openbox moves the tree itself);
+- dialog of another process parked on tag 3, owner tag 1 -> 2: pulled to 2 (the documented limit; the
+  same-process dialog next to it stays);
+- two owner moves back to back (pager messages, dialog + its own dialog, 25 rounds each): v3-style judging by
+  reported desktops 15 of 25 (1 -> 2 -> 3) and 17 of 25 (1 -> 2 -> 1) left behind; final 0 of 50 and 0 of 25.
+
 tests/r175/scen.sh (owned.exe; owner moved between desktops 0 and 1 ten times each way; awesome: `c:move_to_tag`,
-openbox: pager message; screen checked by window colours):
-| | base | fix |
+openbox: pager message; screen checked by window colours), final:
+| | base (earlier runs) | final |
 |---|---|---|
-| awesome | all 5 managed owned windows left behind on 2 of 2 moves away (base runs: 2 moves) | 20 moves, 0 left behind; old tag shows only the override-redirect noact/plain |
-| awesome + picom | same | same; bar never visible, no border |
-| openbox, openbox + picom | sub left on the old desktop on every move away | 1 of 10 (the first) |
-Dialog created while the owner is on the other desktop: on the owner's desktop, and now comes back with it
-(base: stayed), cross-process one too. Stacking (real X order): owned windows above the owner before and after,
-same as base; clicks on owner / dialog / tool window activate them (X and Win32), same as base. Positions are not
-touched by a tag move. Close: 0 X windows left.
-Border (tests/r175/barpix.sh, awesome + picom): base `000000 03c903 ... 000000` with no frame opacity; fix all
-`00c800`, frame and client opacity 1, also after SC_MINIMIZE + awesome restore.
-062 check (tests/layered_splitter.sh drag / move / cycle x 4 WM configs x base / fix, inst/175/ls062.txt): same
-drags, splits and clicks in all 24 runs; bar on screen without a compositor 030303 (both), openbox + picom 00c800
-(both), awesome + picom base 03c903 -> fix 00c800. Screenshot in the middle of a Mod4+drag and after the drop
-(inst/175/middrag.sh, awesome + picom): base two black columns 6 px apart (398/404, then 518/524), fix none.
-077 table (tests/sizemove_scen.sh, 8 scenarios x awesome / openbox, inst/175/sm077.txt): ENTER/EXITSIZEMOVE
-pairs and WM_WINDOWPOSCHANGED counts identical base vs fix in all 16.
-tools/regress.sh unit, 2 runs per arch: user32:win 4 failures (baseline b5d75449ffe-h26: 4), user32:msg 1 (1),
-user32:input pass (pass), i386 and x86_64: 0 worse.
+| awesome | all 5 managed owned windows left behind on every move away | 20 moves, 0 left behind; old tag shows only the override-redirect noact/plain |
+| awesome + picom | same | 20 moves, 0 left behind; bar never visible, no border |
+| openbox, openbox + picom | second-level dialog left on the old desktop on every move away | on the first of 10 moves away |
+The openbox leftover is not a missed follow: openbox moves the whole tree itself (spy on the dialog:
+desktop 0 -> 1, Iconic), then winex11 withdraws and re-maps the Iconic window it can't minimize ("remapping to
+workaround Mutter issues"), and openbox manages it anew on the current desktop (draft 179); it joins its owners
+when their desktop is viewed.
+Dialog created while the owner is on the other desktop: on the owner's desktop, and comes back with it (base:
+stayed), cross-process one too. Stacking (real X order): owned windows above the owner before and after, same
+as base; clicks on owner / dialog / tool window activate them (X and Win32), same as base. Close: 0 X windows left.
+
+Cost (reviewer's count.sh: server requests of the process over one owner tag change, awesome):
+| | `_NET_WM_DESKTOP` requests | get_window_tree | all server requests |
+|---|---|---|---|
+| 50 owned dialogs: base | 0 | 6 | 558 |
+| 50 owned dialogs: v1 (= judging by reported desktops) | 50 | 618 | 1324 |
+| 50 owned dialogs: final | 50 | 18 | 606 |
+| chain of 10: base | 0 | 60 | 464 |
+| chain of 10: v1 | 55 | 192 | 694 |
+| chain of 10: final | 10 | 52 | 536 |
+i.e. one top-level enumeration per real move; nothing but one GetProperty for any other `_NET_WM_DESKTOP`
+PropertyNotify (a window's map: tests/r130 moveloop popup, X requests of the process: GetProperty 316 -> 317
+under awesome, 317 -> 318 under openbox; the other request counts within the run-to-run spread, totals
+7243 / 7267 and 7558 / 7601).
+
+Minimize / restore of the owner under awesome (reviewer's minl.sh: ShowWindow minimize + restore, owned dialog,
+tool window, layered bar, second-level dialog; "incomplete" = owner still iconic and owned windows hidden, the
+failure of draft 178): base 0 of 200; final 2 of 160, the variant before it 2 of 80; final with 40 extra
+GetProperty round trips per PropertyNotify 0 of 80, with a 5 ms sleep there 0 of 80; minimized / restored by the
+window manager 0 of 20 + 0 of 20. Fisher's exact test: my unamplified runs alone (0 of 200 vs 4 of 240)
+p = 0.13; with the reviewer's runs (base 1 of 152, patched 2 of 224) and the amplified ones base 1 of 352,
+patched 6 of 624, p = 0.43. Same signature on base; the handler does nothing but read the property in this loop
+(no desktop changes), and making it much slower didn't produce failures, so I take the difference for the
+spread of a ~1 % race — but it is not shown to be equal.
+Border (tests/r175/barpix.sh, awesome + picom; commit 2 unchanged since): base `000000 03c903 ... 000000` with no
+frame opacity; fix all `00c800`, frame and client opacity 1, also after SC_MINIMIZE + awesome restore.
+062 check (tests/layered_splitter.sh drag / move / cycle x 4 WM configs, final vs base, inst/175/ls062*.txt): same
+drags, splits and clicks in all 12 runs; bar on screen without a compositor 030303 (both), openbox + picom 00c800
+(both), awesome + picom base 03c903 -> 00c800. Screenshot in the middle of a Mod4+drag and after the drop
+(inst/175/middrag.sh, awesome + picom, v1's build): base two black columns 6 px apart (398/404, then 518/524),
+fix none.
+077 table (tests/sizemove_scen.sh, 8 scenarios x awesome / openbox, inst/175/sm077*.txt): ENTER/EXITSIZEMOVE
+pairs identical in all 16; WM_WINDOWPOSCHANGED counts identical except awesome Mod+resize 11 instead of 10 in
+one run (one extra transient rect 199,199 next to 200,200); six more runs each: 10 on base and final.
+tools/regress.sh unit, final and base driver in the same build and session, 4 runs of user32:win per arch:
+identical (x86_64 4 failures = baseline b5d75449ffe-h26, i386 0 on both, baseline 4); user32:msg 1 (1) and
+user32:input pass, 2 runs per arch. An earlier run of the intermediate variant had one extra user32:win line
+(win.c:12747 "parent didn't get WM_NCDESTROY", a cross-thread destroy order check) in 1 of 4 while other tests
+loaded the host; 0 of 8 for final and 0 of 8 for base afterwards.
 
 ## Still to do with Inventor (seat was in use; nothing below is verified)
 On inv3 with wt/175-build (`tests/r175/wm.sh :100 awesome picom`, back to openbox / build afterwards):
@@ -182,8 +301,12 @@ On inv3 with wt/175-build (`tests/r175/wm.sh :100 awesome picom`, back to openbo
 ## Not fixed here / limits
 - Override-redirect owned popups (tooltips, menus, WS_EX_NOACTIVATE helpers) stay on screen on every tag, as
   before.
-- awesome clients on several tags: EWMH has one desktop per window, the owned windows get the first tag only.
-- A thread that doesn't pump gets the owner's PropertyNotify late; the owned windows follow then.
+- An owner on several tags: `_NET_WM_DESKTOP` is its first tag; toggling further tags on it changes nothing
+  for the owned windows (no change of the property value), they are only on the first one.
+- A thread that doesn't pump gets its window's PropertyNotify late: the owned windows follow when it handles
+  the owner's; a window whose own first PropertyNotify isn't handled yet has no desktop and doesn't follow.
+- Owned windows of other processes follow every real move of the owner, wherever the user put them (see the
+  cases).
 - Minimize/restore under awesome is broken on integ already, unchanged (tests/r175/minloop.sh, base = fix):
   WM_SYSCOMMAND SC_MINIMIZE then SC_RESTORE from the app leaves the owner iconic and its owned windows hidden
   5 of 5 (restore from the WM, `c.minimized = false`, works); with an owned dialog of another process also after
@@ -197,5 +320,8 @@ On inv3 with wt/175-build (`tests/r175/wm.sh :100 awesome picom`, back to openbo
   check with a restored Inventor window.
 - win32u doesn't hide owned windows like Windows when the owner is minimized (draft 180); that is what leaves
   windows on screen in the two items above, not the desktop handling.
-- Moving an owned window alone (awesome: Mod4+Shift+N with a dialog or floating pane focused) is not undone;
-  it rejoins its owner the next time the owner changes tag.
+- An owned window the user moved alone (awesome: Mod4+Shift+N with a dialog or floating pane focused) stays
+  where it was put, also when the owner changes tag later; it only moves with the owner again once it is on
+  the owner's tag. Exception: windows of other processes (above).
+- A dialog on several tags that include the owner's first one follows a real move of the owner and is then on
+  that one tag (EWMH has one desktop per window).

@@ -16,6 +16,8 @@ awesome) setsid nohup dbus-run-session --config-file=$W/x/dbus-session.conf -- s
 openbox) setsid nohup openbox > $S/openbox.$n.log 2>&1 < /dev/null & ;;
 esac
 sleep 2
+# openbox keeps the number of desktops the previous WM left on the root window (awesome: 9 tags); its own default is 4
+[ "$WM" = openbox ] && xdotool set_num_desktops ${DESKTOPS:-4}
 if [ "$COMP" = picom ]; then
   setsid nohup picom --config /dev/null --backend glx ${PICOM_VSYNC---vsync} --no-use-damage > $S/picom.$n.log 2>&1 < /dev/null &
   sleep 2

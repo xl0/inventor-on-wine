@@ -14,7 +14,12 @@ Consequences seen in tests/r175/scen.sh on openbox (same on integ and with 175's
   screen on either desktop (only the owner and the override-redirect popups), until the owner was moved again;
 - a dialog owned from another process was not shown again after such a cycle.
 An application also sees a minimize on every desktop switch (Inventor: not checked what it does with it).
-awesome doesn't do this (it unmaps its frame and leaves WM_STATE Normal); mutter / KWin keep windows mapped.
+awesome doesn't do this (it unmaps its frame and leaves WM_STATE Normal). mutter behaves like openbox for Wine
+(175's review, GNOME guest: with the owner on another workspace its managed owned windows are withdrawn until
+that workspace is viewed); KWin not checked.
+With 175's fix the trace of the left-behind second-level dialog under openbox: openbox moves it with its owners
+(desktop 0 -> 1, Iconic), winex11 can't minimize it and re-maps it ("remapping to workaround Mutter issues"),
+openbox manages it anew on the current desktop.
 
 ## Question
 Whether winex11 should tell "iconified by the user" from "on another desktop" (`_NET_WM_DESKTOP` vs

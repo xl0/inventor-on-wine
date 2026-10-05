@@ -98,12 +98,21 @@
   What WMs do with transients: awesome 4.3 gives one its parent's tags only when it is mapped and never moves it
   later (each client has its own tags); it hides clients of unselected tags by unmapping its frame (client
   IsUnviewable, WM_STATE stays Normal, only `_NET_WM_DESKTOP` changes). openbox moves a transient tree as a whole and
-  sets WM_STATE Iconic on hidden desktops, which winex11 takes for a minimize (179). fix/175: on PropertyNotify
-  `_NET_WM_DESKTOP` of a window winex11 sends the EWMH `_NET_WM_DESKTOP` request for the managed windows in its
-  owner chain (Windows: an owned window is always on its owner's desktop).
+  sets WM_STATE Iconic on hidden desktops, which winex11 takes for a minimize (179; mutter in the GNOME guest
+  likewise). fix/175: winex11 remembers each window's last `_NET_WM_DESKTOP` (`net_wm_desktop` in the window data);
+  when a PropertyNotify brings another value, it sends the EWMH `_NET_WM_DESKTOP` request for the managed windows
+  owned by that window (through other owned windows and child-window owners too) that were on the previous
+  desktop, and records the new one for them at once (their own PropertyNotify is then no move, and a second
+  quick owner move still finds them; Windows: an owned window is always on its owner's desktop). Windows of other
+  processes are requested unconditionally (their desktop isn't known). Only a changed value counts: awesome
+  rewrites the property with the same value on every tag toggle of the client, and its desktop numbers run over
+  all screens (tag 1 of screen 2 = 9), so a window parked on another tag or screen has another number and stays.
+  awesome removes the property when a window is withdrawn; sticky clients keep their number (0xFFFFFFFF requests
+  are ignored), openbox uses 0xFFFFFFFF.
 - awesome copies `_NET_WM_WINDOW_OPACITY` to its frame when it changes on a managed client, and at manage time
-  unless the value is 0; picom only looks at the frame (`detect-client-opacity` off). fix/175 sets 1 instead of 0,
-  or awesome's border stays around "hidden" layered windows (062) after their first re-map. awesome's default rule
+  unless the value is 0 (and 0 set again later is no change for it); picom only looks at the frame
+  (`detect-client-opacity` off). fix/175 sets 1 instead of 0, or alpha-0 / "hidden" layered windows (062) are drawn
+  as if opaque, with awesome's border. awesome's default rule
   also moves every new floating client to free screen space, and its `_NET_CLIENT_LIST_STACKING` is not the X
   stacking order (transients are kept above their parents): read `xwininfo -root -children`.
 - Harness (175): picom on the headless NVIDIA Xorg shows X state changes up to ~2 s late in screenshots; wait before
