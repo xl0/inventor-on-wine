@@ -469,7 +469,14 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   build-next/ = wine-11.18-569-gcffd27540ee; full regress vs the h26 master baseline: 0 real
   regressions of 1757 (9 units differed in the loaded run — the 177 worker was building — and all
   are flaky on rerun on both builds: dxgi, mf, ntdll:change/exception, wininet:http,
-  cryptowinrt). Waiting only for the seat: Inventor suite, push, rebuild build/.
+  cryptowinrt).
+- Seat back on the server (2026-10-05). On build-next (integ cffd27540ee): suite 13/13, dwgloop
+  10/10 → integ PUSHED to gh (b5d75449ffe..cffd27540ee). inv, inv2, inv3 run on build-next
+  (x/prefixes.tsv); build/ is still b5d75449ffe as the 'before' reference for the checks below —
+  rebuild it and set the table back when the workers are done.
+  Running: Sonnet worker on inv2 doing the Inventor checks 175 / 181 / 173 still owed; the 174
+  worker on inv3 (does the user's resize problem still reproduce on the new integ? bounded).
+  User: wrap up — finish what is started (177 review, 191, these checks), no new issues.
 - 177 fixed on fix/177 (1 commit on integ cffd27540ee, b1e7b97cfed), in adversarial review.
   Cause: libX11 bug, still in master (a thread already waiting in _XReply is let past a user lock,
   but when it reads an X error _XError waits for that lock; the holder's reply is queued behind
