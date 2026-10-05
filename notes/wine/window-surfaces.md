@@ -77,6 +77,27 @@
   own it (set_window_visual): X requests on it are only safe with the window data locked, on data->display, after
   comparing the window. Check with tests/r173/lockorder-debug.patch (+ lockorder.py): reports every lock taken while
   another is held, with the call chain; repros tests/r173/iconlock.c, visual_race.c, flushpost.c.
+- Owned windows and the window manager (175): winex11 manages a top-level when it is activated on show, has a caption
+  or thick frame, is `WS_POPUP|WS_SYSMENU`, a fullscreen popup, `WS_EX_APPWINDOW`, or owns a managed window
+  (`is_window_managed`; a managed window's owner is made managed too); tool-window / layered styles don't matter. Every
+  WPF `Window` has WS_SYSMENU, so borderless WPF helper windows (Inventor's pane splitter `PaneBorder`, the four
+  `MiniFrameBorder`s of a floating pane) are WM clients: `_NET_WM_WINDOW_TYPE_DIALOG`, WM_TRANSIENT_FOR the owner's
+  whole window (set before the map), group leader = owner. Unmanaged (override-redirect) owned popups are on every
+  desktop and above everything.
+  What WMs do with transients: awesome 4.3 gives one its parent's tags only when it is mapped and never moves it
+  later (each client has its own tags); it hides clients of unselected tags by unmapping its frame (client
+  IsUnviewable, WM_STATE stays Normal, only `_NET_WM_DESKTOP` changes). openbox moves a transient tree as a whole and
+  sets WM_STATE Iconic on hidden desktops, which winex11 takes for a minimize (179). fix/175: on PropertyNotify
+  `_NET_WM_DESKTOP` of a window winex11 sends the EWMH `_NET_WM_DESKTOP` request for the managed windows in its
+  owner chain (Windows: an owned window is always on its owner's desktop).
+- awesome copies `_NET_WM_WINDOW_OPACITY` to its frame when it changes on a managed client, and at manage time
+  unless the value is 0; picom only looks at the frame (`detect-client-opacity` off). fix/175 sets 1 instead of 0,
+  or awesome's border stays around "hidden" layered windows (062) after their first re-map. awesome's default rule
+  also moves every new floating client to free screen space, and its `_NET_CLIENT_LIST_STACKING` is not the X
+  stacking order (transients are kept above their parents): read `xwininfo -root -children`.
+- Harness (175): picom on the headless NVIDIA Xorg shows X state changes up to ~2 s late in screenshots; wait before
+  judging pixels. `tests/r175/wm.sh :N awesome|openbox [picom]` swaps the WM (awesome on a private D-Bus session,
+  `ac.sh :N LUA` = awesome-client; `ac.sh :N clients` lists clients with tags / transient_for).
 - One wineserver must not serve two X displays one after the other (explorer's windows live on the first): the app dies
   of BadWindow on X_UnmapWindow. `wineserver -k` between displays (077, 173).
 - Moves: with _NET_WM_MOVERESIZE (openbox) the WM moves the frame, Wine waits in
