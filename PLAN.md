@@ -305,6 +305,20 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   remaining routes: a new wl_surface per show (needs re-homing of subsurface popups) or keeping the
   xdg objects of hidden windows.
 
+- 175 fixed on fix/175 (2 commits, tip 764362956c3), in adversarial review; Inventor not checked
+  (seat). Why the splitter is a window: `Autodesk.Inventor.InvDockUI.PaneBorder`, a WPF Window over
+  each MFC pane divider (Inventor's frame is MFC); WS_SYSMENU is WPF's default, WS_POPUP and
+  WS_EX_TOOLWINDOW are set by Autodesk; winex11's "popup with sysmenu == caption" rule (2007) makes
+  it a managed client. The outline = awesome's 1 px border: awesome 4.3 doesn't copy an opacity of
+  exactly 0 that is set before it manages the window (062's hiding never reached its frame).
+  awesome never moves transients on a tag change (openbox moves the whole tree). Fix: winex11
+  requests the owner's _NET_WM_DESKTOP for managed windows in its owner chain (EWMH; covers dialogs
+  and floating panes too); opacity 1 instead of 0. "Unmanaged" was rejected: override-redirect
+  windows are on every desktop and above every app. Probes: 0 left behind in 20 moves (base: all).
+  Drafts: 178 (awesome: app-side restore after minimize leaves the owner iconic), 179 (openbox
+  desktop switch minimizes Wine windows), 180 (win32u doesn't hide owned windows on minimize the
+  way Windows does). Meets fix/173 in event.c (one handler).
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
