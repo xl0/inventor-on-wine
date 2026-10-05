@@ -398,6 +398,15 @@ free again — then tell both workers (SendMessage) so they do their Inventor ch
   resized sibling came to overlap; Wine copies bits — a lead for 174's stale panes), 187 (GL: first
   present after show lost in ~25 % of runs on both builds).
 
+- 157 (+ the fixable part of 170) ON INTEG (local): 7 winewayland commits. Commit 7's re-flush cost
+  is gone (role-less flush reported done + `contents_skipped`; the expose for a subsurface only
+  when a flush was actually skipped — an unconditional one would commit an unpainted black surface
+  for every new popup). Verified on the host session (hidden-window CPU 0 ms, glhide at 5 ms 14/14,
+  first frame 5/5, roleflip + jitter 5/5, wl_xowner 28/28, 132 probes, 0 protocol errors); delta
+  read by the coordinator. Open: 170's 0-2 ms hide/show (compositor-side timing), an unmanaged
+  layered popup hidden and re-shown without a redraw stays invisible (integ too), draft 185 (mutter).
+  integ local = b5d75449ffe + 171 (3) + 173 (6) + 157 (7) — not pushed, build/ not rebuilt.
+
 ## Now (2026-10-04, after the reboot)
 Resumed: prefixes and X servers up on build/; the 157 worker, the 173 worker and the 171 reviewer
 continue from the items below. The user is testing on the laptop: the licence seat may leave the
