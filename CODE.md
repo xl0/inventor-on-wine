@@ -449,6 +449,9 @@ launches; previous device-limit errors do not authorize pausing another device.
   `lockorder.py` + `cycles.py` (all win32u + winex11 mutex pairs with call chains, cycle check, X errors with backtraces),
   `run.sh` / `batch.sh` / `ls.sh` / `x.sh` / `sm.sh` (watchdog runner, batches without a WM and with openbox, lockstress loop,
   own Xvfb displays, 077's size-move table without the exported WINEDLLOVERRIDES; they live in inst/173/).
+  `r182/xallocid.c` (plain Xlib: threads creating GCs on one Display, libX11 `_XAllocID` assertion), `r183/settext_race.c`
+  (two threads setting one window's text), `r184/vstate.c` (X window recreated from another thread in each window state,
+  `loop N` counts lost positions; 184).
   `tests/r175/`: owned windows vs the window manager (175): `owned.c` (owner + owned layered popup / dialogs / tool
   window / unmanaged popups, cross-process dialog; commands from a file; `auto` = Windows semantics around minimize),
   `scen.sh` (owner moved between desktops, who follows, what stays on screen; `pix.py`), `matrix.sh` (4 WM configs,

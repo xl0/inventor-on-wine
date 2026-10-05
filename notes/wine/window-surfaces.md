@@ -67,16 +67,27 @@
 - winex11's surface flush can run with win_data_mutex held by the same thread (WindowPosChanged ->
   window_surface_set_shape): don't take the window data there, post a driver message.
 - winex11 lock order (173; the opposite of winewayland's, 157): win32u client `surfaces_lock` (window.c) ->
-  `win_data_mutex` -> win32u user lock -> dce.c `surfaces_lock` (171) -> window surface mutex -> leaves (gdi, font,
-  display lock, xrender_mutex). The driver reads window styles / owner / text / DCs with the window data locked
-  everywhere, so: win32u must not call a driver entry that locks the window data, nor draw on a window DC (a dirty DC
-  calls pGetDC -> get_win_data), while it holds the user lock (a window / icon / menu pointer). What win32u does call
-  with the user lock or the surface locks held (surface flush / set_shape / set_clip, pReleaseDC) must never wait for the
-  window data: trylock + posted retry as in try_set_window_hidden, or do it from the window's thread. In the driver,
-  sends / SetWindowPos come after release_win_data. An X window can be destroyed and recreated by a thread that doesn't
-  own it (set_window_visual): X requests on it are only safe with the window data locked, on data->display, after
-  comparing the window. Check with tests/r173/lockorder-debug.patch (+ lockorder.py): reports every lock taken while
-  another is held, with the call chain; repros tests/r173/iconlock.c, visual_race.c, flushpost.c.
+  `win_data_mutex` -> win32u user lock -> window surface mutex -> leaves (gdi, font, display lock, xrender_mutex).
+  The driver reads window styles / owner / text / DCs with the window data locked everywhere, so: win32u must not
+  call a driver entry that locks the window data, nor draw on a window DC (a dirty DC calls pGetDC -> get_win_data),
+  while it holds the user lock (a window / icon / menu pointer). What win32u does call with the user lock or a surface
+  locked (surface flush / set_shape / set_clip, pReleaseDC) must never wait for the window data: trylock + posted
+  retry as in try_set_window_hidden, or do it from the window's thread. In the driver, sends / SetWindowPos come after
+  release_win_data. Open violations in win32u: 176 (NtUserUpdateLayeredWindow blends from a caller DC, and
+  move_window_bits_surface draws on a window DC, with a surface locked: surface mutex -> user lock and -> window data).
+  dce.c's `surfaces_lock` is taken around flushes (flush_window_surfaces); 171's rework keeps it out of the user lock.
+- Icon bitmaps (win32u cursoricon.c) are only protected by the user lock, which also serializes selecting them into a
+  DC (a bitmap goes into one DC at a time): code that must not hold the user lock draws from copies (copy_bitmap), as
+  NtUserDrawIconEx does for non-memory DCs since 173.
+- An X window can be destroyed and recreated by a thread that doesn't own it (set_window_visual: layered attributes,
+  UpdateLayeredWindow, WS_EX_LAYERED): X requests on it are only safe with the window data locked, on data->display,
+  after comparing the window if the id came from an event (173: property handlers, SetWindowText). Still open: the
+  surface flush draws into the old window (177), ConfigureNotify maps through a stale host parent (184).
+- Lock-order debug build: tests/r173/lockorder-debug.patch (+ lockorder.py, cycles.py) reports every win32u / winex11
+  mutex taken while another is held, with the call chain, and X errors with a backtrace; repros tests/r173/iconlock.c,
+  visual_race.c, flushpost.c. Never relink a .so of a build while a test process runs on it (the process dies silently).
+- Several threads allocating X resources on gdi_display (a GC per memory DC) can abort the process in libX11
+  (`_XAllocID: Assertion ret != inval_id`, 182).
 - Owned windows and the window manager (175): winex11 manages a top-level when it is activated on show, has a caption
   or thick frame, is `WS_POPUP|WS_SYSMENU`, a fullscreen popup, `WS_EX_APPWINDOW`, or owns a managed window
   (`is_window_managed`; a managed window's owner is made managed too); tool-window / layered styles don't matter. Every

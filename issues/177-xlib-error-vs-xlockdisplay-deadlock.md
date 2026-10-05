@@ -28,3 +28,16 @@ to ignore, or the XShmAttach error B expects: both would do).
 - The debug build of 173 prints X errors in the handler; here the handler is never reached.
 - Direction (not tried): don't hold XLockDisplay across the round trip (XSync first, then lock + check), or make
   ThreadDetach's sync not use gdi_display.
+
+## With 173 applied (173 worker, 2026-10-04)
+Still there, and reproducible on demand: `WINEDEBUG=+synchronous tests/r173/visual_race.exe 12 text` on the 173 debug
+build (fix/173 + tests/r173/lockorder-debug.patch, no 171; Xvfb without a WM) hangs 2 of 2 (the reviewer of 173: 2 of 2).
+Synchronous mode makes every request a round trip, which is what the pair needs. Stacks `inst/173/out/s177-1-hang.txt`:
+```
+thread A: flush_window_surfaces -> x11drv_surface_flush -> put_shm_image -> XShmPutImage -> XSync -> _XReply -> _XError -> pthread_cond_wait
+thread B: X11DRV_CreateWindowSurface -> create_shm_image (between X11DRV_expect_error and X11DRV_check_error) -> XSync -> _XReply -> waits
+```
+So here the failing request is known: the flush into an X window that another thread has just replaced
+(set_window_visual), an error winex11 means to ignore on gdi_display. 173's series removes two unlocked uses of a
+replaced window (property reads, window text); this one is the surface flush, which still draws into the old window.
+
