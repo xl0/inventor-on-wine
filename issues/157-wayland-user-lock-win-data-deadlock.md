@@ -1,5 +1,5 @@
 # 157 winewayland: deadlock between win32u's user lock and the driver's win_data_mutex (two threads showing/hiding windows)
-Status: fixed on fix/157 (7 winewayland commits on integ b5d75449ffe), reviewed once, review fixes verified; short re-review of the changed role-change design pending · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
+Status: fixed on fix/157 (7 winewayland commits on integ b5d75449ffe), re-reviewed (commits 1-6 as they are; commit 7 fixed after the re-review, tip e243e7d08bb), ready to merge · Found in: review of fix/134 (inst/134-review, `rv rapid 300`) · predates fix/134 · **serious for real use**: any
 app with two UI threads changing window visibility can hang for good
 
 ## Symptom
@@ -126,12 +126,23 @@ pSetLayeredWindowAttributes, pUpdateLayeredWindow, pCreateWindowSurface, pSysCom
 6. 74a086bfff1 `winewayland: Check that the window has a surface when the pointer moves.` The relative motion handler used
    the surface of the focused window without a check (review finding; on integ the window between reading the focus and
    locking the data is tiny, an earlier version of commit 3 had widened it into a reproducible fault).
-7. 750bb757812 `winewayland: Don't commit buffers to surfaces without a role.` Part of issue 170 (protocol error when a
+7. e243e7d08bb `winewayland: Don't commit buffers to surfaces without a role.` Part of issue 170 (protocol error when a
    toplevel with a GL child is shown again): fixes the case of a window hidden for 5 ms or longer; see 170 for the rest.
+   The flush of a role-less surface is reported to win32u as done and remembered (`contents_skipped` in the win data);
+   the whole window surface is exposed when the surface gets a role: a toplevel at its first configure event (as
+   before), a subsurface, which has no configure event, at the end of WindowPosChanged after win_data is released
+   (`NtUserExposeWindowSurface` takes the user and window surface locks), and only if a flush was skipped: exposing
+   every new subsurface commits the still unpainted (opaque black) window surface of each menu-like popup 0.5 ms before
+   its first paint (tried: one more shm pool and commit per popup shown in seq.c).
+   `wayland_surface_ensure_contents` checks the role before it creates its dummy buffer.
+   Side effect: an unmanaged layered popup that is redrawn while hidden shows the new contents when shown again; on
+   integ it is not drawn at all then (check 3 of the reviewer's `rr.exe ulw`; the integ side was not analysed).
 Row 9 stays: the display lock is taken under win_data, and by reading nothing under the display lock takes the user lock or
 win_data (lock_display_devices: registry, driver UpdateDisplayDevices -> output_mutex, GPU enumeration).
 History: `fix/157-v1` (first series on e00a74f6590), `fix/157-v2` (rebased; it destroyed the old surface outside the lock,
-the reviewed version with the relative-motion fault), `fix/157-surface-per-show` (experiment for 170).
+the reviewed version with the relative-motion fault), `fix/157-v3` (750bb757812, the re-reviewed tip: commit 7 returned
+"not flushed" for a role-less surface, so win32u flushed a hidden layered window again at every idle: 810 ms CPU in the
+2 s of `rr.exe ulw 1600 900`, 0 on integ and on the final tip), `fix/157-surface-per-show` (experiment for 170).
 
 ## Staleness of what is read outside the lock
 - Style / ex style: they join `managed` (computed from the same styles), the owner and the rects, which were already taken
@@ -212,8 +223,44 @@ does not exit within its watchdog (60 s / 300 s), then `thread apply all bt` and
 - 170: `lockstress glhide 3000 5` 14/14 DONE (integ fatal 3/3); `glhide 3000` (hidden 0-2 ms) still fatal, see 170.
 - No win32u change, so no host regress units. Inventor on Wayland not run.
 
+After the re-review fix of commit 7 (tip e243e7d08bb; the numbers above are from 750bb757812, whose commits 1-6 are the
+same), same session type, `inst/157/r4/verify3.txt`:
+- Reviewer's `rr.exe ulw 1600 900` (CPU time of the process while a 1600x900 layered window is hidden for 2 s): 0 / 0 /
+  10 ms in three runs (750bb757812: 810 ms; integ: 0 ms; the 2 s without any hidden window read 0 - 20 ms). Its six
+  screenshot checks: the pixel counts of 750bb757812 in every run, check 3 included (unmanaged layered popup redrawn
+  while hidden and shown again: 16400 green px; none on integ). `title2 40` DONE; `flip 40 30 gl=1 d3d` (GL renderer):
+  the child is there at all three checks.
+- `lockstress glhide 3000 5`: 14/14 DONE, 0 protocol errors.
+- First frame after show: 5/5 (45018 px). GL child visible after each role flip: 5/5 (15000 px).
+- Roleflip + jitter: 5/5 DONE, with a GL child 1/1; faults 0, protocol errors 0.
+- `tests/wl_xowner.sh` on the host session: 28 PASS / 0 FAIL, protocol errors 0.
+- seq.c, two runs each of integ and the tip against the earlier pair: hide, the unmanaged popup, the tooltip, both role
+  changes: equal counts (33-34 / 33 / 38 / 32 requests in all six runs); the cases that differ (shm pools at show,
+  cursor, clip) differ between the integ runs too.
+  A seq.c run that starts on an empty desktop is invalid whatever the build (the shell's overview is open: no keyboard
+  or pointer enter, half of the requests); seen three times, not counted.
+- 132's probes: clip.sh and the role flip identical to integ in the same session, geo.sh identical except the moving
+  bar lines; sink stress with jitter 3/3 DONE; 0 protocol errors.
+- The sink stress leaves the shell with a stale full-screen window of the dead client and thousands of criticals (185):
+  anything that compares screenshots has to run before it or in a fresh session (the first batch compared 132's clip
+  probe against an integ run that was covered by such a window).
+
 ## Weak spots / not covered
 - 170's remaining case (hide and show within ~2 ms with a GL child on a GPU compositor) is still fatal; not a lock problem.
+- 185 (draft, found in the re-review): mutter 50.1 mishandles a role change of a window whose GL / Vulkan child is
+  presenting (Clutter criticals in the shell's log, the child drawn on the owner window, once a shell hang). The driver's
+  requests are legal and integ's request order gives the same; lockstress and `roleflip ... gl` trigger it, and only
+  `/tmp/wl-xdg/shell.log` shows it.
+- Found with a variant of the reviewer's probe (`inst/157/r4/rrs.c reshow`), integ and the tip alike, not fixed: an
+  unmanaged layered popup (UpdateLayeredWindow) that is hidden and shown again without being drawn in between stays
+  invisible. Hiding removes the buffer, and nothing flushes when the subsurface role comes back (a layered toplevel is
+  fine: exposed at its first configure). Exposing every subsurface that gets its role fixes it (tried) but commits the
+  unpainted surface of every new plain popup, see commit 7; it wants "had contents when hidden" as a second reason to
+  expose.
+- Title race left in (re-review): the title set after the release in WindowPosChanged can apply a text read before a
+  hide, SetWindowText and show of the same window that all ran between its read and its second lock (`has_title` is per
+  toplevel role, not per text). Needs WindowPosChanged for one window on two threads and a text writer; the next
+  SetWindowText corrects the title.
 - Older than 157, now easier to fix with the serial but not done: a popup with the subsurface role keeps its wl_subsurface
   when its owner's surface is replaced by a role change (`wayland_surface_make_subsurface` only compares the owner HWND);
   the next place_above would be a protocol error.

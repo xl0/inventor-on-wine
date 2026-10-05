@@ -18,6 +18,12 @@ describe the llvmpipe session; what holds now is in "Host session on the new hos
   with another build starts the update with the Mono install dialog and hangs (also from a backgrounded `wineserver -p; wine cmd`).
 - Scripts that start a probe with WAYLAND_DEBUG=1 must have the prefix running already, or explorer/services inherit it and the
   "probe log" is theirs.
+- Look at the compositor's log too (`/tmp/wl-xdg/shell.log`, count the `CRITICAL` lines around a run): a client can upset
+  mutter without any protocol error (185: surface actors left in the wrong window, once a shell spinning for good). A shell
+  in that state ignores `x/wayland.sh stop` (SIGTERM): kill its pid with -9, then start again; clients started meanwhile
+  report "no driver could be loaded".
+- The shell opens its overview when the last window goes and at start: windows are then drawn scaled down in screenshots.
+  Send `x/wshot.sh key Escape` after the probe's first window is up, not before.
 
 ## Client surfaces across processes (132, branch fix/132; not on integ yet)
 - A window presented to by a process that does not own its top-level has no wl_surface parent in that process.
@@ -209,8 +215,12 @@ text_input / seat mutex`, `display lock (win32u)` -> `output_mutex`.
   buffer release when all three buffers are busy (with the user lock on the `update_surface_region` path, dce.c's
   `surfaces_lock` in `flush_window_surfaces`). `WAYLAND_CreateWindowSurface` dispatches the queue of the previous surface under
   win_data (`window_surface_release` -> `wayland_buffer_queue_destroy`); its listeners only free buffers.
-- Buffers are not committed to a surface without a role (hidden window): the flush returns "not flushed" and the contents go
-  out with the first configure after the window is shown (170).
+- Buffers are not committed to a surface without a role (hidden window, 170): the flush is reported to win32u as done
+  (a "not flushed" makes win32u flush again at every message-loop idle) and remembered in the win data
+  (`contents_skipped`). The driver exposes the whole window surface (`NtUserExposeWindowSurface`, outside win_data) when the
+  surface gets a role: a toplevel at its first configure event (always), a subsurface (no configure events) at the end of
+  `WAYLAND_WindowPosChanged` if a flush was skipped. Not for every subsurface: the window surface of a popup that is
+  shown for the first time is not painted yet, and its commit would be an opaque black frame.
 - Check tool: `tests/r157/lockorder-debug.patch` (debug only, apply to the worktree): win32u reports each acquisition of its
   user / display / client surfaces / window surface locks to the driver, which prints `LOCKORDER held -> acquired` + backtrace
   when the thread holds a driver mutex, and every new pair of driver mutexes; `tests/r157/lockorder.py LOG...` folds them.

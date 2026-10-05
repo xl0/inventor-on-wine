@@ -1,5 +1,5 @@
 # 170 winewayland: protocol error "wl_surface already has a buffer committed" when a toplevel with a GL child is hidden and shown again quickly (mutter 50 + NVIDIA EGL)
-Status: partly fixed on fix/157 (750bb757812: windows hidden for 5 ms or longer); open for a hide and show within ~2 ms · Found in: 157 (stress on the host Wayland session) · reproduces on integ b5d75449ffe without the 157 commits
+Status: partly fixed on fix/157 (e243e7d08bb: windows hidden for 5 ms or longer); open for a hide and show within ~2 ms · Found in: 157 (stress on the host Wayland session) · reproduces on integ b5d75449ffe without the 157 commits
 
 ## Symptom
 The process loses its Wayland connection and exits:
@@ -16,7 +16,7 @@ ShowWindow(SW_HIDE), pumps HIDE_MS (default 0, 1 or 2 ms), ShowWindow(SW_SHOWNA)
 | build | `glhide 3000` (hidden 0-2 ms) | `glhide 2000/3000 5` (hidden 5 ms) |
 |---|---|---|
 | integ `build/` | fatal 6/6 (reviewer: 14/14) | fatal 3/3 |
-| fix/157 with 750bb757812 | fatal 2/2 | DONE 14/14, 0 protocol errors |
+| fix/157 with e243e7d08bb | fatal 2/2 | DONE 14/14, 0 protocol errors |
 | + blocking wl_display roundtrip before get_xdg_surface (experiment) | fatal 5/5 | |
 | fix/157-surface-per-show (7ef19cf2795) | DONE 10/10 | |
 Never seen in the vmwl guest (llvmpipe: GNOME, KDE, sway; ~150 lockstress runs with the same GL child hidden and shown).
@@ -46,8 +46,9 @@ Two ways for the buffer to be there when the window is shown again:
 1. The driver itself committed one while the window was hidden: a window surface flush on a surface whose role was
    cleared (`wayland_surface_reconfigure` returned TRUE for "no role"); found by the 157 reviewer
    (inst/157-review/gh-trace-integ.out). The NULL attach + commit that `wayland_surface_make_toplevel` sends right before
-   get_xdg_surface is not applied in time. Fixed by 750bb757812 "winewayland: Don't commit buffers to surfaces without a
-   role." (nothing is committed to a hidden surface; the contents go out with the first configure after the show).
+   get_xdg_surface is not applied in time. Fixed by e243e7d08bb "winewayland: Don't commit buffers to surfaces without a
+   role." (nothing is committed to a hidden surface; the flush is reported as done and the
+   window surface is exposed when the surface gets a role: first configure of a toplevel, WindowPosChanged for a subsurface).
 2. The hide's own NULL commit has not been applied yet when the show follows within a millisecond or two
    (inst/157/r3/glhide-trace.out: hide at 507.574, get_xdg_surface at 508.099, no buffer attached in between). Open.
 
