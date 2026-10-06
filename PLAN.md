@@ -262,9 +262,12 @@ commits or screenshots). Read-only mode may remain after expiry.
 
 ## State (2026-10-05, wrap-up; nothing is running)
 The user asked to wrap up: finish what was started, no new issues. All workers and reviewers are done.
+Everything is stopped (user, 2026-10-05): the four prefixes, their Xorg / VNC / openbox, the Windows
+VM (guest shutdown), the Wayland session; the Linux VM was not running. To resume:
+`tools/prefix.sh start inv` (inv2, inv3, inv4); `vm/run.sh`, `vmwl/run.sh`, `x/wayland.sh` when needed.
 
 **integ** (wine-src, fork remote `gh`): pushed tip da01d16c73b (wine-11.18-576) = `build/` =
-`build-next/`; all four prefixes run `build/`. Final round on that tip: full regress 0 real of
+`build-next/`; all four prefixes are set to `build/`. Final round on that tip: full regress 0 real of
 1757 vs the master baseline (2 flaky timeouts: amstream, d2d1), Inventor suite 13/13, dwgloop
 10/10, uilat PASS. Known gcc 15 false-positive warning (`clip`, win32u/input.c) still there.
 Since b5d75449ffe (what the user tested on the laptop: "did not really run into any issues"), all
